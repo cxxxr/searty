@@ -5,6 +5,12 @@
 (defstruct token id term)
 
 
+(defparameter *sqlite3-schema-file* (namestring (asdf:system-relative-pathname :searty "schema.sql")))
+
+(defun sqlite3-init-database (database-file)
+  (uiop:run-program `("sqlite3" "-init" ,*sqlite3-schema-file* ,database-file)))
+
+
 ;;; database
 (defgeneric create-document (database pathname text))
 (defgeneric create-token (database term))

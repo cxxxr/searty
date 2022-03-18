@@ -1,6 +1,7 @@
 (defpackage :searty
   (:use :cl :alexandria)
-  (:export :simple-analyzer
+  (:export :sqlite3-init-database
+           :simple-analyzer
            :analyze
            :database
            :indexer

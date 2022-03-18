@@ -7,12 +7,22 @@
        :close-stream
        ,@body)))
 
+(defun call-with-test-database (function)
+  (let ((database-file "/tmp/sqlite-test.sqlite3"))
+    (uiop:delete-file-if-exists database-file)
+    (sqlite3-init-database database-file)
+    (funcall function database-file)))
+
+(defmacro with-test-database ((database-file) &body body)
+  `(call-with-test-database (lambda (,database-file) ,@body)))
+
 (deftest indexer-test
-  (with-temporary-file (pathname "foo bar baz")
-    (let* ((analyzer (make-instance 'simple-analyzer))
-           (database (make-instance 'database
-                                    :connection (dbi:connect :sqlite3 :database-name "/tmp/searty-test.sqlite3")))
-           (indexer (make-instance 'indexer
-                                   :analyzer analyzer
-                                   :database database)))
-      (add-document indexer (probe-file pathname)))))
+  (with-test-database (database-file)
+    (with-temporary-file (doc-file "foo bar baz")
+      (let* ((analyzer (make-instance 'simple-analyzer))
+             (database (make-instance 'database
+                                      :connection (dbi:connect :sqlite3 :database-name database-file)))
+             (indexer (make-instance 'indexer
+                                     :analyzer analyzer
+                                     :database database)))
+        (add-document indexer doc-file)))))

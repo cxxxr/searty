@@ -13,6 +13,8 @@ CREATE TABLE token (
 	term TEXT
 );
 
+CREATE INDEX token_term_index ON token(term);
+
 DROP TABLE IF EXISTS inverted_index;
 CREATE TABLE inverted_index (
 	token_id TEXT PRIMARY KEY,

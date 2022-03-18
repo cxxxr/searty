@@ -1,7 +1,8 @@
 DROP TABLE IF EXISTS document;
 CREATE TABLE document (
 	id TEXT PRIMARY KEY,
-	pathname TEXT
+	pathname TEXT,
+	text TEXT
 );
 
 DROP TABLE IF EXISTS token;

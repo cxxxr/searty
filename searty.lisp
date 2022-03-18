@@ -24,10 +24,9 @@
                :reader database-connection)))
 
 (defmethod create-document ((database database) pathname text)
-  (let ((pathname (convert-document-cache-pathname pathname))
-        (id (random-uuid)))
+  (let ((id (random-uuid)))
     (dbi:do-sql (database-connection database)
-      "INSERT INTO document (id, pathname) values (?, ?)"
+      "INSERT INTO document (id, pathname, text) values (?, ?, ?)"
       (list id (namestring pathname)))
     (make-document :id id :pathname pathname :text text)))
 
@@ -125,23 +124,10 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
              :initform (required-argument :database)
              :reader indexer-database)))
 
-(defun convert-document-cache-pathname (pathname)
-  (pathname (format nil "~A~A"
-                    (merge-pathnames ".searty/cache/" (user-homedir-pathname))
-                    pathname)))
-
-(defun cache-file (pathname text)
-  (let ((pathname (convert-document-cache-pathname pathname)))
-    (ensure-directories-exist pathname)
-    (write-string-into-file text pathname
-                            :if-exists :supersede
-                            :if-does-not-exist :create)))
-
 (defmethod add-document ((indexer indexer) pathname)
   (let* ((text (read-file-into-string pathname))
          (tokens (analyze (indexer-analyzer indexer) text))
          (document (create-document (indexer-database indexer) pathname text)))
-    (cache-file pathname text)
     (loop :for pos :from 0
           :for token-term :in tokens
           :do (add-token indexer token-term document pos))

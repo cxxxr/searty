@@ -1,7 +1,7 @@
 (in-package :searty)
 
 ;;; entities
-(defstruct document id pathname text)
+(defstruct document id pathname body)
 (defstruct token id term)
 
 
@@ -13,9 +13,10 @@
 
 ;;; database
 (defgeneric create-document (database pathname text))
+(defgeneric resolve-document (database pathname))
 (defgeneric create-token (database term))
 (defgeneric find-token (database term))
-(defgeneric select-inverted-index (database token-ids))
+(defgeneric resolve-inverted-index (database token-ids))
 (defgeneric upsert-inverted-index (database token-id encoded-inverted-values))
 
 (defclass database ()
@@ -23,12 +24,23 @@
                :initform (required-argument :connection)
                :reader database-connection)))
 
-(defmethod create-document ((database database) pathname text)
+(defmethod create-document ((database database) pathname body)
   (let ((id (random-uuid)))
     (dbi:do-sql (database-connection database)
-      "INSERT INTO document (id, pathname, text) values (?, ?, ?)"
-      (list id (namestring pathname)))
-    (make-document :id id :pathname pathname :text text)))
+      "INSERT INTO document (id, pathname, body) values (?, ?, ?)"
+      (list id (namestring pathname) body))
+    (make-document :id id :pathname pathname :body body)))
+
+(defmethod resolve-document-by-pathname ((database database) pathname)
+  (when-let ((record (dbi:fetch-all
+                      (dbi:execute (dbi:prepare (database-connection database)
+                                                "SELECT id, pathname, body FROM document WHERE pathname = ? LIMIT 1")
+                                   (list (princ-to-string pathname))))))
+    (destructuring-bind (&key ((:|id| id))
+                              ((:|pathname| pathname))
+                              ((:|body| body)))
+        (first record)
+      (make-document :id id :pathname pathname :body body))))
 
 (defmethod create-token ((database database) term)
   (let ((id (random-uuid)))
@@ -48,16 +60,27 @@
         (first records)
       (make-token :id id :term term))))
 
-(defmethod select-inverted-index ((database database) token-ids)
-  (multiple-value-bind (sql params)
-      (sxql:yield
-       (sxql:select (:token_id :encoded_values)
-         (sxql:from :inverted_index)
-         (sxql:where (:in :token_id token-ids))))
-    (dbi:fetch-all
-     (dbi:execute (dbi:prepare (database-connection database)
-                               sql)
-                  params))))
+(defun decode-inverted-index (records)
+  (let ((inverted-index (make-inverted-index)))
+    (dolist (record records)
+      (destructuring-bind (&key ((:|token_id| token-id))
+                                ((:|values| values)))
+          record
+        (setf (inverted-index-get inverted-index token-id)
+              (decode-inverted-values-from-vector values))))
+    inverted-index))
+
+(defmethod resolve-inverted-index ((database database) token-ids)
+  (decode-inverted-index
+   (multiple-value-bind (sql params)
+       (sxql:yield
+        (sxql:select (:token_id :encoded_values)
+          (sxql:from :inverted_index)
+          (sxql:where (:in :token_id token-ids))))
+     (dbi:fetch-all
+      (dbi:execute (dbi:prepare (database-connection database)
+                                sql)
+                   params)))))
 
 (defmethod upsert-inverted-index ((database database) token-id encoded-inverted-values)
   (dbi:do-sql (database-connection database)
@@ -150,20 +173,9 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
                              (couerce-unsigned-byte-vector
                               (encode-inverted-values-to-vector inverted-values))))))
 
-(defmethod resolve-inverted-index ((indexer indexer) token-ids)
-  (let ((records (select-inverted-index (indexer-database indexer) token-ids))
-        (inverted-index (make-inverted-index)))
-    (dolist (record records)
-      (destructuring-bind (&key ((:|token_id| token-id))
-                                ((:|values| values)))
-          record
-        (setf (inverted-index-get inverted-index token-id)
-              (decode-inverted-values-from-vector values))))
-    inverted-index))
-
 (defmethod flush-inverted-index ((indexer indexer))
   (let ((storage-inverted-index
-          (resolve-inverted-index indexer
+          (resolve-inverted-index (indexer-database indexer)
                                   (inverted-index-keys (indexer-inverted-index indexer)))))
     (save-inverted-index indexer
                          (merge-inverted-index (indexer-inverted-index indexer)

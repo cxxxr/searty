@@ -2,8 +2,10 @@ DROP TABLE IF EXISTS document;
 CREATE TABLE document (
 	id TEXT PRIMARY KEY,
 	pathname TEXT,
-	text TEXT
+	body TEXT
 );
+
+CREATE INDEX document_pathname_index ON document(pathname);
 
 DROP TABLE IF EXISTS token;
 CREATE TABLE token (

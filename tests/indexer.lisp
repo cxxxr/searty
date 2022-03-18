@@ -3,12 +3,12 @@
 (defmacro with-temporary-file ((pathname text) &body body)
   (with-unique-names (stream)
     `(uiop:with-temporary-file (:stream ,stream :pathname ,pathname)
-       (write-line ,text ,stream)
+       (write-string ,text ,stream)
        :close-stream
        ,@body)))
 
 (defun call-with-test-database (function)
-  (let ((database-file "/tmp/sqlite-test.sqlite3"))
+  (let ((database-file "/tmp/searty-test.sqlite3"))
     (uiop:delete-file-if-exists database-file)
     (sqlite3-init-database database-file)
     (funcall function database-file)))
@@ -25,4 +25,5 @@
              (indexer (make-instance 'indexer
                                      :analyzer analyzer
                                      :database database)))
-        (add-document indexer doc-file)))))
+        (add-document indexer doc-file)
+        (print (searty::resolve-document-by-pathname database doc-file))))))

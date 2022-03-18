@@ -32,10 +32,11 @@
     (make-document :id id :pathname pathname :body body)))
 
 (defmethod resolve-document-by-pathname ((database database) pathname)
-  (when-let ((record (dbi:fetch-all
-                      (dbi:execute (dbi:prepare (database-connection database)
-                                                "SELECT id, pathname, body FROM document WHERE pathname = ? LIMIT 1")
-                                   (list (princ-to-string pathname))))))
+  (when-let ((record
+              (dbi:fetch-all
+               (dbi:execute (dbi:prepare (database-connection database)
+                                         "SELECT id, pathname, body FROM document WHERE pathname = ? LIMIT 1")
+                            (list (princ-to-string pathname))))))
     (destructuring-bind (&key ((:|id| id))
                               ((:|pathname| pathname))
                               ((:|body| body)))

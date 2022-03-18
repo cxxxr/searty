@@ -13,8 +13,8 @@
 (defgeneric upsert-inverted-index (database token-id encoded-inverted-values))
 
 (defclass database ()
-  ((connection :initarg connection
-               :initform (dbi:connect :sqlite3 :database-name "/tmp/searty.sqlite3")
+  ((connection :initarg :connection
+               :initform (required-argument :connection)
                :reader database-connection)))
 
 (defmethod create-document ((database database) pathname text)
@@ -115,7 +115,8 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
               :reader indexer-analyzer)
    (inverted-index :initform (make-inverted-index)
                    :reader indexer-inverted-index)
-   (database :initform (make-instance 'database)
+   (database :initarg :database
+             :initform (required-argument :database)
              :reader indexer-database)))
 
 (defun convert-document-cache-pathname (pathname)
@@ -180,7 +181,11 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 ;;;
 (defun example-index ()
   (let* ((analyzer (make-instance 'simple-analyzer))
-         (indexer (make-instance 'indexer :analyzer analyzer)))
+         (connection (dbi:connect :sqlite3 :database-name "/tmp/searty.sqlite3"))
+         (database (make-instance 'database :connection connection))
+         (indexer (make-instance 'indexer
+                                 :analyzer analyzer
+                                 :database database)))
     (add-document indexer "searty.lisp")
     indexer))
 

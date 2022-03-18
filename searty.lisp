@@ -13,9 +13,9 @@
 
 ;;; database
 (defgeneric create-document (database pathname text))
-(defgeneric resolve-document (database pathname))
+(defgeneric resolve-document-by-pathname (database pathname))
 (defgeneric create-token (database term))
-(defgeneric find-token (database term))
+(defgeneric resolve-token (database term))
 (defgeneric resolve-inverted-index (database token-ids))
 (defgeneric upsert-inverted-index (database token-id encoded-inverted-values))
 
@@ -49,7 +49,7 @@
       (list id term))
     (make-token :id id :term term)))
 
-(defmethod find-token ((database database) term)
+(defmethod resolve-token ((database database) term)
   (when-let ((records
               (dbi:fetch-all
                (dbi:execute (dbi:prepare (database-connection database)
@@ -157,7 +157,7 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
     (flush-inverted-index indexer)))
 
 (defmethod add-token ((indexer indexer) token-term document pos)
-  (let ((token (or (find-token (indexer-database indexer) token-term)
+  (let ((token (or (resolve-token (indexer-database indexer) token-term)
                    (create-token (indexer-database indexer) token-term))))
     (insert-inverted-value (indexer-inverted-index indexer)
                            (token-id token)

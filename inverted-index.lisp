@@ -72,15 +72,6 @@
     (unless (plusp v) (return))
     (write-byte (+ #x80 (logand v #x7f)) stream)))
 
-(defun encode-inverted-values (inverted-values stream)
-  (encode-positive-integer (length inverted-values) stream)
-  (dolist (inverted-value inverted-values)
-    (encode-inverted-value inverted-value stream)))
-
-(defun encode-inverted-value (inverted-value stream)
-  (encode-uuid (inverted-value-document-id inverted-value) stream)
-  (encode-positive-integer-list (inverted-value-positions inverted-value) stream))
-
 (defun encode-positive-integer-list (integers stream)
   (encode-positive-integer (length integers) stream)
   (dolist (integer integers)
@@ -91,6 +82,20 @@
   (loop :for c :across uuid
         :unless (char= c #\-)
         :do (write-byte (char-code c) stream)))
+
+(defun encode-inverted-value (inverted-value stream)
+  (encode-uuid (inverted-value-document-id inverted-value) stream)
+  (encode-positive-integer-list (inverted-value-positions inverted-value) stream))
+
+(defun encode-inverted-values (inverted-values stream)
+  (encode-positive-integer (length inverted-values) stream)
+  (dolist (inverted-value inverted-values)
+    (encode-inverted-value inverted-value stream)))
+
+(defun encode-inverted-values-to-vector (inverted-values)
+  (with-open-stream (stream (flex:make-in-memory-output-stream))
+    (encode-inverted-values inverted-values stream)
+    (flex:get-output-stream-sequence stream)))
 
 (defun decode-positive-integer (stream)
   (let ((v 0))
@@ -104,16 +109,10 @@
           :while continue)
     v))
 
-(defun decode-inverted-values (stream)
-  (let ((length (decode-positive-integer stream)))
+(defun decode-positive-integer-list (stream)
+  (let ((length (read-byte stream)))
     (loop :repeat length
-          :collect (decode-inverted-value stream))))
-
-(defun decode-inverted-value (stream)
-  (let ((document-id (decode-uuid stream))
-        (positions (decode-positive-integer-list stream)))
-    (make-inverted-value :document-id document-id
-                         :positions positions)))
+          :collect (decode-positive-integer stream))))
 
 (defun decode-uuid (stream)
   (let ((uuid (make-array 36 :element-type '(unsigned-byte 8) :initial-element (char-code #\-))))
@@ -124,16 +123,17 @@
     (read-sequence uuid stream :start 24)
     (map 'string #'code-char uuid)))
 
-(defun decode-positive-integer-list (stream)
-  (let ((length (read-byte stream)))
+(defun decode-inverted-value (stream)
+  (let ((document-id (decode-uuid stream))
+        (positions (decode-positive-integer-list stream)))
+    (make-inverted-value :document-id document-id
+                         :positions positions)))
+
+(defun decode-inverted-values (stream)
+  (let ((length (decode-positive-integer stream)))
     (loop :repeat length
-          :collect (decode-positive-integer stream))))
+          :collect (decode-inverted-value stream))))
 
 (defun decode-inverted-values-from-vector (bytes)
   (with-open-stream (stream (flex:make-in-memory-input-stream bytes))
     (decode-inverted-values stream)))
-
-(defun encode-inverted-values-to-vector (inverted-values)
-  (with-open-stream (stream (flex:make-in-memory-output-stream))
-    (encode-inverted-values inverted-values stream)
-    (flex:get-output-stream-sequence stream)))

@@ -1,6 +1,12 @@
 (defpackage :searty
   (:use :cl :alexandria)
   (:export
+   ;; utils
+   :ngram
+   :random-uuid
+   :word-tokenize
+   :coerce-unsigned-byte-vector
+   ;; sqlite
    :sqlite3-init-database
    ;; entities
    :document-id
@@ -23,6 +29,8 @@
    :indexer
    :add-document
    ;; inverted-index
+   :make-inverted-index
+   :insert-inverted-value
    :inverted-index-get
    :inverted-value-document-id
    :inverted-value-positions

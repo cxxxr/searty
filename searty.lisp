@@ -17,6 +17,7 @@
 (defgeneric create-token (database term))
 (defgeneric resolve-token (database term))
 (defgeneric resolve-inverted-index (database token-ids))
+(defgeneric resolve-whole-inverted-index (database))
 (defgeneric upsert-inverted-index (database token-id encoded-doc-locations))
 
 (defclass database ()
@@ -71,17 +72,28 @@
               (decode-doc-locations-from-vector values))))
     inverted-index))
 
-(defmethod resolve-inverted-index ((database database) token-ids)
+(defun resolve-inverted-index-aux (database sxql)
   (decode-inverted-index
-   (multiple-value-bind (sql params)
-       (sxql:yield
-        (sxql:select (:token_id :encoded_values)
-          (sxql:from :inverted_index)
-          (sxql:where (:in :token_id token-ids))))
+   (multiple-value-bind (sql params) sxql
      (dbi:fetch-all
       (dbi:execute (dbi:prepare (database-connection database)
                                 sql)
                    params)))))
+
+(defmethod resolve-inverted-index ((database database) token-ids)
+  (resolve-inverted-index-aux
+   database
+   (sxql:yield
+    (sxql:select (:token_id :encoded_values)
+      (sxql:from :inverted_index)
+      (sxql:where (:in :token_id token-ids))))))
+
+(defmethod resolve-whole-inverted-index ((database database))
+  (resolve-inverted-index-aux
+   database
+   (sxql:yield
+    (sxql:select (:token_id :encoded_values)
+      (sxql:from :inverted_index)))))
 
 (defmethod upsert-inverted-index ((database database) token-id encoded-doc-locations)
   (dbi:do-sql (database-connection database)

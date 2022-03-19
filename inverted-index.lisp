@@ -1,5 +1,8 @@
 (in-package :searty)
 
+(defun merge-positions (positions1 positions2)
+  (merge 'list positions1 positions2 #'<))
+
 (defstruct doc-location
   document-id
   positions)
@@ -9,6 +12,29 @@
               (doc-location-document-id doc-location-2))
        (equal (doc-location-positions doc-location-1)
               (doc-location-positions doc-location-2))))
+
+(defun merge-doc-location (doc-locations document-id pos)
+  (dolist (loc doc-locations)
+    (when (equal document-id (doc-location-document-id loc))
+      (setf (doc-location-positions loc)
+            (merge-positions (list pos) (doc-location-positions loc)))
+      (return-from merge-doc-location doc-locations)))
+  (cons (make-doc-location :document-id document-id :positions (list pos))
+        doc-locations))
+
+(defun merge-doc-locations (destination-doc-locations source-doc-locations)
+  (dolist (source-doc-location source-doc-locations)
+    (if-let ((destination-doc-location
+              (find (doc-location-document-id source-doc-location)
+                    destination-doc-locations
+                    :test #'equal
+                    :key #'doc-location-document-id)))
+      (setf (doc-location-positions destination-doc-location)
+            (merge-positions (doc-location-positions destination-doc-location)
+                             (doc-location-positions source-doc-location)))
+      (push source-doc-location
+            destination-doc-locations)))
+  destination-doc-locations)
 
 (defstruct inverted-index
   (map (make-hash-table :test 'equal)))
@@ -26,18 +52,6 @@
                     (hash-table-values map-2)
                     :test (lambda (locs-1 locs-2)
                             (set-equal locs-1 locs-2 :test #'doc-location-equal))))))
-
-(defun merge-positions (positions1 positions2)
-  (merge 'list positions1 positions2 #'<))
-
-(defun merge-doc-location (doc-locations document-id pos)
-  (dolist (loc doc-locations)
-    (when (equal document-id (doc-location-document-id loc))
-      (setf (doc-location-positions loc)
-            (merge-positions (list pos) (doc-location-positions loc)))
-      (return-from merge-doc-location doc-locations)))
-  (cons (make-doc-location :document-id document-id :positions (list pos))
-        doc-locations))
 
 (defun insert-doc-location (inverted-index token-id document-id pos)
   (let* ((map (inverted-index-map inverted-index))
@@ -60,20 +74,6 @@
 
 (defun inverted-index-keys (inverted-index)
   (hash-table-keys (inverted-index-map inverted-index)))
-
-(defun merge-doc-locations (destination-doc-locations source-doc-locations)
-  (dolist (source-doc-location source-doc-locations)
-    (if-let ((destination-doc-location
-              (find (doc-location-document-id source-doc-location)
-                    destination-doc-locations
-                    :test #'equal
-                    :key #'doc-location-document-id)))
-      (setf (doc-location-positions destination-doc-location)
-            (merge-positions (doc-location-positions destination-doc-location)
-                             (doc-location-positions source-doc-location)))
-      (push source-doc-location
-            destination-doc-locations)))
-  destination-doc-locations)
 
 (defun merge-inverted-index (destination source)
   (do-inverted-index ((token-id doc-locations) source)

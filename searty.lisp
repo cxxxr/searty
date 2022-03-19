@@ -216,7 +216,7 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
              :initform (required-argument :database)
              :reader searcher-database)))
 
-(defgeneric match (query tokens inverted-index))
+(defgeneric match (query inverted-index))
 
 (defclass query ()
   ((text :initarg :text
@@ -226,13 +226,56 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 (defclass or-matcher (query) ())
 (defclass phrase-matcher (query) ())
 
-(defmethod match ((query and-matcher) tokens inverted-index)
+(defstruct (posting (:constructor make-posting (doc-locations)))
+  doc-locations)
+
+(defun posting-head-doc-id (posting)
+  (doc-location-document-id (first (posting-doc-locations posting))))
+
+(defun posting-null-p (posting)
+  (null (posting-doc-locations posting)))
+
+(defun same-document-id-p (postings)
+  (let ((doc-id (posting-head-doc-id (first postings))))
+    (loop :for posting :in (rest postings)
+          :always (equal doc-id (posting-head-doc-id posting)))))
+
+(defun posting-next (posting)
+  (setf (posting-doc-locations posting)
+        (rest (posting-doc-locations posting)))
+  posting)
+
+(defun posting-next-all (postings)
+  (dolist (posting postings)
+    (posting-next posting)))
+
+(defun minimize-posting (postings)
+  (let ((min (first postings)))
+    (dolist (posting (rest postings))
+      (when (string< (posting-head-doc-id posting) (posting-head-doc-id min))
+        (setf min posting)))
+    min))
+
+(defun next-minimum-id-posting (postings)
+  (let ((posting (minimize-posting postings)))
+    (posting-next posting)))
+
+(defmethod match ((query and-matcher) inverted-index)
+  (let ((postings (collect-inverted-index-values inverted-index #'make-posting))
+        (matched-doc-locations '()))
+    (loop :until (some #'posting-null-p postings)
+          :do (cond ((same-document-id-p postings)
+                     (push (first (posting-doc-locations (first postings)))
+                           matched-doc-locations)
+                     (posting-next-all postings))
+                    (t
+                     (next-minimum-id-posting postings))))
+    matched-doc-locations))
+
+(defmethod match ((query or-matcher) inverted-index)
   )
 
-(defmethod match ((query or-matcher) tokens inverted-index)
-  )
-
-(defmethod match ((query phrase-matcher) tokens inverted-index)
+(defmethod match ((query phrase-matcher) inverted-index)
   )
 
 (defmethod do-search ((searcher searcher) query)
@@ -243,8 +286,7 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
          (inverted-index
            (resolve-inverted-index (searcher-database searcher)
                                    (mapcar #'token-id tokens))))
-    (match query tokens inverted-index)
-    inverted-index))
+    (match query inverted-index)))
 
 ;;;
 (defun example-index ()

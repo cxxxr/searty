@@ -91,6 +91,13 @@
 (defun inverted-index-tokens (inverted-index)
   (hash-table-keys (inverted-index-map inverted-index)))
 
+(defun collect-inverted-index-values (inverted-index make-function)
+  (let ((values '()))
+    (do-inverted-index ((token-id locs) inverted-index)
+      (declare (ignore token-id))
+      (push (funcall make-function locs) values))
+    values))
+
 (defun merge-inverted-index (destination source)
   (do-inverted-index ((token-id doc-locations) source)
     (setf (get-doc-locations destination token-id)

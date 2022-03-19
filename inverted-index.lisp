@@ -97,11 +97,13 @@
 
 ;;; encode/decode
 (defun encode-positive-integer (v stream)
-  (write-byte (logand v #x7f) stream)
-  (loop
-    (setf v (ash v -7))
-    (unless (plusp v) (return))
-    (write-byte (+ #x80 (logand v #x7f)) stream)))
+  (let ((bytes '()))
+    (push (logand v #x7f) bytes)
+    (loop
+      (setf v (ash v -7))
+      (unless (plusp v) (return))
+      (push (+ #x80 (logand v #x7f)) bytes))
+    (write-sequence bytes stream)))
 
 (defun encode-positive-integer-list (integers stream)
   (encode-positive-integer (length integers) stream)

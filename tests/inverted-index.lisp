@@ -99,8 +99,8 @@
         (d1 (random-uuid))
         (d2 (random-uuid))
         (d3 (random-uuid)))
-    (let ((inverted-index (index ((t1 (d1 1 2 3) (d2 1 2))
-                                  (t2 (d1 3) (d3 5 10))))))
+    (let ((inverted-index (index ((t1 (d1 1 2 3 241099124) (d2 1 2))
+                                  (t2 (d1 3) (d3 5 10 553))))))
       (do-inverted-index ((token-id doc-locations) inverted-index)
         (declare (ignorable token-id))
         (ok (doc-locations-equal doc-locations

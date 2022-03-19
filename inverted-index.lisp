@@ -65,22 +65,6 @@
   destination)
 
 ;;; encode/decode
-
-#|
-inverted-values
-length inverted-value...
-lengthは長さを表すバイト列
-
-inverted-value
-document-id, positions
-
-document-id
-0x1 UUIDがバイト列で詰め込まれる
-
-positions
-length position...
-|#
-
 (defun encode-positive-integer (v stream)
   (write-byte (logand v #x7f) stream)
   (loop

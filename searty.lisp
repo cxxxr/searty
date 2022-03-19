@@ -171,7 +171,7 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
     (do-inverted-index ((token-id inverted-values) inverted-index)
       (upsert-inverted-index database
                              token-id
-                             (couerce-unsigned-byte-vector
+                             (coerce-unsigned-byte-vector
                               (encode-inverted-values-to-vector inverted-values))))))
 
 (defmethod flush-inverted-index ((indexer indexer))

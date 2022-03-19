@@ -37,7 +37,7 @@
       (ok (equal doc-id-2 (doc-location-document-id loc2)))
       (ok (equal '(1 3 5) (doc-location-positions loc2))))))
 
-(defun make-test-inverted-index (spec)
+(defun make-testing-inverted-index (spec)
   (let ((inverted-index (make-inverted-index)))
     (loop :for (token . locs) :in spec
           :do (loop :for (doc . positions) :in locs
@@ -45,11 +45,16 @@
                           (insert-doc-location inverted-index token doc pos))))
     inverted-index))
 
-(defun parse (spec)
-  `(list
-    ,@(loop :for (token . locs) :in spec
-            :collect `(list ,token ,@(loop :for (doc . positions) :in locs
-                                           :collect `(list ,doc ,@positions))))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun parse (spec)
+    `(list
+      ,@(loop :for (token . locs) :in spec
+              :collect `(list ,token ,@(loop :for (doc . positions) :in locs
+                                             :collect `(list ,doc ,@positions)))))))
+
+(defmacro index (spec)
+  (let ((spec (parse spec)))
+    `(make-testing-inverted-index ,spec)))
 
 (deftest inverted-index/merge-inverted-index
   (macrolet ((test (input-1 input-2 output)
@@ -58,11 +63,11 @@
                        (input-2 (parse input-2))
                        (output (parse output)))
                    `(let ((,result
-                            (merge-inverted-index (make-test-inverted-index ,input-1)
-                                                  (make-test-inverted-index ,input-2))))
+                            (merge-inverted-index (make-testing-inverted-index ,input-1)
+                                                  (make-testing-inverted-index ,input-2))))
                       ;; (print (searty::dump-inverted-index ,result))
                       (inverted-index-equal ,result
-                                            (make-test-inverted-index ,output)))))))
+                                            (make-testing-inverted-index ,output)))))))
     (let ((d1 "d1")
           (d2 "d2")
           (d3 "d3")
@@ -87,3 +92,18 @@
                 ((t1 (d1 1 2 10) (d2 4 5))
                  (t2 (d2 2 3))
                  (t3 (d3 10))))))))
+
+(deftest inverted-index/encode-decode
+  (let ((t1 (random-uuid))
+        (t2 (random-uuid))
+        (d1 (random-uuid))
+        (d2 (random-uuid))
+        (d3 (random-uuid)))
+    (let ((inverted-index (index ((t1 (d1 1 2 3) (d2 1 2))
+                                  (t2 (d1 3) (d3 5 10))))))
+      (do-inverted-index ((token-id doc-locations) inverted-index)
+        (declare (ignorable token-id))
+        (ok (doc-locations-equal doc-locations
+                                 (decode-doc-locations-from-vector
+                                  (encode-doc-locations-to-vector
+                                   doc-locations))))))))

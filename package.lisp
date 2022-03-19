@@ -31,10 +31,12 @@
    ;; inverted-index
    :doc-location-document-id
    :doc-location-positions
+   :doc-locations-equal
    :make-inverted-index
    :inverted-index-equal
    :insert-doc-location
    :get-doc-locations
+   :do-inverted-index
    :merge-inverted-index
    :encode-doc-locations-to-vector
    :decode-doc-locations-from-vector))

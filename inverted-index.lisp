@@ -13,6 +13,9 @@
        (equal (doc-location-positions doc-location-1)
               (doc-location-positions doc-location-2))))
 
+(defun doc-locations-equal (doc-locations-1 doc-locations-2)
+  (set-equal doc-locations-1 doc-locations-2 :test #'doc-location-equal))
+
 (defun merge-doc-location (doc-locations document-id pos)
   (dolist (loc doc-locations)
     (when (equal document-id (doc-location-document-id loc))
@@ -61,8 +64,7 @@
                     :test #'equal)
          (set-equal (hash-table-values map-1)
                     (hash-table-values map-2)
-                    :test (lambda (locs-1 locs-2)
-                            (set-equal locs-1 locs-2 :test #'doc-location-equal))))))
+                    :test #'doc-locations-equal))))
 
 (defun insert-doc-location (inverted-index token-id document-id pos)
   (let* ((map (inverted-index-map inverted-index))

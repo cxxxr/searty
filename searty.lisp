@@ -14,6 +14,7 @@
 ;;; database
 (defgeneric create-document (database pathname text))
 (defgeneric resolve-document-by-pathname (database pathname))
+(defgeneric resolve-document-by-ids (database id))
 (defgeneric create-token (database term))
 (defgeneric resolve-token (database term))
 (defgeneric resolve-inverted-index (database token-ids))
@@ -32,17 +33,31 @@
       (list id (namestring pathname) body))
     (make-document :id id :pathname pathname :body body)))
 
+(defun make-document-from-record (record)
+  (destructuring-bind (&key ((:|id| id))
+                            ((:|pathname| pathname))
+                            ((:|body| body)))
+      record
+    (make-document :id id :pathname pathname :body body)))
+
 (defmethod resolve-document-by-pathname ((database database) pathname)
-  (when-let ((record
+  (when-let ((records
               (dbi:fetch-all
                (dbi:execute (dbi:prepare (database-connection database)
                                          "SELECT id, pathname, body FROM document WHERE pathname = ? LIMIT 1")
                             (list (princ-to-string pathname))))))
-    (destructuring-bind (&key ((:|id| id))
-                              ((:|pathname| pathname))
-                              ((:|body| body)))
-        (first record)
-      (make-document :id id :pathname pathname :body body))))
+    (make-document-from-record (first records))))
+
+(defmethod resolve-document-by-ids ((database database) ids)
+  (multiple-value-bind (sql params)
+      (sxql:yield
+       (sxql:select (:id :pathname :body)
+         (sxql:from :document)
+         (sxql:where (:in :id ids))))
+    (mapcar #'make-document-from-record
+            (dbi:fetch-all
+             (dbi:execute (dbi:prepare (database-connection database) sql)
+                          params)))))
 
 (defmethod create-token ((database database) term)
   (let ((id (random-uuid)))
@@ -286,7 +301,9 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
          (inverted-index
            (resolve-inverted-index (searcher-database searcher)
                                    (mapcar #'token-id tokens))))
-    (match query inverted-index)))
+    (let ((doc-locations (match query inverted-index)))
+      (resolve-document-by-ids (searcher-database searcher)
+                               (mapcar #'doc-location-document-id doc-locations)))))
 
 ;;;
 (defun example-index ()
@@ -306,8 +323,8 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
   (defparameter $analyzer (make-instance 'simple-analyzer))
   (defparameter $database (make-instance 'database :connection (dbi:connect :sqlite3 :database-name "/tmp/searty.sqlite3")))
   (defparameter $indexer (make-instance 'indexer
-                                        :analyzer analyzer
-                                        :database database))
+                                        :analyzer $analyzer
+                                        :database $database))
   (defparameter $searcher (make-instance 'searcher
                                          :analyzer $analyzer
                                          :database $database)))

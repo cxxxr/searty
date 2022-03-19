@@ -4,11 +4,28 @@
   document-id
   positions)
 
+(defun doc-location-equal (doc-location-1 doc-location-2)
+  (and (equal (doc-location-document-id doc-location-1)
+              (doc-location-document-id doc-location-2))
+       (equal (doc-location-positions doc-location-1)
+              (doc-location-positions doc-location-2))))
+
 (defstruct inverted-index
   (map (make-hash-table :test 'equal)))
 
 (defun clear-inverted-index (inverted-index)
   (clrhash (inverted-index-map inverted-index)))
+
+(defun inverted-index-equal (inverted-index-1 inverted-index-2)
+  (let ((map-1 (inverted-index-map inverted-index-1))
+        (map-2 (inverted-index-map inverted-index-2)))
+    (and (set-equal (hash-table-keys map-1)
+                    (hash-table-keys map-2)
+                    :test #'equal)
+         (set-equal (hash-table-values map-1)
+                    (hash-table-values map-2)
+                    :test (lambda (locs-1 locs-2)
+                            (set-equal locs-1 locs-2 :test #'doc-location-equal))))))
 
 (defun merge-positions (positions1 positions2)
   (merge 'list positions1 positions2 #'<))

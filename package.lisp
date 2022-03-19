@@ -29,9 +29,10 @@
    :indexer
    :add-document
    ;; inverted-index
-   :make-inverted-index
-   :insert-doc-location
-   :get-doc-locations
    :doc-location-document-id
    :doc-location-positions
-   ))
+   :make-inverted-index
+   :inverted-index-equal
+   :insert-doc-location
+   :get-doc-locations
+   :merge-inverted-index))

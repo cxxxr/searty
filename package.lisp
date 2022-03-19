@@ -2,6 +2,12 @@
   (:use :cl :alexandria)
   (:export
    :sqlite3-init-database
+   ;; entities
+   :document-id
+   :document-pathname
+   :document-body
+   :token-id
+   :token-term
    ;; analyzer
    :simple-analyzer
    :analyze
@@ -15,4 +21,9 @@
    :upsert-inverted-index
    ;; indexer
    :indexer
-   :add-document))
+   :add-document
+   ;; inverted-index
+   :inverted-index-get
+   :inverted-value-document-id
+   :inverted-value-positions
+   ))

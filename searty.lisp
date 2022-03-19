@@ -65,7 +65,7 @@
   (let ((inverted-index (make-inverted-index)))
     (dolist (record records)
       (destructuring-bind (&key ((:|token_id| token-id))
-                                ((:|values| values)))
+                                ((:|encoded_values| values)))
           record
         (setf (inverted-index-get inverted-index token-id)
               (decode-inverted-values-from-vector values))))

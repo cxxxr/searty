@@ -39,6 +39,17 @@
 (defstruct inverted-index
   (map (make-hash-table :test 'equal)))
 
+(defun dump-inverted-index (inverted-index)
+  (let ((table '()))
+    (maphash (lambda (token locs)
+               (push (cons token
+                           (loop :for loc :in locs
+                                 :collect (cons (doc-location-document-id loc)
+                                                (doc-location-positions loc))))
+                     table))
+             (inverted-index-map inverted-index))
+    table))
+
 (defun clear-inverted-index (inverted-index)
   (clrhash (inverted-index-map inverted-index)))
 

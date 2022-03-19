@@ -177,7 +177,7 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 (defmethod flush-inverted-index ((indexer indexer))
   (let ((storage-inverted-index
           (resolve-inverted-index (indexer-database indexer)
-                                  (inverted-index-keys (indexer-inverted-index indexer)))))
+                                  (inverted-index-tokens (indexer-inverted-index indexer)))))
     (save-inverted-index indexer
                          (merge-inverted-index (indexer-inverted-index indexer)
                                                storage-inverted-index)))

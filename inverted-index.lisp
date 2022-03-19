@@ -72,7 +72,7 @@
               ,@body)
             (inverted-index-map ,inverted-index)))
 
-(defun inverted-index-keys (inverted-index)
+(defun inverted-index-tokens (inverted-index)
   (hash-table-keys (inverted-index-map inverted-index)))
 
 (defun merge-inverted-index (destination source)

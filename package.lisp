@@ -30,8 +30,8 @@
    :add-document
    ;; inverted-index
    :make-inverted-index
-   :insert-inverted-value
-   :inverted-index-get
-   :inverted-value-document-id
-   :inverted-value-positions
+   :insert-doc-location
+   :get-doc-locations
+   :doc-location-document-id
+   :doc-location-positions
    ))

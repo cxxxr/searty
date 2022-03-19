@@ -1,6 +1,6 @@
 (in-package :searty)
 
-(defstruct inverted-value
+(defstruct doc-location
   document-id
   positions)
 
@@ -13,55 +13,55 @@
 (defun merge-positions (positions1 positions2)
   (merge 'list positions1 positions2 #'<))
 
-(defun merge-inverted-value (inverted-values document-id pos)
-  (dolist (inverted-value inverted-values)
-    (when (equal document-id (inverted-value-document-id inverted-value))
-      (setf #1=(inverted-value-positions inverted-value)
+(defun merge-doc-location (doc-locations document-id pos)
+  (dolist (loc doc-locations)
+    (when (equal document-id (doc-location-document-id loc))
+      (setf #1=(doc-location-positions loc)
             (merge-positions (list pos) #1#))
-      (return-from merge-inverted-value inverted-values)))
-  (cons (make-inverted-value :document-id document-id :positions (list pos))
-        inverted-values))
+      (return-from merge-doc-location doc-locations)))
+  (cons (make-doc-location :document-id document-id :positions (list pos))
+        doc-locations))
 
-(defun insert-inverted-value (inverted-index token-id document-id pos)
-  (let ((inverted-values #1=(gethash token-id (inverted-index-map inverted-index))))
+(defun insert-doc-location (inverted-index token-id document-id pos)
+  (let ((doc-locations #1=(gethash token-id (inverted-index-map inverted-index))))
     (setf #1#
-          (merge-inverted-value inverted-values document-id pos)))
+          (merge-doc-location doc-locations document-id pos)))
   (values))
 
-(defun inverted-index-get (inverted-index token-id)
+(defun get-doc-locations (inverted-index token-id)
   (gethash token-id (inverted-index-map inverted-index)))
 
-(defun (setf inverted-index-get) (inverted-values inverted-index token-id)
+(defun (setf get-doc-locations) (doc-locations inverted-index token-id)
   (setf (gethash token-id (inverted-index-map inverted-index))
-        inverted-values))
+        doc-locations))
 
-(defmacro do-inverted-index (((token-id inverted-values) inverted-index) &body body)
-  `(maphash (lambda (,token-id ,inverted-values)
+(defmacro do-inverted-index (((token-id doc-locations) inverted-index) &body body)
+  `(maphash (lambda (,token-id ,doc-locations)
               ,@body)
             (inverted-index-map ,inverted-index)))
 
 (defun inverted-index-keys (inverted-index)
   (hash-table-keys (inverted-index-map inverted-index)))
 
-(defun merge-inverted-values (destination-values source-values)
-  (dolist (source-inverted-value source-values)
-    (if-let ((destination-inverted-value
-              (find (inverted-value-document-id source-inverted-value)
-                    destination-values
+(defun merge-doc-locations (destination-doc-locations source-doc-locations)
+  (dolist (source-doc-location source-doc-locations)
+    (if-let ((destination-doc-location
+              (find (doc-location-document-id source-doc-location)
+                    destination-doc-locations
                     :test #'equal
-                    :key #'inverted-value-document-id)))
-      (setf (inverted-value-positions destination-inverted-value)
-            (merge-positions (inverted-value-positions destination-inverted-value)
-                             (inverted-value-positions source-inverted-value)))
-      (push source-inverted-value
-            destination-values)))
-  destination-values)
+                    :key #'doc-location-document-id)))
+      (setf (doc-location-positions destination-doc-location)
+            (merge-positions (doc-location-positions destination-doc-location)
+                             (doc-location-positions source-doc-location)))
+      (push source-doc-location
+            destination-doc-locations)))
+  destination-doc-locations)
 
 (defun merge-inverted-index (destination source)
-  (do-inverted-index ((token-id inverted-values) source)
-    (setf (inverted-index-get destination token-id)
-          (merge-inverted-values (inverted-index-get destination token-id)
-                                 inverted-values)))
+  (do-inverted-index ((token-id doc-locations) source)
+    (setf (get-doc-locations destination token-id)
+          (merge-doc-locations (get-doc-locations destination token-id)
+                               doc-locations)))
   destination)
 
 ;;; encode/decode
@@ -83,18 +83,18 @@
         :unless (char= c #\-)
         :do (write-byte (char-code c) stream)))
 
-(defun encode-inverted-value (inverted-value stream)
-  (encode-uuid (inverted-value-document-id inverted-value) stream)
-  (encode-positive-integer-list (inverted-value-positions inverted-value) stream))
+(defun encode-doc-location (doc-location stream)
+  (encode-uuid (doc-location-document-id doc-location) stream)
+  (encode-positive-integer-list (doc-location-positions doc-location) stream))
 
-(defun encode-inverted-values (inverted-values stream)
-  (encode-positive-integer (length inverted-values) stream)
-  (dolist (inverted-value inverted-values)
-    (encode-inverted-value inverted-value stream)))
+(defun encode-doc-locations (doc-locations stream)
+  (encode-positive-integer (length doc-locations) stream)
+  (dolist (loc doc-locations)
+    (encode-doc-location loc stream)))
 
-(defun encode-inverted-values-to-vector (inverted-values)
+(defun encode-doc-locations-to-vector (doc-locations)
   (with-open-stream (stream (flex:make-in-memory-output-stream))
-    (encode-inverted-values inverted-values stream)
+    (encode-doc-locations doc-locations stream)
     (flex:get-output-stream-sequence stream)))
 
 (defun decode-positive-integer (stream)
@@ -123,17 +123,17 @@
     (read-sequence uuid stream :start 24)
     (map 'string #'code-char uuid)))
 
-(defun decode-inverted-value (stream)
+(defun decode-doc-location (stream)
   (let ((document-id (decode-uuid stream))
         (positions (decode-positive-integer-list stream)))
-    (make-inverted-value :document-id document-id
-                         :positions positions)))
+    (make-doc-location :document-id document-id
+                       :positions positions)))
 
-(defun decode-inverted-values (stream)
+(defun decode-doc-locations (stream)
   (let ((length (decode-positive-integer stream)))
     (loop :repeat length
-          :collect (decode-inverted-value stream))))
+          :collect (decode-doc-location stream))))
 
-(defun decode-inverted-values-from-vector (bytes)
+(defun decode-doc-locations-from-vector (bytes)
   (with-open-stream (stream (flex:make-in-memory-input-stream bytes))
-    (decode-inverted-values stream)))
+    (decode-doc-locations stream)))

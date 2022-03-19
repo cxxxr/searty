@@ -17,7 +17,7 @@
 (defgeneric create-token (database term))
 (defgeneric resolve-token (database term))
 (defgeneric resolve-inverted-index (database token-ids))
-(defgeneric upsert-inverted-index (database token-id encoded-inverted-values))
+(defgeneric upsert-inverted-index (database token-id encoded-doc-locations))
 
 (defclass database ()
   ((connection :initarg :connection
@@ -67,8 +67,8 @@
       (destructuring-bind (&key ((:|token_id| token-id))
                                 ((:|encoded_values| values)))
           record
-        (setf (inverted-index-get inverted-index token-id)
-              (decode-inverted-values-from-vector values))))
+        (setf (get-doc-locations inverted-index token-id)
+              (decode-doc-locations-from-vector values))))
     inverted-index))
 
 (defmethod resolve-inverted-index ((database database) token-ids)
@@ -83,13 +83,13 @@
                                 sql)
                    params)))))
 
-(defmethod upsert-inverted-index ((database database) token-id encoded-inverted-values)
+(defmethod upsert-inverted-index ((database database) token-id encoded-doc-locations)
   (dbi:do-sql (database-connection database)
     "INSERT INTO inverted_index (token_id, encoded_values) VALUES (?, ?)
 ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
     (list token-id
-          encoded-inverted-values
-          encoded-inverted-values)))
+          encoded-doc-locations
+          encoded-doc-locations)))
 
 
 ;;; character filter
@@ -160,19 +160,19 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 (defmethod add-token ((indexer indexer) token-term document pos)
   (let ((token (or (resolve-token (indexer-database indexer) token-term)
                    (create-token (indexer-database indexer) token-term))))
-    (insert-inverted-value (indexer-inverted-index indexer)
-                           (token-id token)
-                           (document-id document)
-                           pos)
+    (insert-doc-location (indexer-inverted-index indexer)
+                         (token-id token)
+                         (document-id document)
+                         pos)
     (values)))
 
 (defmethod save-inverted-index ((indexer indexer) inverted-index)
   (let ((database (indexer-database indexer)))
-    (do-inverted-index ((token-id inverted-values) inverted-index)
+    (do-inverted-index ((token-id doc-locations) inverted-index)
       (upsert-inverted-index database
                              token-id
                              (coerce-unsigned-byte-vector
-                              (encode-inverted-values-to-vector inverted-values))))))
+                              (encode-doc-locations-to-vector doc-locations))))))
 
 (defmethod flush-inverted-index ((indexer indexer))
   (let ((storage-inverted-index

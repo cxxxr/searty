@@ -1,7 +1,7 @@
 (in-package :searty)
 
 (defun merge-positions (positions1 positions2)
-  (merge 'list positions1 positions2 #'<))
+  (delete-duplicates (merge 'list positions1 positions2 #'<)))
 
 (defstruct doc-location
   document-id

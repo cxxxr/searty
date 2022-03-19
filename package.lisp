@@ -35,4 +35,6 @@
    :inverted-index-equal
    :insert-doc-location
    :get-doc-locations
-   :merge-inverted-index))
+   :merge-inverted-index
+   :encode-doc-locations-to-vector
+   :decode-doc-locations-from-vector))

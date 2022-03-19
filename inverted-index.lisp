@@ -16,15 +16,16 @@
 (defun merge-doc-location (doc-locations document-id pos)
   (dolist (loc doc-locations)
     (when (equal document-id (doc-location-document-id loc))
-      (setf #1=(doc-location-positions loc)
-            (merge-positions (list pos) #1#))
+      (setf (doc-location-positions loc)
+            (merge-positions (list pos) (doc-location-positions loc)))
       (return-from merge-doc-location doc-locations)))
   (cons (make-doc-location :document-id document-id :positions (list pos))
         doc-locations))
 
 (defun insert-doc-location (inverted-index token-id document-id pos)
-  (let ((doc-locations #1=(gethash token-id (inverted-index-map inverted-index))))
-    (setf #1#
+  (let* ((map (inverted-index-map inverted-index))
+         (doc-locations (gethash token-id map)))
+    (setf (gethash token-id map)
           (merge-doc-location doc-locations document-id pos)))
   (values))
 

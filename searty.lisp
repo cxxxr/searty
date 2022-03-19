@@ -244,8 +244,11 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 (defstruct (posting (:constructor make-posting (doc-locations)))
   doc-locations)
 
+(defun posting-head-doc-location (posting)
+  (first (posting-doc-locations posting)))
+
 (defun posting-head-doc-id (posting)
-  (doc-location-document-id (first (posting-doc-locations posting))))
+  (doc-location-document-id (posting-head-doc-location posting)))
 
 (defun posting-null-p (posting)
   (null (posting-doc-locations posting)))
@@ -280,7 +283,7 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
         (matched-doc-locations '()))
     (loop :until (some #'posting-null-p postings)
           :do (cond ((same-document-id-p postings)
-                     (push (first (posting-doc-locations (first postings)))
+                     (push (posting-head-doc-location (first postings))
                            matched-doc-locations)
                      (posting-next-all postings))
                     (t

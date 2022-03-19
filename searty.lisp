@@ -51,16 +51,31 @@
       (list id term))
     (make-token :id id :term term)))
 
+(defun make-token-from-record (record)
+  (destructuring-bind (&key ((:|id| id))
+                            ((:|term| term)))
+      record
+    (make-token :id id :term term)))
+
 (defmethod resolve-token ((database database) term)
   (when-let ((records
               (dbi:fetch-all
                (dbi:execute (dbi:prepare (database-connection database)
                                          "SELECT term, id FROM token WHERE term = ? LIMIT 1")
                             (list term)))))
-    (destructuring-bind (&key ((:|id| id))
-                              ((:|term| term)))
-        (first records)
-      (make-token :id id :term term))))
+    (make-token-from-record (first records))))
+
+(defmethod resolve-tokens ((database database) terms)
+  (multiple-value-bind (sql params)
+      (sxql:yield
+       (sxql:select (:term :id)
+         (sxql:from :token)
+         (sxql:where (:in :term terms))))
+    (let ((records
+            (dbi:fetch-all
+             (dbi:execute (dbi:prepare (database-connection database) sql)
+                          params))))
+      (mapcar #'make-token-from-record records))))
 
 (defun decode-inverted-index (records)
   (let ((inverted-index (make-inverted-index)))
@@ -74,26 +89,23 @@
 
 (defun resolve-inverted-index-aux (database sxql)
   (decode-inverted-index
-   (multiple-value-bind (sql params) sxql
+   (multiple-value-bind (sql params) (sxql:yield sxql)
      (dbi:fetch-all
-      (dbi:execute (dbi:prepare (database-connection database)
-                                sql)
+      (dbi:execute (dbi:prepare (database-connection database) sql)
                    params)))))
 
 (defmethod resolve-inverted-index ((database database) token-ids)
   (resolve-inverted-index-aux
    database
-   (sxql:yield
-    (sxql:select (:token_id :encoded_values)
-      (sxql:from :inverted_index)
-      (sxql:where (:in :token_id token-ids))))))
+   (sxql:select (:token_id :encoded_values)
+     (sxql:from :inverted_index)
+     (sxql:where (:in :token_id token-ids)))))
 
 (defmethod resolve-whole-inverted-index ((database database))
   (resolve-inverted-index-aux
    database
-   (sxql:yield
-    (sxql:select (:token_id :encoded_values)
-      (sxql:from :inverted_index)))))
+   (sxql:select (:token_id :encoded_values)
+     (sxql:from :inverted_index))))
 
 (defmethod upsert-inverted-index ((database database) token-id encoded-doc-locations)
   (dbi:do-sql (database-connection database)
@@ -196,6 +208,45 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
   (clear-inverted-index (indexer-inverted-index indexer)))
 
 ;;;
+(defclass searcher ()
+  ((analyzer :initarg :analyzer
+             :initform (required-argument :analyzer)
+             :reader searcher-analyzer)
+   (database :initarg :database
+             :initform (required-argument :database)
+             :reader searcher-database)))
+
+(defgeneric match (query tokens inverted-index))
+
+(defclass query ()
+  ((text :initarg :text
+         :initform (required-argument :text)
+         :reader query-text)))
+(defclass and-matcher (query) ())
+(defclass or-matcher (query) ())
+(defclass phrase-matcher (query) ())
+
+(defmethod match ((query and-matcher) tokens inverted-index)
+  )
+
+(defmethod match ((query or-matcher) tokens inverted-index)
+  )
+
+(defmethod match ((query phrase-matcher) tokens inverted-index)
+  )
+
+(defmethod do-search ((searcher searcher) query)
+  (let* ((tokens
+           (resolve-tokens (searcher-database searcher)
+                           (analyze (searcher-analyzer searcher)
+                                    (query-text query))))
+         (inverted-index
+           (resolve-inverted-index (searcher-database searcher)
+                                   (mapcar #'token-id tokens))))
+    (match query tokens inverted-index)
+    inverted-index))
+
+;;;
 (defun example-index ()
   (let* ((analyzer (make-instance 'simple-analyzer))
          (connection (dbi:connect :sqlite3 :database-name "/tmp/searty.sqlite3"))
@@ -203,9 +254,18 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
          (indexer (make-instance 'indexer
                                  :analyzer analyzer
                                  :database database)))
+    (add-document indexer "package.lisp")
+    (add-document indexer "utils.lisp")
+    (add-document indexer "inverted-index.lisp")
     (add-document indexer "searty.lisp")
     indexer))
 
-#+(or)
-(defun example-search (indexer query)
-  )
+(eval-when ()
+  (defparameter $analyzer (make-instance 'simple-analyzer))
+  (defparameter $database (make-instance 'database :connection (dbi:connect :sqlite3 :database-name "/tmp/searty.sqlite3")))
+  (defparameter $indexer (make-instance 'indexer
+                                        :analyzer analyzer
+                                        :database database))
+  (defparameter $searcher (make-instance 'searcher
+                                         :analyzer $analyzer
+                                         :database $database)))

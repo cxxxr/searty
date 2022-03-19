@@ -1,5 +1,9 @@
 (in-package :searty-tests)
 
+(defun random-sorting-uuids (n)
+  (sort (loop :repeat n :collect (random-uuid))
+        #'string<))
+
 (deftest inverted-index/insert-doc-location
   (let ((token-id (random-uuid))
         (doc-id (random-uuid))
@@ -13,10 +17,11 @@
       (ok (equal '(0 1 2 3 4 5 6 7 8 9)
                  (doc-location-positions loc)))))
 
-  (let ((token-id-1 (random-uuid))
-        (doc-id-1 (random-uuid))
-        (doc-id-2 (random-uuid))
-        (inverted-index (make-inverted-index)))
+  (let* ((token-id-1 (random-uuid))
+         (doc-ids (random-sorting-uuids 2))
+         (doc-id-1 (first doc-ids))
+         (doc-id-2 (second doc-ids))
+         (inverted-index (make-inverted-index)))
 
     (insert-doc-location inverted-index token-id-1 doc-id-1 1)
     (insert-doc-location inverted-index token-id-1 doc-id-1 2)
@@ -27,8 +32,8 @@
     (insert-doc-location inverted-index token-id-1 doc-id-2 3)
 
     (let* ((locs (get-doc-locations inverted-index token-id-1))
-           (loc1 (second locs))
-           (loc2 (first locs)))
+           (loc1 (first locs))
+           (loc2 (second locs)))
       (ok (length= locs 2))
 
       (ok (equal doc-id-1 (doc-location-document-id loc1)))

@@ -22,8 +22,11 @@
       (setf (doc-location-positions loc)
             (merge-positions (list pos) (doc-location-positions loc)))
       (return-from merge-doc-location doc-locations)))
-  (cons (make-doc-location :document-id document-id :positions (list pos))
-        doc-locations))
+  (merge 'list
+         (list (make-doc-location :document-id document-id :positions (list pos)))
+         doc-locations
+         #'string<
+         :key #'doc-location-document-id))
 
 (defun merge-doc-locations (destination-doc-locations source-doc-locations)
   (dolist (source-doc-location source-doc-locations)

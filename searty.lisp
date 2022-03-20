@@ -214,10 +214,6 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 (defmethod save-inverted-index ((indexer indexer) inverted-index)
   (let ((database (indexer-database indexer)))
     (do-inverted-index ((token-id doc-locations) inverted-index)
-      (defparameter $ doc-locations)
-      (assert (doc-locations-equal
-               (decode-doc-locations-from-vector (encode-doc-locations-to-vector doc-locations))
-               doc-locations))
       (upsert-inverted-index database
                              token-id
                              (coerce-unsigned-byte-vector
@@ -233,6 +229,8 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
   (clear-inverted-index (indexer-inverted-index indexer)))
 
 ;;;
+(defgeneric execute-search (searcher query))
+
 (defclass searcher ()
   ((analyzer :initarg :analyzer
              :initform (required-argument :analyzer)
@@ -241,7 +239,7 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
              :initform (required-argument :database)
              :reader searcher-database)))
 
-(defgeneric match (query inverted-index))
+(defgeneric match (query tokens inverted-index))
 
 (defclass query ()
   ((text :initarg :text
@@ -251,7 +249,12 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 (defclass or-matcher (query) ())
 (defclass phrase-matcher (query) ())
 
-(defstruct (posting (:constructor make-posting (doc-locations)))
+(defstruct matched
+  token-id
+  doc-locations)
+
+(defstruct (posting (:constructor make-posting (token-id doc-locations)))
+  token-id
   doc-locations)
 
 (defun posting-head-doc-location (posting)
@@ -288,23 +291,30 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
   (let ((posting (minimize-posting postings)))
     (posting-next posting)))
 
-(defmethod match ((query and-matcher) inverted-index)
-  (let ((postings (collect-inverted-index-values inverted-index #'make-posting))
-        (matched-doc-locations '()))
+(defun convert-matchies (token-locations-map tokens)
+  (loop :for token :in tokens
+        :for doc-locations := (gethash (token-id token) token-locations-map)
+        :collect (make-matched :token-id (token-id token)
+                               :doc-locations doc-locations)))
+
+(defmethod match ((query and-matcher) tokens inverted-index)
+  (let ((postings (map-inverted-index-values #'make-posting inverted-index))
+        (token-locations-map (make-hash-table :test 'equal)))
     (when postings
       (loop :until (some #'posting-null-p postings)
             :do (cond ((same-document-id-p postings)
-                       (push (posting-head-doc-location (first postings))
-                             matched-doc-locations)
+                       (dolist (posting postings)
+                         (push (posting-head-doc-location posting)
+                               (gethash (posting-token-id posting) token-locations-map)))
                        (posting-next-all postings))
                       (t
                        (next-minimum-id-posting postings))))
-      matched-doc-locations)))
+      (convert-matchies token-locations-map tokens))))
 
-(defmethod match ((query or-matcher) inverted-index)
+(defmethod match ((query or-matcher) tokens inverted-index)
   (error "unimplemented"))
 
-(defmethod match ((query phrase-matcher) inverted-index)
+(defmethod match ((query phrase-matcher) tokens inverted-index)
   (error "unimplemented"))
 
 (defmethod execute-search ((searcher searcher) query)
@@ -315,6 +325,4 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
          (inverted-index
            (resolve-inverted-index (searcher-database searcher)
                                    (mapcar #'token-id tokens))))
-    (let ((doc-locations (match query inverted-index)))
-      (resolve-document-by-ids (searcher-database searcher)
-                               (mapcar #'doc-location-document-id doc-locations)))))
+    (match query tokens inverted-index)))

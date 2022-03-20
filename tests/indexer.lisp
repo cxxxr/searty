@@ -46,3 +46,31 @@
                   (ok (equal (doc-location-document-id loc)
                              (document-id document)))
                   (ok (equal '(2) (doc-location-positions loc))))))))))))
+
+(defun lisp-pathname-p (pathname)
+  (equal "lisp" (pathname-type pathname)))
+
+(defun find-files (directory test)
+  (append (remove-if-not test (uiop:directory-files directory))
+          (mapcan (lambda (dir)
+                    (unless (search "/.git/" (namestring dir))
+                      (find-files dir test)))
+                  (uiop:subdirectories directory))))
+
+(defun create-index (indexer)
+  (dolist (file (find-files (asdf:system-source-directory :searty) #'lisp-pathname-p))
+    (let ((start (get-internal-real-time)))
+      (format t "~&~A " file)
+      (add-document indexer file)
+      (format t "[~D ms]~%" (floor (- (get-internal-real-time) start)
+                                   1000)))))
+
+(deftest check-inverted-index-corruption-test
+  (with-test-database (connection)
+    (let* ((database (make-instance 'database :connection connection))
+           (analyzer (make-instance 'simple-analyzer))
+           (indexer (make-instance 'indexer
+                                   :analyzer analyzer
+                                   :database database)))
+      (create-index indexer)
+      (ok (check-inverted-index-corruption (searty::resolve-whole-inverted-index database))))))

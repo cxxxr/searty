@@ -26,6 +26,7 @@
    :resolve-token
    :resolve-inverted-index
    :upsert-inverted-index
+   :resolve-whole-inverted-index
    ;; indexer
    :indexer
    :add-document
@@ -44,4 +45,5 @@
    :do-inverted-index
    :merge-inverted-index
    :encode-doc-locations-to-vector
-   :decode-doc-locations-from-vector))
+   :decode-doc-locations-from-vector
+   :check-inverted-index-corruption))

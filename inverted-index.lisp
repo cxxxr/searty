@@ -191,3 +191,14 @@
 (defun decode-doc-locations-from-vector (bytes)
   (with-open-stream (stream (flex:make-in-memory-input-stream bytes))
     (decode-doc-locations stream)))
+
+
+(defun check-inverted-index-corruption (inverted-index)
+  (do-inverted-index ((token-id doc-locations) inverted-index)
+    (declare (ignore token-id))
+    (unless (loop :for (loc1 loc2) :on doc-locations
+                  :while loc2
+                  :always (id< (doc-location-document-id loc1)
+                               (doc-location-document-id loc2)))
+      (return-from check-inverted-index-corruption nil)))
+  t)

@@ -10,5 +10,5 @@
                (:file "utils")
                (:file "inverted-index")
                (:file "searty")
-               (:file "example"))
+               (:file "main"))
   :in-order-to ((test-op (test-op searty-tests))))

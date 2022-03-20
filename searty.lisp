@@ -33,9 +33,11 @@
 
 (defmethod create-document ((database database) pathname body)
   (let ((id (random-uuid)))
-    (dbi:do-sql (database-connection database)
-      "INSERT INTO document (id, pathname, body) values (?, ?, ?)"
-      (list id (namestring pathname) body))
+    (execute-sxql (database-connection database)
+                  (sxql:insert-into :document
+                    (sxql:set= :id id
+                               :pathname (namestring pathname)
+                               :body body)))
     (make-document :id id :pathname pathname :body body)))
 
 (defun make-document-from-record (record)
@@ -47,28 +49,25 @@
 
 (defmethod resolve-document-by-pathname ((database database) pathname)
   (when-let ((records
-              (dbi:fetch-all
-               (dbi:execute (dbi:prepare (database-connection database)
-                                         "SELECT id, pathname, body FROM document WHERE pathname = ? LIMIT 1")
-                            (list (princ-to-string pathname))))))
+              (resolve-sxql (database-connection database)
+                            (sxql:select (:id :pathname :body)
+                              (sxql:from :document)
+                              (sxql:where (:= :pathname (namestring pathname)))
+                              (sxql:limit 1)))))
     (make-document-from-record (first records))))
 
 (defmethod resolve-document-by-ids ((database database) ids)
-  (multiple-value-bind (sql params)
-      (sxql:yield
-       (sxql:select (:id :pathname :body)
-         (sxql:from :document)
-         (sxql:where (:in :id ids))))
-    (mapcar #'make-document-from-record
-            (dbi:fetch-all
-             (dbi:execute (dbi:prepare (database-connection database) sql)
-                          params)))))
+  (mapcar #'make-document-from-record
+          (resolve-sxql (database-connection database)
+                        (sxql:select (:id :pathname :body)
+                          (sxql:from :document)
+                          (sxql:where (:in :id ids))))))
 
 (defmethod create-token ((database database) term)
   (let ((id (random-uuid)))
-    (dbi:do-sql (database-connection database)
-      "INSERT INTO token (id, term) values (?, ?)"
-      (list id term))
+    (execute-sxql (database-connection database)
+                  (sxql:insert-into :token
+                    (sxql:set= :id id :term term)))
     (make-token :id id :term term)))
 
 (defun make-token-from-record (record)
@@ -79,23 +78,19 @@
 
 (defmethod resolve-token ((database database) term)
   (when-let ((records
-              (dbi:fetch-all
-               (dbi:execute (dbi:prepare (database-connection database)
-                                         "SELECT term, id FROM token WHERE term = ? LIMIT 1")
-                            (list term)))))
+              (resolve-sxql (database-connection database)
+                            (sxql:select (:term :id)
+                              (sxql:from :token)
+                              (sxql:where (:= :term term))
+                              (sxql:limit 1)))))
     (make-token-from-record (first records))))
 
 (defmethod resolve-tokens ((database database) terms)
-  (multiple-value-bind (sql params)
-      (sxql:yield
-       (sxql:select (:term :id)
-         (sxql:from :token)
-         (sxql:where (:in :term terms))))
-    (let ((records
-            (dbi:fetch-all
-             (dbi:execute (dbi:prepare (database-connection database) sql)
-                          params))))
-      (mapcar #'make-token-from-record records))))
+  (mapcar #'make-token-from-record
+          (resolve-sxql (database-connection database)
+                        (sxql:select (:term :id)
+                          (sxql:from :token)
+                          (sxql:where (:in :term terms))))))
 
 (defun decode-inverted-index (records)
   (let ((inverted-index (make-inverted-index)))
@@ -109,10 +104,7 @@
 
 (defun resolve-inverted-index-aux (database sxql)
   (decode-inverted-index
-   (multiple-value-bind (sql params) (sxql:yield sxql)
-     (dbi:fetch-all
-      (dbi:execute (dbi:prepare (database-connection database) sql)
-                   params)))))
+   (resolve-sxql (database-connection database) sxql)))
 
 (defmethod resolve-inverted-index ((database database) token-ids)
   (resolve-inverted-index-aux
@@ -128,12 +120,12 @@
      (sxql:from :inverted_index))))
 
 (defmethod upsert-inverted-index ((database database) token-id encoded-doc-locations)
-  (dbi:do-sql (database-connection database)
-    "INSERT INTO inverted_index (token_id, encoded_values) VALUES (?, ?)
+  (execute-sql (database-connection database)
+               "INSERT INTO inverted_index (token_id, encoded_values) VALUES (?, ?)
 ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
-    (list token-id
-          encoded-doc-locations
-          encoded-doc-locations)))
+               (list token-id
+                     encoded-doc-locations
+                     encoded-doc-locations)))
 
 
 ;;; character filter

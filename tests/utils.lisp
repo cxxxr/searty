@@ -14,5 +14,5 @@
     (let ((connection (dbi:connect :sqlite3 :database-name database-file)))
       (funcall function connection))))
 
-(defmacro with-test-database ((database-file) &body body)
-  `(call-with-test-database (lambda (,database-file) ,@body)))
+(defmacro with-test-database ((connection) &body body)
+  `(call-with-test-database (lambda (,connection) ,@body)))

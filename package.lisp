@@ -9,6 +9,7 @@
    ;; sqlite
    :sqlite3-init-database
    ;; entities
+   :document-equal
    :document-id
    :document-pathname
    :document-body
@@ -28,6 +29,10 @@
    ;; indexer
    :indexer
    :add-document
+   ;; searcher
+   :searcher
+   :execute-search
+   :and-matcher
    ;; inverted-index
    :doc-location-document-id
    :doc-location-positions

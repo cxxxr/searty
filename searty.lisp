@@ -4,6 +4,11 @@
 (defstruct document id pathname body)
 (defstruct token id term)
 
+(defmethod document-equal ((doc-1 document) (doc-2 document))
+  (and (equal (document-id doc-1) (document-id doc-2))
+       (uiop:pathname-equal (document-pathname doc-1) (document-pathname doc-2))
+       (string= (document-body doc-1) (document-body doc-2))))
+
 
 (defparameter *sqlite3-schema-file* (namestring (asdf:system-relative-pathname :searty "schema.sql")))
 
@@ -194,7 +199,8 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
     (loop :for pos :from 0
           :for token-term :in tokens
           :do (add-token indexer token-term document pos))
-    (flush-inverted-index indexer)))
+    (flush-inverted-index indexer)
+    document))
 
 (defmethod add-token ((indexer indexer) token-term document pos)
   (let ((token (or (resolve-token (indexer-database indexer) token-term)
@@ -281,14 +287,15 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 (defmethod match ((query and-matcher) inverted-index)
   (let ((postings (collect-inverted-index-values inverted-index #'make-posting))
         (matched-doc-locations '()))
-    (loop :until (some #'posting-null-p postings)
-          :do (cond ((same-document-id-p postings)
-                     (push (posting-head-doc-location (first postings))
-                           matched-doc-locations)
-                     (posting-next-all postings))
-                    (t
-                     (next-minimum-id-posting postings))))
-    matched-doc-locations))
+    (when postings
+      (loop :until (some #'posting-null-p postings)
+            :do (cond ((same-document-id-p postings)
+                       (push (posting-head-doc-location (first postings))
+                             matched-doc-locations)
+                       (posting-next-all postings))
+                      (t
+                       (next-minimum-id-posting postings))))
+      matched-doc-locations)))
 
 (defmethod match ((query or-matcher) inverted-index)
   )

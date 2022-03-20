@@ -16,16 +16,6 @@
                                  :analyzer $analyzer
                                  :database $database)))
 
-(defun lisp-pathname-p (pathname)
-  (equal "lisp" (pathname-type pathname)))
-
-(defun find-files (directory test)
-  (append (remove-if-not test (uiop:directory-files directory))
-          (mapcan (lambda (dir)
-                    (unless (search "/.git/" (namestring dir))
-                      (find-files dir test)))
-                  (uiop:subdirectories directory))))
-
 (defun index ()
   (dolist (file (find-files "/home/user/common-lisp/lem/" #'lisp-pathname-p))
     (let ((start (get-internal-real-time)))

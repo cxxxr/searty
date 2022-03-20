@@ -6,6 +6,8 @@
    :random-uuid
    :word-tokenize
    :coerce-unsigned-byte-vector
+   :lisp-pathname-p
+   :find-files
    ;; sqlite
    :sqlite3-init-database
    ;; entities

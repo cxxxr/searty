@@ -18,3 +18,13 @@
   (make-array (length bytes)
               :element-type '(unsigned-byte 8)
               :initial-contents (coerce bytes 'list)))
+
+(defun lisp-pathname-p (pathname)
+  (equal "lisp" (pathname-type pathname)))
+
+(defun find-files (directory test)
+  (append (remove-if-not test (uiop:directory-files directory))
+          (mapcan (lambda (dir)
+                    (unless (search "/.git/" (namestring dir))
+                      (find-files dir test)))
+                  (uiop:subdirectories directory))))

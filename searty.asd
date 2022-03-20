@@ -9,5 +9,6 @@
   :components ((:file "package")
                (:file "utils")
                (:file "inverted-index")
-               (:file "searty"))
+               (:file "searty")
+               (:file "example"))
   :in-order-to ((test-op (test-op searty-tests))))

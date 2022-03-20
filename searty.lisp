@@ -214,6 +214,10 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 (defmethod save-inverted-index ((indexer indexer) inverted-index)
   (let ((database (indexer-database indexer)))
     (do-inverted-index ((token-id doc-locations) inverted-index)
+      (defparameter $ doc-locations)
+      (assert (doc-locations-equal
+               (decode-doc-locations-from-vector (encode-doc-locations-to-vector doc-locations))
+               doc-locations))
       (upsert-inverted-index database
                              token-id
                              (coerce-unsigned-byte-vector
@@ -314,27 +318,3 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
     (let ((doc-locations (match query inverted-index)))
       (resolve-document-by-ids (searcher-database searcher)
                                (mapcar #'doc-location-document-id doc-locations)))))
-
-;;;
-(defun example-index ()
-  (let* ((analyzer (make-instance 'simple-analyzer))
-         (connection (dbi:connect :sqlite3 :database-name "/tmp/searty.sqlite3"))
-         (database (make-instance 'database :connection connection))
-         (indexer (make-instance 'indexer
-                                 :analyzer analyzer
-                                 :database database)))
-    (add-document indexer "package.lisp")
-    (add-document indexer "utils.lisp")
-    (add-document indexer "inverted-index.lisp")
-    (add-document indexer "searty.lisp")
-    indexer))
-
-(eval-when ()
-  (defparameter $analyzer (make-instance 'simple-analyzer))
-  (defparameter $database (make-instance 'database :connection (dbi:connect :sqlite3 :database-name "/tmp/searty.sqlite3")))
-  (defparameter $indexer (make-instance 'indexer
-                                        :analyzer $analyzer
-                                        :database $database))
-  (defparameter $searcher (make-instance 'searcher
-                                         :analyzer $analyzer
-                                         :database $database)))

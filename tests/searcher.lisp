@@ -5,10 +5,10 @@
     (add-document indexer doc-file)))
 
 (deftest and-matcher
-  (with-test-database (database-file)
+  (with-test-database (connection)
     (let* ((analyzer (make-instance 'simple-analyzer))
            (database (make-instance 'database
-                                    :connection (dbi:connect :sqlite3 :database-name database-file)))
+                                    :connection connection))
            (indexer (make-instance 'indexer
                                    :analyzer analyzer
                                    :database database))

@@ -1,11 +1,11 @@
 (in-package :searty-tests)
 
 (deftest indexer-test
-  (with-test-database (database-file)
+  (with-test-database (connection)
     (with-temporary-file (doc-file "foo bar baz")
       (let* ((analyzer (make-instance 'simple-analyzer))
              (database (make-instance 'database
-                                      :connection (dbi:connect :sqlite3 :database-name database-file)))
+                                      :connection connection))
              (indexer (make-instance 'indexer
                                      :analyzer analyzer
                                      :database database)))

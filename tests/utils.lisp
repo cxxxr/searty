@@ -11,7 +11,8 @@
   (let ((database-file "/tmp/searty-test.sqlite3"))
     (uiop:delete-file-if-exists database-file)
     (sqlite3-init-database database-file)
-    (funcall function database-file)))
+    (let ((connection (dbi:connect :sqlite3 :database-name database-file)))
+      (funcall function connection))))
 
 (defmacro with-test-database ((database-file) &body body)
   `(call-with-test-database (lambda (,database-file) ,@body)))

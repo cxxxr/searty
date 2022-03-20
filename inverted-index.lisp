@@ -1,5 +1,8 @@
 (in-package :searty)
 
+(defun id< (id1 id2)
+  (string< id1 id2))
+
 (defun merge-positions (positions1 positions2)
   (delete-duplicates (merge 'list positions1 positions2 #'<)))
 
@@ -20,7 +23,7 @@
   (merge 'list
          (list doc-location)
          doc-locations
-         #'string<
+         #'id<
          :key #'doc-location-document-id))
 
 (defun merge-doc-location (doc-locations document-id pos)

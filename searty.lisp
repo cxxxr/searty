@@ -280,7 +280,7 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 (defun minimize-posting (postings)
   (let ((min (first postings)))
     (dolist (posting (rest postings))
-      (when (string< (posting-head-doc-id posting) (posting-head-doc-id min))
+      (when (id< (posting-head-doc-id posting) (posting-head-doc-id min))
         (setf min posting)))
     min))
 

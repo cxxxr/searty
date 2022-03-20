@@ -296,7 +296,7 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 (defmethod match ((query phrase-matcher) inverted-index)
   )
 
-(defmethod do-search ((searcher searcher) query)
+(defmethod execute-search ((searcher searcher) query)
   (let* ((tokens
            (resolve-tokens (searcher-database searcher)
                            (analyze (searcher-analyzer searcher)

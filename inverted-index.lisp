@@ -153,7 +153,7 @@
     v))
 
 (defun decode-positive-integer-list (stream)
-  (let ((length (read-byte stream)))
+  (let ((length (decode-positive-integer stream)))
     (loop :repeat length
           :collect (decode-positive-integer stream))))
 

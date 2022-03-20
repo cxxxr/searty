@@ -16,17 +16,24 @@
 (defun doc-locations-equal (doc-locations-1 doc-locations-2)
   (set-equal doc-locations-1 doc-locations-2 :test #'doc-location-equal))
 
+(defun insert-sort-doc-location (doc-location doc-locations)
+  (merge 'list
+         (list doc-location)
+         doc-locations
+         #'string<
+         :key #'doc-location-document-id))
+
 (defun merge-doc-location (doc-locations document-id pos)
   (dolist (loc doc-locations)
     (when (equal document-id (doc-location-document-id loc))
       (setf (doc-location-positions loc)
             (merge-positions (list pos) (doc-location-positions loc)))
       (return-from merge-doc-location doc-locations)))
-  (merge 'list
-         (list (make-doc-location :document-id document-id :positions (list pos)))
-         doc-locations
-         #'string<
-         :key #'doc-location-document-id))
+  (let ((merged-doc-locations
+          (insert-sort-doc-location (make-doc-location :document-id document-id
+                                                       :positions (list pos))
+                                    doc-locations)))
+    merged-doc-locations))
 
 (defun merge-doc-locations (destination-doc-locations source-doc-locations)
   (dolist (source-doc-location source-doc-locations)

@@ -298,10 +298,10 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
       matched-doc-locations)))
 
 (defmethod match ((query or-matcher) inverted-index)
-  )
+  (error "unimplemented"))
 
 (defmethod match ((query phrase-matcher) inverted-index)
-  )
+  (error "unimplemented"))
 
 (defmethod execute-search ((searcher searcher) query)
   (let* ((tokens

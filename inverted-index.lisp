@@ -16,8 +16,11 @@
        (equal (doc-location-positions doc-location-1)
               (doc-location-positions doc-location-2))))
 
-(defun doc-locations-equal (doc-locations-1 doc-locations-2)
-  (set-equal doc-locations-1 doc-locations-2 :test #'doc-location-equal))
+(defun doc-locations-equal (doc-locations-1 doc-locations-2 &key (ordered t))
+  (if ordered
+      (and (length= doc-locations-1 doc-locations-2)
+           (every #'doc-location-equal doc-locations-1 doc-locations-2))
+      (set-equal doc-locations-1 doc-locations-2 :test #'doc-location-equal)))
 
 (defun insert-sort-doc-location (doc-location doc-locations)
   (merge 'list

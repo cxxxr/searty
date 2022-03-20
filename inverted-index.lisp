@@ -45,8 +45,9 @@
       (setf (doc-location-positions destination-doc-location)
             (merge-positions (doc-location-positions destination-doc-location)
                              (doc-location-positions source-doc-location)))
-      (push source-doc-location
-            destination-doc-locations)))
+      (setf destination-doc-locations
+            (insert-sort-doc-location source-doc-location
+                                      destination-doc-locations))))
   destination-doc-locations)
 
 (defstruct inverted-index

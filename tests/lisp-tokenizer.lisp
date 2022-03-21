@@ -2,10 +2,10 @@
 
 (defun test (actual expected)
   (ok (length= actual expected))
-  (loop :for tok1 :in actual
-        :for tok2 :in expected
-        :do (ok (equal (token-term tok1) (getf tok2 :term)))
-            (ok (equal (token-position tok1) (getf tok2 :position)))))
+  (loop :for lit1 :in actual
+        :for lit2 :in expected
+        :do (ok (equal (literal-term lit1) (getf lit2 :term)))
+            (ok (equal (literal-position lit1) (getf lit2 :position)))))
 
 (deftest lisp-tokenizer
   (test (with-input-from-string (in "foo") (tokenize in))

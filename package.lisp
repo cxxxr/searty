@@ -53,7 +53,7 @@
 
 (defpackage :searty.lisp-tokenizer
   (:use :cl :alexandria)
-  (:export :token-term
-           :token-position
-           :token-kind
+  (:export :literal-term
+           :literal-position
+           :literal-kind
            :tokenize))

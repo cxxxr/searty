@@ -4,11 +4,6 @@
 (defstruct document id pathname body)
 (defstruct token id term)
 
-(defmethod document-equal ((doc-1 document) (doc-2 document))
-  (and (equal (document-id doc-1) (document-id doc-2))
-       (uiop:pathname-equal (document-pathname doc-1) (document-pathname doc-2))
-       (string= (document-body doc-1) (document-body doc-2))))
-
 
 (defparameter *sqlite3-schema-file* (namestring (asdf:system-relative-pathname :searty "schema.sql")))
 

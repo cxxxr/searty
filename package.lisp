@@ -11,7 +11,6 @@
    ;; sqlite
    :sqlite3-init-database
    ;; entities
-   :document-equal
    :document-id
    :document-pathname
    :document-body

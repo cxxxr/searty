@@ -243,8 +243,19 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 (defclass phrase-matcher (query) ())
 
 (defstruct matched
-  token-id
-  doc-locations)
+  token
+  document-id
+  positions)
+
+(defun matched-equal (matched-1 matched-2)
+  (and (equal (token-id (matched-token matched-1))
+              (token-id (matched-token matched-2)))
+       (equal (token-term (matched-token matched-1))
+              (token-term (matched-token matched-2)))
+       (equal (matched-document-id matched-1)
+              (matched-document-id matched-2))
+       (equal (matched-positions matched-1)
+              (matched-positions matched-2))))
 
 (defstruct (posting (:constructor make-posting (token-id doc-locations)))
   token-id
@@ -285,10 +296,14 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
     (posting-next posting)))
 
 (defun convert-matchies (token-locations-map tokens)
-  (loop :for token :in tokens
-        :for doc-locations := (gethash (token-id token) token-locations-map)
-        :collect (make-matched :token-id (token-id token)
-                               :doc-locations doc-locations)))
+  (let ((acc '()))
+    (dolist (token tokens)
+      (dolist (loc (gethash (token-id token) token-locations-map))
+        (push (make-matched :token token
+                            :document-id (doc-location-document-id loc)
+                            :positions (doc-location-positions loc))
+              acc)))
+    acc))
 
 (defmethod match ((query and-matcher) tokens inverted-index)
   (let ((postings (map-inverted-index-values #'make-posting inverted-index))

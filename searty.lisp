@@ -123,10 +123,6 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
                      encoded-doc-locations)))
 
 
-;;; character filter
-(defgeneric filter-character (character-filter text))
-(defclass character-filter () ())
-
 ;;; tokenizer
 (defgeneric tokenize (tokenizer text))
 
@@ -137,31 +133,16 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 (defmethod tokenize ((tokenizer word-tokenizer) text)
   (word-tokenize text))
 
-;;; token filter
-(defgeneric filter-token (token-filter tokens))
-(defclass token-filter () ())
-
 ;;; analyzer
 (defgeneric analyze (analyzer text))
 
 (defclass analyzer ()
-  ((character-filters :initarg :character-filters
-                      :initform '()
-                      :reader analyzer-character-filters)
-   (tokenizer :initarg :tokenizer
+  ((tokenizer :initarg :tokenizer
               :initform (required-argument :tokenizer)
-              :reader analyzer-tokenizer)
-   (token-filters :initarg :token-filters
-                  :initform '()
-                  :reader analyzer-token-filters)))
+              :reader analyzer-tokenizer)))
 
 (defmethod analyze ((analyzer analyzer) text)
-  (dolist (character-filter (analyzer-character-filters analyzer))
-    (setf text (filter-character character-filter text)))
-  (let ((tokens (tokenize (analyzer-tokenizer analyzer) text)))
-    (dolist (token-filter (analyzer-token-filters analyzer))
-      (setf tokens (filter-token token-filter tokens)))
-    tokens))
+  (tokenize (analyzer-tokenizer analyzer) text))
 
 ;;; simple analyzer
 (defclass simple-analyzer (analyzer)

@@ -52,4 +52,8 @@
    :check-inverted-index-corruption))
 
 (defpackage :searty.lisp-tokenizer
-  (:use :cl :alexandria))
+  (:use :cl :alexandria)
+  (:export :token-term
+           :token-position
+           :token-kind
+           :tokenize))

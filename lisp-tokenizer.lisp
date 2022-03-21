@@ -204,7 +204,7 @@
     (funcall scanner stream)
     (scan-symbol stream)))
 
-(defun scan (stream)
+(defun tokenize (stream)
   (let ((tokens '()))
     (loop
       (multiple-value-bind (token eof) (scan-token stream)

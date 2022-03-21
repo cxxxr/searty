@@ -11,6 +11,6 @@
                (:file "inverted-index")
                (:file "sql")
                (:file "searty")
-               (:file "lisp-analyzer")
+               (:file "lisp-tokenizer")
                (:file "main"))
   :in-order-to ((test-op (test-op searty-tests))))

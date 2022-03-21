@@ -1,4 +1,4 @@
-(in-package :searty.lisp-analyzer)
+(in-package :searty.lisp-tokenizer)
 
 (deftype token-kind ()
   '(member

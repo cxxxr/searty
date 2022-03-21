@@ -51,5 +51,5 @@
    :decode-doc-locations-from-vector
    :check-inverted-index-corruption))
 
-(defpackage :searty.lisp-analyzer
+(defpackage :searty.lisp-tokenizer
   (:use :cl :alexandria))

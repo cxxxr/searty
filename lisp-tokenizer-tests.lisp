@@ -1,4 +1,4 @@
-(in-package :searty.lisp-analyzer)
+(in-package :searty.lisp-tokenizer)
 
 (defun test (actual expected)
   (assert (length= actual expected))

@@ -185,14 +185,15 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
              :reader indexer-database)))
 
 (defmethod add-document ((indexer indexer) pathname)
-  (let* ((text (read-file-into-string pathname))
-         (tokens (analyze (indexer-analyzer indexer) text))
-         (document (create-document (indexer-database indexer) pathname text)))
-    (loop :for pos :from 0
-          :for token-term :in tokens
-          :do (add-token indexer token-term document pos))
-    (flush-inverted-index indexer)
-    document))
+  (dbi:with-transaction (database-connection (indexer-database indexer))
+    (let* ((text (read-file-into-string pathname))
+           (tokens (analyze (indexer-analyzer indexer) text))
+           (document (create-document (indexer-database indexer) pathname text)))
+      (loop :for pos :from 0
+            :for token-term :in tokens
+            :do (add-token indexer token-term document pos))
+      (flush-inverted-index indexer)
+      document)))
 
 (defmethod add-token ((indexer indexer) token-term document pos)
   (let ((token (or (resolve-token (indexer-database indexer) token-term)

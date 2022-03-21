@@ -18,6 +18,7 @@
    :token-id
    :token-term
    ;; analyzer
+   :tokenize
    :simple-analyzer
    :analyze
    ;; database
@@ -49,3 +50,6 @@
    :encode-doc-locations-to-vector
    :decode-doc-locations-from-vector
    :check-inverted-index-corruption))
+
+(defpackage :searty.lisp-analyzer
+  (:use :cl :alexandria))

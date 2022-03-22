@@ -6,15 +6,15 @@
 
 (deftest and-matcher
   (with-test-database (connection)
-    (let* ((analyzer (make-instance 'simple-analyzer))
+    (let* ((tokenizer (make-instance 'word-tokenizer))
            (database (make-instance 'database
                                     :connection connection))
            (indexer (make-instance 'indexer
-                                   :analyzer analyzer
+                                   :tokenizer tokenizer
                                    :database database))
            (searcher (make-instance 'searcher
                                     :database database
-                                    :analyzer analyzer))
+                                    :tokenizer tokenizer))
            (doc-1 (add-temporary-document indexer "foo xxx yyy bar baz"))
            (doc-2 (add-temporary-document indexer "foo hoge xxx yyy piyo bar"))
            (doc-3 (add-temporary-document indexer "aaaaaaa bbbbbbbb cccccc")))

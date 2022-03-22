@@ -16,10 +16,10 @@
    :document-body
    :token-id
    :token-term
-   ;; analyzer
+   ;; tokenizer
    :tokenize
-   :simple-analyzer
-   :analyze
+   :tokenizer
+   :word-tokenizer
    ;; database
    :database
    :create-document

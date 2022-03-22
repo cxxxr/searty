@@ -3,11 +3,11 @@
 (deftest indexer-test
   (with-test-database (connection)
     (with-temporary-file (doc-file "foo bar baz")
-      (let* ((analyzer (make-instance 'simple-analyzer))
+      (let* ((tokenizer (make-instance 'word-tokenizer))
              (database (make-instance 'database
                                       :connection connection))
              (indexer (make-instance 'indexer
-                                     :analyzer analyzer
+                                     :tokenizer tokenizer
                                      :database database)))
         (add-document indexer doc-file)
         (let ((document (resolve-document-by-pathname database doc-file)))
@@ -58,9 +58,9 @@
 (deftest check-inverted-index-corruption-test
   (with-test-database (connection)
     (let* ((database (make-instance 'database :connection connection))
-           (analyzer (make-instance 'simple-analyzer))
+           (tokenizer (make-instance 'word-tokenizer))
            (indexer (make-instance 'indexer
-                                   :analyzer analyzer
+                                   :tokenizer tokenizer
                                    :database database)))
       (create-index indexer)
       (ok (check-inverted-index-corruption (searty::resolve-whole-inverted-index database))))))

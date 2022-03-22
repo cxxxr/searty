@@ -2,16 +2,17 @@
 
 (defparameter *sqlite3-database-name* "/tmp/searty.sqlite3")
 
-(defparameter *analyzer* (make-instance 'simple-analyzer))
+(defparameter *tokenizer* (make-instance 'word-tokenizer))
+
 (defparameter *database* (make-instance 'database
                                         :connection (dbi:connect :sqlite3
                                                                  :database-name *sqlite3-database-name*)))
 (defparameter *indexer* (make-instance 'indexer
-                                       :analyzer *analyzer*
+                                       :tokenizer *tokenizer*
                                        :database *database*))
 
 (defparameter *searcher* (make-instance 'searcher
-                                        :analyzer *analyzer*
+                                        :tokenizer *tokenizer*
                                         :database *database*))
 
 (defun index-lisp-sources (system-designator)

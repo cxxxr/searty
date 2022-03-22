@@ -133,27 +133,11 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 (defmethod tokenize ((tokenizer word-tokenizer) text)
   (word-tokenize text))
 
-;;; analyzer
-(defgeneric analyze (analyzer text))
-
-(defclass analyzer ()
-  ((tokenizer :initarg :tokenizer
-              :initform (required-argument :tokenizer)
-              :reader analyzer-tokenizer)))
-
-(defmethod analyze ((analyzer analyzer) text)
-  (tokenize (analyzer-tokenizer analyzer) text))
-
-;;; simple analyzer
-(defclass simple-analyzer (analyzer)
-  ()
-  (:default-initargs :tokenizer (make-instance 'word-tokenizer)))
-
 ;;; indexer
 (defclass indexer ()
-  ((analyzer :initarg :analyzer
-              :initform (required-argument :analyzer)
-              :reader indexer-analyzer)
+  ((tokenizer :initarg :tokenizer
+              :initform (required-argument :tokenizer)
+              :reader indexer-tokenizer)
    (inverted-index :initform (make-inverted-index)
                    :reader indexer-inverted-index)
    (database :initarg :database
@@ -163,7 +147,7 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 (defmethod add-document ((indexer indexer) pathname)
   (dbi:with-transaction (database-connection (indexer-database indexer))
     (let* ((text (read-file-into-string pathname))
-           (tokens (analyze (indexer-analyzer indexer) text))
+           (tokens (tokenize (indexer-tokenizer indexer) text))
            (document (create-document (indexer-database indexer) pathname text)))
       (loop :for pos :from 0
             :for token-term :in tokens
@@ -201,9 +185,9 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 (defgeneric execute-search (searcher query))
 
 (defclass searcher ()
-  ((analyzer :initarg :analyzer
-             :initform (required-argument :analyzer)
-             :reader searcher-analyzer)
+  ((tokenizer :initarg :tokenizer
+              :initform (required-argument :tokenizer)
+              :reader searcher-tokenizer)
    (database :initarg :database
              :initform (required-argument :database)
              :reader searcher-database)))
@@ -304,8 +288,8 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 (defmethod execute-search ((searcher searcher) query)
   (let* ((tokens
            (resolve-tokens (searcher-database searcher)
-                           (analyze (searcher-analyzer searcher)
-                                    (query-text query))))
+                           (tokenize (searcher-tokenizer searcher)
+                                     (query-text query))))
          (inverted-index
            (resolve-inverted-index (searcher-database searcher)
                                    (mapcar #'token-id tokens))))

@@ -6,7 +6,6 @@
   :components ((:file "package")
                (:file "utils")
                (:file "inverted-index")
-               (:file "analyzer")
                (:file "indexer")
                (:file "searcher")
                (:file "lisp-tokenizer"))

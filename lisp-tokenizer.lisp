@@ -142,20 +142,25 @@
                 :position position
                 :kind t))
 
+(defun delimiter-char-p (c)
+  (or (null c)
+      (whitespacep c)
+      (gethash c *macro-character-table*)))
+
 (defun scan-character (stream arg position)
   (declare (ignore arg))
   (exact-char stream #\\)
-  (let ((char-name
-          (with-output-to-string (out)
-            (loop :for c := (peek-char nil stream nil)
-                  :while (and c
-                              (or (alphanumericp c)
-                                  (member c '(#\- #\_))))
-                  :do (write-char c out)
-                      (read-char stream)))))
-    (make-literal :term char-name
-                  :position position
-                  :kind :character)))
+  (let ((char (read-char stream))
+        (next-char (peek-char nil stream nil)))
+    (cond ((delimiter-char-p next-char)
+           (make-literal :term (string char)
+                         :position position
+                         :kind :character))
+          (t
+           (unread-char char stream)
+           (make-literal :term (scan-symbol-name stream)
+                         :position position
+                         :kind :character)))))
 
 (defun scan-function (stream arg position)
   (declare (ignore arg))

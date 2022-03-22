@@ -69,6 +69,9 @@ bar")
   (test (with-input-from-string (in "#\\space") (tokenize in))
         '((:TERM "space" :POSITION 0 :KIND :CHARACTER)))
 
+  (test (with-input-from-string (in "#\\'") (tokenize in))
+        '((:TERM "'" :POSITION 0 :KIND :CHARACTER)))
+
   (test (with-input-from-string (in "#'car") (tokenize in))
         '((:TERM "car" :POSITION 0 :KIND :FUNCTION-OBJECT)))
 

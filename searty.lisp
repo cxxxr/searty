@@ -87,6 +87,13 @@
                           (sxql:from :token)
                           (sxql:where (:in :term terms))))))
 
+(defmethod resolve-tokens-with-submatch ((database database) term)
+  (mapcar #'make-token-from-record
+          (resolve-sxql (database-connection database)
+                        (sxql:select (:term :id)
+                          (sxql:from :token)
+                          (sxql:where (:like :term (format nil "%~A%" term)))))))
+
 (defun decode-inverted-index (records)
   (let ((inverted-index (make-inverted-index)))
     (dolist (record records)
@@ -294,3 +301,24 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
            (resolve-inverted-index (searcher-database searcher)
                                    (mapcar #'token-id tokens))))
     (match query tokens inverted-index)))
+
+
+(defclass lisp-tokenizer () ())
+
+(defmethod tokenize ((tokenizer lisp-tokenizer) text)
+  (with-input-from-string (in text)
+    (mapcar #'searty.lisp-tokenizer:literal-term
+            (searty.lisp-tokenizer:tokenize in))))
+
+(defclass lisp-searcher (searcher) ())
+
+(defmethod execute-search ((searcher lisp-searcher) query)
+  (let* ((tokens
+           (loop :for term :in (tokenize (searcher-tokenizer searcher)
+                                         (query-text query))
+                 :append (resolve-tokens-with-submatch (searcher-database searcher) term))))
+    (loop :for token :in tokens
+          :append (let ((inverted-index
+                          (resolve-inverted-index (searcher-database searcher)
+                                                  (list (token-id token)))))
+                    (match query (list token) inverted-index)))))

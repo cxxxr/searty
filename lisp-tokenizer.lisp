@@ -11,7 +11,7 @@
     :line-comment
     :block-comment))
 
-(defstruct literal
+(defstruct token
   term
   position
   kind)
@@ -48,16 +48,16 @@
   (assert (char= expected (read-char stream))))
 
 (defun scan-one-char (stream)
-  (make-literal :position (file-position stream)
-                :term (string (read-char stream))
-                :kind t))
+  (make-token :position (file-position stream)
+              :term (string (read-char stream))
+              :kind t))
 
 (defun scan-line-comment (stream)
   (let ((position (file-position stream)))
     (exact-char stream #\;)
-    (make-literal :term (read-line stream)
-                  :position position
-                  :kind :line-comment)))
+    (make-token :term (read-line stream)
+                :position position
+                :kind :line-comment)))
 
 (defun scan-string (stream)
   (let ((pos (file-position stream))
@@ -74,9 +74,9 @@
                              (write-char (read-char stream) out))
                             (otherwise
                              (write-char c out)))))))
-    (make-literal :position pos
-                  :term term
-                  :kind :string)))
+    (make-token :position pos
+                :term term
+                :kind :string)))
 
 (defun scan-multiple-escape (stream)
   (with-output-to-string (out)
@@ -114,9 +114,9 @@
 (defun scan-symbol (stream)
   (let ((pos (file-position stream))
         (term (scan-symbol-name stream)))
-    (make-literal :position pos
-                  :term term
-                  :kind :symbol)))
+    (make-token :position pos
+                :term term
+                :kind :symbol)))
 
 (defun scan-dispatch-macro-arg (stream)
   (let ((arg (with-output-to-string (out)
@@ -138,9 +138,9 @@
 
 (defun scan-sharp-others (stream arg position)
   (declare (ignore arg))
-  (make-literal :term (format nil "#~C" (read-char stream))
-                :position position
-                :kind t))
+  (make-token :term (format nil "#~C" (read-char stream))
+              :position position
+              :kind t))
 
 (defun delimiter-char-p (c)
   (or (null c)
@@ -153,32 +153,32 @@
   (let ((char (read-char stream))
         (next-char (peek-char nil stream nil)))
     (cond ((delimiter-char-p next-char)
-           (make-literal :term (string char)
-                         :position position
-                         :kind :character))
+           (make-token :term (string char)
+                       :position position
+                       :kind :character))
           (t
            (unread-char char stream)
-           (make-literal :term (scan-symbol-name stream)
-                         :position position
-                         :kind :character)))))
+           (make-token :term (scan-symbol-name stream)
+                       :position position
+                       :kind :character)))))
 
 (defun scan-function (stream arg position)
   (declare (ignore arg))
   (exact-char stream #\')
   (if (char= #\( (peek-char nil stream))
-      (make-literal :term "#'"
-                    :position position
-                    :kind t)
-      (make-literal :term (scan-symbol-name stream)
-                    :position position
-                    :kind :function-object)))
+      (make-token :term "#'"
+                  :position position
+                  :kind t)
+      (make-token :term (scan-symbol-name stream)
+                  :position position
+                  :kind :function-object)))
 
 (defun scan-unintern-symbol (stream arg position)
   (declare (ignore arg))
   (exact-char stream #\:)
-  (make-literal :term (scan-symbol-name stream)
-                :position position
-                :kind :unintern-symbol))
+  (make-token :term (scan-symbol-name stream)
+              :position position
+              :kind :unintern-symbol))
 
 (defun scan-block-comment (stream arg position)
   (declare (ignore arg))
@@ -198,9 +198,9 @@
                                    (return))))
                           (when prev
                             (write-char prev out))))))
-    (make-literal :term term
-                  :position position
-                  :kind :block-comment)))
+    (make-token :term term
+                :position position
+                :kind :block-comment)))
 
 (defun scan-token (stream)
   (unless (peek-char t stream nil)

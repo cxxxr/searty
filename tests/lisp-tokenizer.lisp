@@ -4,8 +4,8 @@
   (ok (length= actual expected))
   (loop :for lit1 :in actual
         :for lit2 :in expected
-        :do (ok (equal (literal-term lit1) (getf lit2 :term)))
-            (ok (equal (literal-position lit1) (getf lit2 :position)))))
+        :do (ok (equal (token-term lit1) (getf lit2 :term)))
+            (ok (equal (token-position lit1) (getf lit2 :position)))))
 
 (deftest lisp-tokenizer
   (test (with-input-from-string (in "foo") (tokenize in))

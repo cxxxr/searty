@@ -56,3 +56,6 @@
            :token-position
            :token-kind
            :tokenize))
+
+(defpackage :searty2
+  (:use :cl :alexandria))

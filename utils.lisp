@@ -1,9 +1,12 @@
 (in-package :searty)
 
-(defun ngram (sequence n)
-  (loop :for pos :from 0 :to (- (length sequence) n)
-        :collect (loop :for i :from 0 :below n
-                       :collect (elt sequence (+ pos i)))))
+(defun ngram (string n)
+  (if (< (length string) n)
+      (list string)
+      (loop :for pos :from 0 :to (- (length string) n)
+            :collect (with-output-to-string (out)
+                       (loop :for i :from 0 :below n
+                             :do (write-char (char string (+ pos i)) out))))))
 
 (defun word-tokenize (string)
   (let ((tokens '()))

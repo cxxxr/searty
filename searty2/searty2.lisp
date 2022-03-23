@@ -55,15 +55,15 @@
   (trigram-table (make-hash-table :test 'equal))
   (symbol-table (make-hash-table :test 'equal)))
 
-(defun inverted-index-get (inverted-index term to)
-  (ecase to
+(defun inverted-index-get (inverted-index term from)
+  (ecase from
     (:trigram
      (gethash term (inverted-index-trigram-table inverted-index)))
     (:symbol
      (gethash term (inverted-index-symbol-table inverted-index)))))
 
-(defun (setf inverted-index-get) (value inverted-index term to)
-  (ecase to
+(defun (setf inverted-index-get) (value inverted-index term from)
+  (ecase from
     (:trigram
      (setf (gethash term (inverted-index-trigram-table inverted-index))
            value))
@@ -71,13 +71,15 @@
      (setf (gethash term (inverted-index-symbol-table inverted-index))
            value))))
 
-(defun insert-inverted-index (inverted-index document token to)
-  (let ((inverted-values (inverted-index-get inverted-index (token-term token) to)))
+(defun insert-inverted-index (inverted-index document token from)
+  (let ((inverted-values (inverted-index-get inverted-index (token-term token) from)))
     (let ((trigram-value (find (token-kind token) inverted-values :key #'trigram-value-kind)))
       (if (null trigram-value)
-          (push (make-trigram-value :kind (token-kind token)
-                                    :locations (list (make-location :document document :positions (list (token-pos token)))))
-                (inverted-index-get inverted-index (token-term token) to))
+          (push (make-trigram-value
+                 :kind (token-kind token)
+                 :locations (list (make-location :document document
+                                                 :positions (list (token-pos token)))))
+                (inverted-index-get inverted-index (token-term token) from))
           (let ((loc (find (document-id document)
                            (trigram-value-locations trigram-value)
                            :key (lambda (loc) (document-id (location-document loc)))

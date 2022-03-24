@@ -48,6 +48,12 @@
           document)
     document))
 
+(defun document= (document1 document2)
+  (= (document-id document1) (document-id document2)))
+
+(defun document< (document1 document2)
+  (< (document-id document1) (document-id document2)))
+
 (defstruct trigram-value kind locations)
 (defstruct location document positions)
 
@@ -85,8 +91,11 @@
                            :key (lambda (loc) (document-id (location-document loc)))
                            :test #'=)))
             (if (null loc)
-                (push (make-location :document document :positions (list (token-pos token)))
-                      (trigram-value-locations trigram-value))
+                (setf (trigram-value-locations trigram-value)
+                      (insert-sort (make-location :document document :positions (list (token-pos token)))
+                                   (trigram-value-locations trigram-value)
+                                   #'document<
+                                   :key #'location-document))
                 (setf (location-positions loc)
                       (insert-sort (token-pos token) (location-positions loc) #'<))))))))
 
@@ -110,6 +119,72 @@
       (add-file inverted-index file))
     inverted-index))
 
-
-(defun search-all (inverted-index query)
-  (declare (ignore inverted-index query)))
+(defstruct (posting (:constructor %make-posting (token locations))) token locations)
+
+(defun make-posting (inverted-index token)
+  (dolist (trigram-value (inverted-index-get inverted-index
+                                             (token-term token)
+                                             :trigram))
+    (when (eq :symbol (trigram-value-kind trigram-value))
+      (let ((locations (trigram-value-locations trigram-value)))
+        (return (%make-posting token locations))))))
+
+(defun make-postings (inverted-index query)
+  (let* ((tokens (mapcan #'tokenize-trigram (tokenize query)))
+         (postings (make-array (length tokens))))
+    (loop :for token :in tokens
+          :for i :from 0
+          :do (setf (aref postings i)
+                    (make-posting inverted-index token)))
+    postings))
+
+(defun posting-null-p (posting)
+  (null (posting-locations posting)))
+
+(defun posting-location (posting)
+  (first (posting-locations posting)))
+
+(defun posting-document (posting)
+  (location-document (posting-location posting)))
+
+(defun posting-positions (posting)
+  (location-positions (posting-location posting)))
+
+(defun posting-next (posting)
+  (setf (posting-locations posting)
+        (rest (posting-locations posting)))
+  posting)
+
+(defun postings-next (postings)
+  (loop :for posting :across postings
+        :do (posting-next posting)))
+
+(defun next-minimum-posting (postings)
+  (let ((min-posting (aref postings 0)))
+    (loop :for i :from 1 :below (length postings)
+          :for posting := (aref postings i)
+          :do (when (document< (posting-document posting)
+                               (posting-document min-posting))
+                (setf min-posting posting)))
+    (posting-next min-posting)))
+
+(defun same-document-p (postings)
+  (let ((first-document (posting-document (aref postings 0))))
+    (loop :for i :from 1 :below (length postings)
+          :for posting := (aref postings i)
+          :always (document= first-document
+                             (posting-document posting)))))
+
+(defun search-and (inverted-index query)
+  (let ((postings (make-postings inverted-index query))
+        (token-locations-map (make-hash-table :test 'equal)))
+    (loop :until (some #'posting-null-p postings)
+          :do (cond ((same-document-p postings)
+                     (loop :for posting :across postings
+                           :do (push (posting-location posting)
+                                     (gethash (token-term (posting-token posting))
+                                              token-locations-map)))
+                     (postings-next postings))
+                    (t
+                     (next-minimum-posting postings))))
+    token-locations-map))

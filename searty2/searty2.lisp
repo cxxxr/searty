@@ -293,3 +293,23 @@
                     (t
                      (next-minimum-posting postings))))
     (normalize-matched matched)))
+
+(defun read-file-range (file range)
+  (let* ((buffer (lem:find-file-buffer file))
+         (point (lem:buffer-point buffer)))
+    (lem:move-to-position point (range-start range))
+    (lem:with-point ((line-start (lem:line-start point)))
+      (lem:with-point ((line-end (lem:line-end point)))
+        (lem:with-point ((match-start (lem:move-to-position point (1+ (range-start range)))))
+          (lem:with-point ((match-end (lem:move-to-position point (1+ (range-end range)))))
+            (format t "~&~A:~A~A~A~%"
+                    file
+                    (lem:points-to-string line-start match-start)
+                    (cl-ansi-text:red (lem:points-to-string match-start match-end))
+                    (lem:points-to-string match-end line-end))))))))
+
+(defun print-matched (matched)
+  (maphash (lambda (pathname ranges)
+             (dolist (range ranges)
+               (read-file-range pathname range)))
+           (matched-document-positions-map matched)))

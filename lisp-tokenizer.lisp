@@ -35,6 +35,7 @@
                       #\+ scan-sharp-others
                       #\- scan-sharp-others
                       #\# scan-sharp-others
+                      #\= scan-sharp-others
                       #\* scan-sharp-others
                       #\| scan-block-comment
                       #\b scan-sharp-others
@@ -122,7 +123,8 @@
   (let ((arg (with-output-to-string (out)
                (loop :for c := (peek-char nil stream)
                      :while (and c (digit-char-p c))
-                     :do (write-char c out)))))
+                     :do (write-char c out)
+                         (read-char stream)))))
     (if (length= arg 0)
         nil
         (parse-integer arg))))
@@ -137,8 +139,9 @@
       (funcall scanner stream arg position))))
 
 (defun scan-sharp-others (stream arg position)
-  (declare (ignore arg))
-  (make-token :term (format nil "#~C" (read-char stream))
+  (make-token :term (if arg
+                        (format nil "#~D~C" arg (read-char stream))
+                        (format nil "#~C" (read-char stream)))
               :position position
               :kind t))
 

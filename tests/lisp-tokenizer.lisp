@@ -1,11 +1,12 @@
 (in-package :searty-tests.lisp-tokenizer)
 
 (defun test (actual expected)
-  (ok (length= actual expected))
-  (loop :for lit1 :in actual
-        :for lit2 :in expected
-        :do (ok (equal (token-term lit1) (getf lit2 :term)))
-            (ok (equal (token-position lit1) (getf lit2 :position)))))
+  (testing (princ-to-string expected)
+    (ok (length= actual expected))
+    (loop :for lit1 :in actual
+          :for lit2 :in expected
+          :do (ok (equal (token-term lit1) (getf lit2 :term)))
+              (ok (equal (token-position lit1) (getf lit2 :position))))))
 
 (deftest lisp-tokenizer
   (test (with-input-from-string (in "foo") (tokenize in))
@@ -92,4 +93,12 @@ bar")
         '((:TERM "foo" :POSITION 0 :KIND :UNINTERN-SYMBOL)))
 
   (test (with-input-from-string (in "#| foo #||# |#") (tokenize in))
-        '((:TERM " foo #||# " :POSITION 0 :KIND :BLOCK-COMMENT))))
+        '((:TERM " foo #||# " :POSITION 0 :KIND :BLOCK-COMMENT)))
+
+  (test (with-input-from-string (in "#1=(x y z)") (tokenize in))
+        '((:TERM "#1=" :POSITION 0 :KIND T)
+          (:TERM "(" :POSITION 3 :KIND T)
+          (:TERM "x" :POSITION 4 :KIND :SYMBOL)
+          (:TERM "y" :POSITION 6 :KIND :SYMBOL)
+          (:TERM "z" :POSITION 8 :KIND :SYMBOL)
+          (:TERM ")" :POSITION 9 :KIND T))))

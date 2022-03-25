@@ -137,6 +137,43 @@
       (add-file inverted-index file))
     inverted-index))
 
+;;;
+(defstruct (range (:constructor make-range (start end))) start end)
+
+(defstruct matched
+  (document-positions-map (make-hash-table :test 'equal)))
+
+(defun add-matched (matched document position length)
+  (push (make-range position (+ position length))
+        (gethash (document-pathname document)
+                 (matched-document-positions-map matched))))
+
+(defun normalize-ranges (ranges)
+  (let* ((ranges (sort ranges #'< :key #'range-start))
+        (head-ranges ranges))
+    (loop
+      (let ((current (first ranges))
+            (next (second ranges)))
+        (when (null next) (return))
+        (cond ((<= (range-start current)
+                   (range-start next)
+                   (range-end current))
+               (setf (range-end current) (range-end next))
+               (setf (rest ranges) (rest (rest ranges))))
+              (t
+               (setf ranges (rest ranges))))))
+    head-ranges))
+
+(defun normalize-matched (matched)
+  (let ((ht (matched-document-positions-map matched)))
+    (maphash (lambda (document ranges)
+               (setf ranges (sort ranges #'< :key #'range-start))
+               (setf (gethash document ht)
+                     (normalize-ranges ranges)))
+             ht))
+  matched)
+
+;;;
 (defstruct (posting (:constructor %make-posting (token locations))) token locations)
 
 (defun make-posting (inverted-index token)
@@ -207,17 +244,16 @@
 (defun search-and (inverted-index query)
   (let* ((tokens (mapcan #'tokenize-trigram (tokenize query)))
          (postings (make-postings inverted-index tokens))
-         (token-locations-map (make-hash-table :test 'equal)))
+         (matched (make-matched)))
     (loop :until (end-posting-one-or-more-p postings)
           :do (cond ((same-document-p postings)
                      (loop :for posting :across postings
-                           :do (push (posting-location posting)
-                                     (gethash (token-term (posting-token posting))
-                                              token-locations-map)))
+                           :do (loop :for pos :in (posting-positions posting)
+                                     :do (add-matched matched (posting-document posting) pos 1)))
                      (postings-next postings))
                     (t
                      (next-minimum-posting postings))))
-    (convert-token-locations-map token-locations-map)))
+    (normalize-matched matched)))
 
 (defun compute-relative-positions-list (postings)
   (loop :for posting :across postings
@@ -235,40 +271,6 @@
   (let ((relative-positions-list (compute-relative-positions-list postings)))
     (intersection-positions relative-positions-list)))
 
-(defstruct (range (:constructor make-range (start end))) start end)
-
-(defstruct matched
-  (document-positions-map (make-hash-table :test 'equal)))
-
-(defun add-matched (matched document position length)
-  (push (make-range position (+ position length))
-        (gethash (document-pathname document)
-                 (matched-document-positions-map matched))))
-
-(defun normalize-ranges (ranges)
-  (let* ((ranges (sort ranges #'< :key #'range-start))
-        (head-ranges ranges))
-    (loop
-      (let ((current (first ranges))
-            (next (second ranges)))
-        (when (null next) (return))
-        (cond ((<= (range-start current)
-                   (range-start next)
-                   (range-end current))
-               (setf (range-end current) (range-end next))
-               (setf (rest ranges) (rest (rest ranges))))
-              (t
-               (setf ranges (rest ranges))))))
-    head-ranges))
-
-(defun normalize-matched (matched)
-  (let ((ht (matched-document-positions-map matched)))
-    (maphash (lambda (document ranges)
-               (setf ranges (sort ranges #'< :key #'range-start))
-               (setf (gethash document ht)
-                     (normalize-ranges ranges)))
-             ht)))
-
 (defun search-phrase (inverted-index query &key start-bounding end-bounding)
   (let* ((tokens (mapcan (lambda (token)
                            (tokenize-trigram token
@@ -283,9 +285,11 @@
                        (loop :for posting :across postings
                              :for offset :from 0
                              :do (dolist (pos positions)
-                                   (add-matched matched (posting-document posting) (+ pos offset) 3))))
+                                   (add-matched matched
+                                                (posting-document posting)
+                                                (+ pos offset)
+                                                3))))
                      (postings-next postings))
                     (t
                      (next-minimum-posting postings))))
-    (normalize-matched matched)
-    matched))
+    (normalize-matched matched)))

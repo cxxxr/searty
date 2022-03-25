@@ -96,26 +96,26 @@
            value))))
 
 (defun insert-inverted-index (inverted-index document token from)
-  (let ((inverted-values (inverted-index-get inverted-index (token-term token) from)))
-    (let ((trigram-value (find (token-kind token) inverted-values :key #'trigram-value-kind)))
-      (if (null trigram-value)
-          (push (make-trigram-value
-                 :kind (token-kind token)
-                 :locations (list (make-location :document document
-                                                 :positions (list (token-pos token)))))
-                (inverted-index-get inverted-index (token-term token) from))
-          (let ((loc (find (document-id document)
-                           (trigram-value-locations trigram-value)
-                           :key (lambda (loc) (document-id (location-document loc)))
-                           :test #'=)))
-            (if (null loc)
-                (setf (trigram-value-locations trigram-value)
-                      (insert-sort (make-location :document document :positions (list (token-pos token)))
-                                   (trigram-value-locations trigram-value)
-                                   #'document<
-                                   :key #'location-document))
-                (setf (location-positions loc)
-                      (insert-sort (token-pos token) (location-positions loc) #'<))))))))
+  (let* ((inverted-values (inverted-index-get inverted-index (token-term token) from))
+         (trigram-value (find (token-kind token) inverted-values :key #'trigram-value-kind)))
+    (if (null trigram-value)
+        (push (make-trigram-value
+               :kind (token-kind token)
+               :locations (list (make-location :document document
+                                               :positions (list (token-pos token)))))
+              (inverted-index-get inverted-index (token-term token) from))
+        (let ((loc (find (document-id document)
+                         (trigram-value-locations trigram-value)
+                         :key (lambda (loc) (document-id (location-document loc)))
+                         :test #'=)))
+          (if (null loc)
+              (setf (trigram-value-locations trigram-value)
+                    (insert-sort (make-location :document document :positions (list (token-pos token)))
+                                 (trigram-value-locations trigram-value)
+                                 #'document<
+                                 :key #'location-document))
+              (setf (location-positions loc)
+                    (insert-sort (token-pos token) (location-positions loc) #'<)))))))
 
 (defun add-token (inverted-index document token)
   (insert-inverted-index inverted-index document token :trigram))

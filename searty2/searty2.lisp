@@ -7,13 +7,31 @@
 
 (defstruct token term kind pos)
 
-(defun tokenize-trigram (token)
+(defun make-bounding-string (string start-bounding end-bounding)
+  (cond ((and start-bounding end-bounding)
+         (format nil
+                 "~C~A~C"
+                 +null-char+
+                 string
+                 +null-char+))
+        (start-bounding
+         (format nil
+                 "~C~A"
+                 +null-char+
+                 string))
+        (end-bounding
+         (format nil
+                 "~A~C"
+                 string
+                 +null-char+))
+        (t
+         string)))
+
+(defun tokenize-trigram (token &key start-bounding end-bounding)
   (let ((kind (token-kind token)))
-    (loop :for term :in (searty:ngram (format nil
-                                              "~C~A~C"
-                                              +null-char+
-                                              (token-term token)
-                                              +null-char+)
+    (loop :for term :in (searty:ngram (make-bounding-string (token-term token)
+                                                            start-bounding
+                                                            end-bounding)
                                       3)
           :for pos :from (1- (token-pos token))
           :collect (make-token :term term :kind kind :pos pos))))
@@ -109,7 +127,7 @@
   (let ((document (new-document file)))
     (dolist (token (tokenize-file file))
       (add-symbol inverted-index document token)
-      (dolist (token (tokenize-trigram token))
+      (dolist (token (tokenize-trigram token :start-bounding t :end-bounding t))
         (add-token inverted-index document token)))))
 
 (defun index-lisp-system (system-designator)
@@ -214,24 +232,60 @@
         :finally (return set)))
 
 (defun phrase-match-p (postings)
-  (let* ((relative-positions-list (compute-relative-positions-list postings)))
+  (let ((relative-positions-list (compute-relative-positions-list postings)))
     (intersection-positions relative-positions-list)))
 
-(defun search-phrase (inverted-index query)
-  (let* ((tokens (mapcan #'tokenize-trigram (tokenize query)))
+(defstruct (range (:constructor make-range (start end))) start end)
+
+(defstruct matched
+  (document-positions-map (make-hash-table :test 'equal)))
+
+(defun add-matched (matched document position length)
+  (push (make-range position (+ position length))
+        (gethash (document-pathname document)
+                 (matched-document-positions-map matched))))
+
+(defun normalize-ranges (ranges)
+  (let* ((ranges (sort ranges #'< :key #'range-start))
+        (head-ranges ranges))
+    (loop
+      (let ((current (first ranges))
+            (next (second ranges)))
+        (when (null next) (return))
+        (cond ((<= (range-start current)
+                   (range-start next)
+                   (range-end current))
+               (setf (range-end current) (range-end next))
+               (setf (rest ranges) (rest (rest ranges))))
+              (t
+               (setf ranges (rest ranges))))))
+    head-ranges))
+
+(defun normalize-matched (matched)
+  (let ((ht (matched-document-positions-map matched)))
+    (maphash (lambda (document ranges)
+               (setf ranges (sort ranges #'< :key #'range-start))
+               (setf (gethash document ht)
+                     (normalize-ranges ranges)))
+             ht)))
+
+(defun search-phrase (inverted-index query &key start-bounding end-bounding)
+  (let* ((tokens (mapcan (lambda (token)
+                           (tokenize-trigram token
+                                             :start-bounding start-bounding
+                                             :end-bounding end-bounding))
+                         (tokenize query)))
          (postings (make-postings inverted-index tokens))
-         (token-locations-map (make-hash-table :test 'equal)))
+         (matched (make-matched)))
     (loop :until (some #'posting-null-p postings)
           :do (cond ((same-document-p postings)
                      (when-let ((positions (phrase-match-p postings)))
                        (loop :for posting :across postings
                              :for offset :from 0
-                             :do (push (make-location :document (posting-document posting)
-                                                      :positions (loop :for pos :in positions
-                                                                       :collect (+ pos offset)))
-                                       (gethash (token-term (posting-token posting))
-                                                token-locations-map))))
+                             :do (dolist (pos positions)
+                                   (add-matched matched (posting-document posting) (+ pos offset) 3))))
                      (postings-next postings))
                     (t
                      (next-minimum-posting postings))))
-    (convert-token-locations-map token-locations-map)))
+    (normalize-matched matched)
+    matched))

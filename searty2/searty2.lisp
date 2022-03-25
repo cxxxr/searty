@@ -122,16 +122,16 @@
 (defstruct (posting (:constructor %make-posting (token locations))) token locations)
 
 (defun make-posting (inverted-index token)
-  (dolist (trigram-value (inverted-index-get inverted-index
-                                             (token-term token)
-                                             :trigram))
-    (when (eq :symbol (trigram-value-kind trigram-value))
-      (let ((locations (trigram-value-locations trigram-value)))
-        (return (%make-posting token locations))))))
+  (or (dolist (trigram-value (inverted-index-get inverted-index
+                                                 (token-term token)
+                                                 :trigram))
+        (when (eq :symbol (trigram-value-kind trigram-value))
+          (let ((locations (trigram-value-locations trigram-value)))
+            (return (%make-posting token locations)))))
+      (%make-posting token nil)))
 
-(defun make-postings (inverted-index query)
-  (let* ((tokens (mapcan #'tokenize-trigram (tokenize query)))
-         (postings (make-array (length tokens))))
+(defun make-postings (inverted-index tokens)
+  (let ((postings (make-array (length tokens))))
     (loop :for token :in tokens
           :for i :from 0
           :do (setf (aref postings i)
@@ -175,10 +175,22 @@
           :always (document= first-document
                              (posting-document posting)))))
 
+(defun end-posting-one-or-more-p (postings)
+  (some #'posting-null-p postings))
+
+(defun convert-token-locations-map (token-locations-map)
+  (loop :for term :being :each :hash-key :of token-locations-map :using (:hash-value locs)
+        :collect (list term
+                       (mapcar (lambda (loc)
+                                 (list (document-pathname (location-document loc))
+                                       (location-positions loc)))
+                               locs))))
+
 (defun search-and (inverted-index query)
-  (let ((postings (make-postings inverted-index query))
-        (token-locations-map (make-hash-table :test 'equal)))
-    (loop :until (some #'posting-null-p postings)
+  (let* ((tokens (mapcan #'tokenize-trigram (tokenize query)))
+         (postings (make-postings inverted-index tokens))
+         (token-locations-map (make-hash-table :test 'equal)))
+    (loop :until (end-posting-one-or-more-p postings)
           :do (cond ((same-document-p postings)
                      (loop :for posting :across postings
                            :do (push (posting-location posting)
@@ -187,4 +199,39 @@
                      (postings-next postings))
                     (t
                      (next-minimum-posting postings))))
-    token-locations-map))
+    (convert-token-locations-map token-locations-map)))
+
+(defun compute-relative-positions-list (postings)
+  (loop :for posting :across postings
+        :for offset :from 0
+        :collect (loop :for pos :in (location-positions (posting-location posting))
+                       :collect (- pos offset))))
+
+(defun intersection-positions (relative-positions-list)
+  (loop :with set := (first relative-positions-list)
+        :for positions :in (rest relative-positions-list)
+        :do (setf set (intersection set positions))
+        :finally (return set)))
+
+(defun phrase-match-p (postings)
+  (let* ((relative-positions-list (compute-relative-positions-list postings)))
+    (intersection-positions relative-positions-list)))
+
+(defun search-phrase (inverted-index query)
+  (let* ((tokens (mapcan #'tokenize-trigram (tokenize query)))
+         (postings (make-postings inverted-index tokens))
+         (token-locations-map (make-hash-table :test 'equal)))
+    (loop :until (some #'posting-null-p postings)
+          :do (cond ((same-document-p postings)
+                     (when-let ((positions (phrase-match-p postings)))
+                       (loop :for posting :across postings
+                             :for offset :from 0
+                             :do (push (make-location :document (posting-document posting)
+                                                      :positions (loop :for pos :in positions
+                                                                       :collect (+ pos offset)))
+                                       (gethash (token-term (posting-token posting))
+                                                token-locations-map))))
+                     (postings-next postings))
+                    (t
+                     (next-minimum-posting postings))))
+    (convert-token-locations-map token-locations-map)))

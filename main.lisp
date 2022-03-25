@@ -24,4 +24,8 @@
                                    1000)))))
 
 (defun search-code (query)
-  (execute-search *searcher* (make-instance 'and-matcher :text query)))
+  (loop :for matched :in (execute-search *searcher* (make-instance 'and-matcher :text query))
+        :do (format t "~A:~{~D~^,~}~%"
+                    (document-pathname (first (resolve-document-by-ids *database* (list (matched-document-id matched)))))
+                    (matched-positions matched))))
+

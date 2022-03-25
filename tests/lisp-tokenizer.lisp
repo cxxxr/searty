@@ -1,7 +1,7 @@
 (in-package :searty-tests.lisp-tokenizer)
 
 (defun test (actual expected)
-  (testing (princ-to-string expected)
+  (testing (prin1-to-string expected)
     (ok (length= actual expected))
     (loop :for lit1 :in actual
           :for lit2 :in expected

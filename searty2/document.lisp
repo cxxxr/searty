@@ -6,7 +6,7 @@
 (defun id= (id1 id2)
   (string= id1 id2))
 
-(defstruct (document (:constructor make-document (pathname body)))
+(defstruct document
   (id (random-uuid))
   pathname
   body)

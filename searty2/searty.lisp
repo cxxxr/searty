@@ -58,7 +58,7 @@
   (inverted-index-clear inverted-index))
 
 (defun create-document (pathname)
-  (let ((document (make-document pathname (read-file-into-string pathname))))
+  (let ((document (make-document :pathname pathname :body (read-file-into-string pathname))))
     (insert-document *database* document)
     ;; (setf (gethash (document-id document) *document-table*) document)
     document))
@@ -138,7 +138,7 @@
 (defstruct (posting (:constructor %make-posting (token locations))) token locations)
 
 (defun make-posting (inverted-index token)
-  (let ((locations (inverted-index-get inverted-index token)))
+  (let ((locations (inverted-index-get inverted-index (token-id token))))
     (%make-posting token locations)))
 
 (defun make-postings (inverted-index tokens)
@@ -197,6 +197,7 @@
                                        (location-positions loc)))
                                locs))))
 
+;; TODO
 (defun search-and (inverted-index query)
   (let* ((tokens (mapcan #'tokenize-trigram (tokenize query)))
          (postings (make-postings inverted-index tokens))
@@ -227,12 +228,14 @@
   (let ((relative-positions-list (compute-relative-positions-list postings)))
     (intersection-positions relative-positions-list)))
 
-(defun search-phrase (inverted-index query &key start-bounding end-bounding)
+(defun search-phrase (query &key start-bounding end-bounding)
   (let* ((tokens (mapcan (lambda (token)
                            (tokenize-trigram token
                                              :start-bounding start-bounding
                                              :end-bounding end-bounding))
                          (tokenize query)))
+         (tokens (mapcar (curry #'resolve-token *database*) tokens))
+         (inverted-index (resolve-inverted-index *database* (mapcar #'token-id tokens)))
          (postings (make-postings inverted-index tokens))
          (matched (make-matched)))
     (loop :until (some #'posting-null-p postings)
@@ -272,10 +275,8 @@
               (incf pos (1+ (length line))))))
 
 (defun pretty-print-matched (matched)
-  matched
-  #+(or)
   (maphash (lambda (document-id ranges)
-             (let ((document (gethash document-id *document-table*)))
+             (let ((document (resolve-document-by-id *database* document-id))) ; N+1
                (dolist (range ranges)
                  (read-file-range (document-pathname document) range))))
            (matched-document-positions-map matched)))
@@ -283,4 +284,18 @@
 (eval-when ()
   (setq *database* (make-instance 'database))
   (defparameter $ (index-lisp-system :searty))
-  (pretty-print-matched (search-phrase $ "defun")))
+  (pretty-print-matched (search-phrase "defun")))
+
+;;;
+(defun pprint-inverted-index (inverted-index)
+  (let ((table (make-hash-table :test 'equal)))
+    (inverted-index-foreach inverted-index
+                            (lambda (token-id locations)
+                              (setf (gethash (token-term (resolve-token-by-id *database* token-id))
+                                             table)
+                                    (mapcar (lambda (loc)
+                                              (cons (resolve-document-by-id *database*
+                                                                            (location-document-id loc))
+                                                    (location-positions loc)))
+                                            locations))))
+    (hash-table-alist table)))

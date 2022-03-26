@@ -17,6 +17,17 @@
                              :body (document-body document))))
   document)
 
+(defun resolve-document-by-id (database id)
+  (when-let ((records (resolve-sxql (database-connection database)
+                                    (sxql:select (:pathname :body)
+                                      (sxql:from :document)
+                                      (sxql:where (:= :id id))
+                                      (sxql:limit 1)))))
+    (let* ((record (first records))
+           (pathname (getf record :|pathname|))
+           (body (getf record :|body|)))
+      (make-document :id id :pathname pathname :body body))))
+
 (defun insert-token (database token)
   (unless (token-id token)
     (setf (token-id token) (random-uuid)))
@@ -40,6 +51,19 @@
       (setf (token-id token) id))
     token))
 
+(defun resolve-token-by-id (database id)
+  (when-let* ((records
+               (resolve-sxql (database-connection database)
+                             (sxql:select (:id :term :kind)
+                               (sxql:from :token)
+                               (sxql:where (:= :id id))
+                               (sxql:limit 1)))))
+    (let* ((record (first records))
+           (id (getf record :|id|))
+           (term (babel:octets-to-string (getf record :|term|)))
+           (kind (getf record :|kind|)))
+      (make-token :id id :term term :kind kind))))
+
 (defun decode-inverted-index-records (records)
   (let ((inverted-index (make-inverted-index)))
     (dolist (record records)
@@ -55,6 +79,12 @@
                  (sxql:select (:token_id :encoded_values)
                    (sxql:from :inverted_index)
                    (sxql:where (:in :token_id token-ids))))))
+
+(defun resolve-whole-inverted-index (database)
+  (decode-inverted-index-records
+   (resolve-sxql (database-connection database)
+                 (sxql:select (:token_id :encoded_values)
+                   (sxql:from :inverted_index)))))
 
 (defun upsert-inverted-index (database token-id locations)
   (let ((encoded-locations (encode-locations-to-vector locations)))

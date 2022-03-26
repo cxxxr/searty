@@ -6,4 +6,4 @@
   :components ((:file "package")
                (:file "utils")
                (:file "lisp-tokenizer")
-               (:file "searty2")))
+               (:file "searty")))

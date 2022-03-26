@@ -235,9 +235,10 @@
 (defun scan-token (lexer)
   (unless (skip-whitespaces lexer)
     (return-from scan-token (values nil t)))
-  (if-let ((scanner (gethash (lexer-peek-char lexer) *macro-character-table*)))
-    (funcall scanner lexer)
-    (scan-symbol lexer)))
+  (let ((scanner (gethash (lexer-peek-char lexer) *macro-character-table*)))
+    (if scanner
+        (funcall scanner lexer)
+        (scan-symbol lexer))))
 
 (defun tokenize (text)
   (let ((lexer (make-lexer text)))

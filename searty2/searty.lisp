@@ -35,24 +35,19 @@
   (tokenize
    (read-file-into-string file)))
 
-(defvar *document-counter* 0)
-(defvar *document-table* (make-hash-table :test 'eql))
-
 (defstruct (document (:constructor %make-document (pathname)))
-  (id (incf *document-counter*))
+  (id (random-uuid))
   pathname)
 
 (defun new-document (pathname)
   (let ((document (%make-document pathname)))
-    (setf (gethash (document-id document) *document-table*)
-          document)
     document))
 
 (defun document= (document1 document2)
-  (= (document-id document1) (document-id document2)))
+  (equal (document-id document1) (document-id document2)))
 
 (defun document< (document1 document2)
-  (< (document-id document1) (document-id document2)))
+  (equal (document-id document1) (document-id document2)))
 
 (defstruct trigram-value kind locations)
 (defstruct location document positions)
@@ -86,10 +81,10 @@
                :locations (list (make-location :document document
                                                :positions (list (token-position token)))))
               (inverted-index-get inverted-index (token-term token) from))
-        (let ((loc (find (document-id document)
+        (let ((loc (find document
                          (trigram-value-locations trigram-value)
-                         :key (lambda (loc) (document-id (location-document loc)))
-                         :test #'=)))
+                         :key (lambda (loc) (location-document loc))
+                         :test #'document=)))
           (if (null loc)
               (setf (trigram-value-locations trigram-value)
                     (insert-sort (make-location :document document :positions (list (token-position token)))

@@ -44,14 +44,13 @@
                              :pos (searty.lisp-tokenizer:token-position token))))
 
 (defun tokenize (string)
-  (with-input-from-string (in string)
-    (convert-tokens
-     (searty.lisp-tokenizer:tokenize in))))
+  (convert-tokens
+   (searty.lisp-tokenizer:tokenize string)))
 
 (defun tokenize-file (file)
-  (with-open-file (in file)
-    (convert-tokens
-     (searty.lisp-tokenizer:tokenize in))))
+  (convert-tokens
+   (searty.lisp-tokenizer:tokenize
+    (read-file-into-string file))))
 
 (defvar *document-counter* 0)
 (defvar *document-table* (make-hash-table :test 'eql))
@@ -164,12 +163,24 @@
                (setf ranges (rest ranges))))))
     head-ranges))
 
-(defun normalize-matched (matched)
+(defun normalize-matched (matched &key start-bounding end-bounding)
   (let ((ht (matched-document-positions-map matched)))
     (maphash (lambda (document ranges)
                (setf ranges (sort ranges #'< :key #'range-start))
                (setf (gethash document ht)
                      (normalize-ranges ranges)))
+             ht)
+    (maphash (lambda (document ranges)
+               (when (or start-bounding end-bounding)
+                 (setf (gethash document ht)
+                       (mapcar (lambda (range)
+                                 (make-range (if start-bounding
+                                                 (1+ (range-start range))
+                                                 (range-start range))
+                                             (if end-bounding
+                                                 (1- (range-end range))
+                                                 (range-end range))))
+                               ranges))))
              ht))
   matched)
 
@@ -292,7 +303,9 @@
                      (postings-next postings))
                     (t
                      (next-minimum-posting postings))))
-    (normalize-matched matched)))
+    (normalize-matched matched
+                       :start-bounding start-bounding
+                       :end-bounding end-bounding)))
 
 (defun read-file-range (file range)
   (let* ((buffer (lem:find-file-buffer file))
@@ -313,3 +326,10 @@
              (dolist (range ranges)
                (read-file-range pathname range)))
            (matched-document-positions-map matched)))
+
+#|
+
+(defparameter $ (index-lisp-system :searty))
+(print-matched (search-phrase $ "save-excursion"))
+
+|#

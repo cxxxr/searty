@@ -306,9 +306,8 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 (defclass lisp-tokenizer () ())
 
 (defmethod tokenize ((tokenizer lisp-tokenizer) text)
-  (with-input-from-string (in text)
-    (mapcar #'searty.lisp-tokenizer:token-term
-            (searty.lisp-tokenizer:tokenize in))))
+  (mapcar #'searty.lisp-tokenizer:token-term
+          (searty.lisp-tokenizer:tokenize text)))
 
 (defclass lisp-searcher (searcher) ())
 

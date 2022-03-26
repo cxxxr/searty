@@ -5,8 +5,7 @@
                "sxql"
                "flexi-streams"
                "uuid"
-               "cl-ansi-text"
-               "lem")
+               "cl-ansi-text")
   :serial t
   :components ((:file "package")
                (:file "utils")

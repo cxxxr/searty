@@ -308,20 +308,21 @@
                        :end-bounding end-bounding)))
 
 (defun read-file-range (file range)
-  (let* ((buffer (lem:find-file-buffer file))
-         (point (lem:buffer-point buffer)))
-    (lem:move-to-position point (range-start range))
-    (lem:with-point ((line-start (lem:line-start point)))
-      (lem:with-point ((line-end (lem:line-end point)))
-        (lem:with-point ((match-start (lem:move-to-position point (1+ (range-start range)))))
-          (lem:with-point ((match-end (lem:move-to-position point (1+ (range-end range)))))
-            (format t "~&~A:~A~A~A~%"
-                    file
-                    (lem:points-to-string line-start match-start)
-                    (cl-ansi-text:red (lem:points-to-string match-start match-end))
-                    (lem:points-to-string match-end line-end))))))))
+  (with-open-file (in file)
+    (loop :with pos := 0
+          :for line := (read-line in)
+          :do (when (<= pos (range-start range) (+ pos (length line)))
+                (format t "~&~A:~A~A~A~%"
+                        file
+                        (subseq line 0 (- (range-start range) pos))
+                        (cl-ansi-text:red (subseq line
+                                                  (- (range-start range) pos)
+                                                  (- (range-end range) pos)))
+                        (subseq line (- (range-end range) pos)))
+                (return))
+              (incf pos (1+ (length line))))))
 
-(defun print-matched (matched)
+(defun pretty-print-matched (matched)
   (maphash (lambda (pathname ranges)
              (dolist (range ranges)
                (read-file-range pathname range)))
@@ -330,6 +331,6 @@
 #|
 
 (defparameter $ (index-lisp-system :searty))
-(print-matched (search-phrase $ "save-excursion"))
+(pretty-print-matched (search-phrase $ "defun"))
 
 |#

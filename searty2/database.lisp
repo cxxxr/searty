@@ -15,11 +15,35 @@
                   (sxql:set= :id (document-id document)
                              :pathname (namestring (document-pathname document))
                              :body (document-body document))))
-  document)
+  (values))
 
-(defun resolve-inverted-index (database tokens kind)
-  (resolve-sxql (database-connection database)
-                (sxql:select (:token :kind :encoded_values)
-                  (sxql:from :inverted_index)
-                  (sxql:where (:and (:in :token (mapcar #'token-term tokens))
-                                    (:= :kind kind))))))
+(defun decode-inverted-index-records (records tokens)
+  (let ((inverted-index (make-inverted-index))
+        (kind-set (delete-duplicates (mapcar (compose #'encode-token-kind #'token-kind) tokens))))
+    (dolist (record records)
+      (let ((term (getf record :|token|))
+            (kind (getf record :|kind|))
+            (encoded-values (getf record :|encoded_values|)))
+        (when (find kind kind-set)
+          (setf (inverted-index-get inverted-index
+                                    (make-token :term term :kind kind))
+                (decode-doc-locations-from-vector encoded-values)))))
+    inverted-index))
+
+(defun resolve-inverted-index (database tokens)
+  (decode-inverted-index-records
+   (resolve-sxql (database-connection database)
+                 (sxql:select (:token :kind :encoded_values)
+                   (sxql:from :inverted_index)
+                   (sxql:where (:in :token (mapcar #'token-term tokens)))))
+   tokens))
+
+(defun upsert-inverted-index (database token locations)
+  (let ((encoded-locations (encode-locations-to-vector locations)))
+    (execute-sql (database-connection database)
+                 "INSERT INTO inverted_index (token, kind, encoded_values) VALUES (?, ?, ?)
+ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
+                 (list (token-term token)
+                       (token-kind token)
+                       encoded-locations
+                       encoded-locations))))

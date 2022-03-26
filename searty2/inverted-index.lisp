@@ -9,6 +9,10 @@
 (defun token-hashkey (token)
   (list (token-kind token) (token-term token)))
 
+(defun hashkey-token (hashkey)
+  (destructuring-bind (kind term) hashkey
+    (make-token :term term :kind kind)))
+
 (defun inverted-index-get (inverted-index token)
   (gethash (token-hashkey token) (inverted-index-table inverted-index)))
 
@@ -31,6 +35,44 @@
                              :key #'location-document-id))
           (setf (location-positions loc)
                 (insert-sort (token-position token) (location-positions loc) #'<))))))
+
+(defun inverted-index-tokens (inverted-index)
+  (maphash (lambda (key value)
+             (declare (ignore value))
+             (hashkey-token key))
+           inverted-index))
+
+(defun insert-locations (loc locations)
+  (insert-sort loc locations #'id< :key #'location-document-id))
+
+(defun merge-positions (positions1 positions2)
+  (merge 'list positions1 positions2 #'<))
+
+(defun merge-inverted-values (destination-locations source-locations)
+  (dolist (source-loc source-locations)
+    (if-let ((dest-loc
+              (find (location-document-id source-loc)
+                    destination-locations
+                    :test #'id=
+                    :key #'location-document-id)))
+      (setf (location-positions dest-loc)
+            (merge-positions (location-positions dest-loc)
+                             (location-positions source-loc)))
+      (setf destination-locations
+            (insert-locations source-loc destination-locations))))
+  destination-locations)
+
+(defun inverted-index-merge (destination source)
+  (maphash (lambda (hashkey locations)
+             (setf (gethash hashkey destination)
+                   (merge-inverted-values (gethash hashkey destination)
+                                          locations)))
+           source))
+
+(defun inverted-index-foreach (inverted-index function)
+  (maphash (lambda (hashkey locations)
+             (funcall function (hashkey-token hashkey) locations))
+           inverted-index))
 
 ;;; encode/decode
 (defun encode-positive-integer (v stream)
@@ -65,7 +107,7 @@
 (defun encode-locations-to-vector (locations)
   (with-open-stream (stream (flex:make-in-memory-output-stream))
     (encode-locations locations stream)
-    (flex:get-output-stream-sequence stream)))
+    (coerce-unsigned-byte-vector (flex:get-output-stream-sequence stream))))
 
 (defun decode-positive-integer (stream)
   (let ((v 0))

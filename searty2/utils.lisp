@@ -26,3 +26,8 @@
 
 (defun random-uuid ()
   (princ-to-string (uuid:make-v4-uuid)))
+
+(defun coerce-unsigned-byte-vector (bytes)
+  (make-array (length bytes)
+              :element-type '(unsigned-byte 8)
+              :initial-contents (coerce bytes 'list)))

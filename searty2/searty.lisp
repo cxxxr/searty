@@ -35,7 +35,23 @@
   (tokenize
    (read-file-into-string file)))
 
+;; TODO: idとdocumentをマッピングするためにあるが、rdbmsがあれば不要になるので削除する
 (defvar *document-table* (make-hash-table :test 'equal))
+
+(defun save-inverted-index (inverted-index)
+  (inverted-index-foreach
+   inverted-index
+   (lambda (token locations)
+     (upsert-inverted-index *database*
+                            token
+                            locations))))
+
+(defun flush-inverted-index (inverted-index)
+  (let* ((storage-inverted-index
+           (resolve-inverted-index *database* (inverted-index-tokens inverted-index)))
+         (merged-inverted-index
+           (inverted-index-merge inverted-index storage-inverted-index)))
+    (save-inverted-index merged-inverted-index)))
 
 (defun create-document (pathname)
   (let ((document (make-document pathname (read-file-into-string pathname))))
@@ -49,7 +65,9 @@
                           (tokenize-trigram token :start-bounding t :end-bounding t))
                         (tokenize-file file))))
     (dolist (token tokens)
-      (inverted-index-insert inverted-index (document-id document) token))))
+      (inverted-index-insert inverted-index (document-id document) token))
+    ;; TODO: index-lisp-systemで最後に一度だけ行うようにする
+    (flush-inverted-index inverted-index)))
 
 (defun index-lisp-system (system-designator)
   (let ((inverted-index (make-inverted-index)))

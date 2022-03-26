@@ -307,9 +307,7 @@
                (read-file-range pathname range)))
            (matched-document-positions-map matched)))
 
-#|
-
-(defparameter $ (index-lisp-system :searty))
-(pretty-print-matched (search-phrase $ "defun"))
-
-|#
+(eval-when ()
+  (setq *database* (make-instance 'database))
+  (defparameter $ (index-lisp-system :searty))
+  (pretty-print-matched (search-phrase $ "defun")))

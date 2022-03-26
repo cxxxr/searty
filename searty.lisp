@@ -138,7 +138,9 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 (defclass word-tokenizer () ())
 
 (defmethod tokenize ((tokenizer word-tokenizer) text)
-  (word-tokenize text))
+  (loop :for term :in (word-tokenize text)
+        :for pos :from 0
+        :collect (make-token :term term :position pos)))
 
 ;;; indexer
 (defclass indexer ()
@@ -157,18 +159,18 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
            (tokens (tokenize (indexer-tokenizer indexer) text))
            (document (create-document (indexer-database indexer) pathname text)))
       (loop :for pos :from 0
-            :for token-term :in tokens
-            :do (add-token indexer token-term document pos))
+            :for token :in tokens
+            :do (add-token indexer token document))
       (flush-inverted-index indexer)
       document)))
 
-(defmethod add-token ((indexer indexer) token-term document pos)
-  (let ((token (or (resolve-token (indexer-database indexer) token-term)
-                   (create-token (indexer-database indexer) token-term))))
+(defmethod add-token ((indexer indexer) token document)
+  (let ((storage-token (or (resolve-token (indexer-database indexer) (token-term token))
+                           (create-token (indexer-database indexer) (token-term token)))))
     (insert-doc-location (indexer-inverted-index indexer)
-                         (token-id token)
+                         (token-id storage-token)
                          (document-id document)
-                         pos)
+                         (token-position token))
     (values)))
 
 (defmethod save-inverted-index ((indexer indexer) inverted-index)
@@ -295,8 +297,9 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 (defmethod execute-search ((searcher searcher) query)
   (let* ((tokens
            (resolve-tokens (searcher-database searcher)
-                           (tokenize (searcher-tokenizer searcher)
-                                     (query-text query))))
+                           (mapcar #'token-term
+                                   (tokenize (searcher-tokenizer searcher)
+                                             (query-text query)))))
          (inverted-index
            (resolve-inverted-index (searcher-database searcher)
                                    (mapcar #'token-id tokens))))

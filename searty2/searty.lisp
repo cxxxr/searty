@@ -28,7 +28,9 @@
                                                      start-bounding
                                                      end-bounding)
                                3)
-          :for pos :from (1- (token-position token))
+          :for pos :from (if start-bounding
+                             (1- (token-position token))
+                             (token-position token))
           :collect (make-token :term term :kind kind :position pos))))
 
 (defun tokenize-file (file)

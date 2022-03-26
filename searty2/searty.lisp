@@ -64,25 +64,27 @@
     document))
 
 (defun add-file (inverted-index file)
-  (dbi:with-transaction (database-connection *database*)
-    (let ((document (create-document file))
-          (tokens (tokenize-file file)))
-      (dolist (token tokens)
-        ;; NOTE: このresolve-token, insert-token内でtoken-idがセットされる
-        (unless (resolve-token *database* token)
-          (insert-token *database* token))
-        (inverted-index-insert inverted-index (document-id document) token))
-      ;; TODO: index-lisp-systemで最後に一度だけ行うようにする
-      (flush-inverted-index inverted-index))))
+  (let ((document (create-document file))
+        (tokens (tokenize-file file)))
+    (dolist (token tokens)
+      ;; NOTE: このresolve-token, insert-token内でtoken-idがセットされる
+      (unless (resolve-token *database* token)
+        (insert-token *database* token))
+      (inverted-index-insert inverted-index (document-id document) token))))
+
+(defun add-file-with-time (inverted-index file)
+  (format t "~&~A " file)
+  (let ((ms (measure-time (add-file inverted-index file))))
+    (format t "[~D ms]~%" ms)))
 
 (defun index-lisp-system (system-designator)
-  (let ((inverted-index (make-inverted-index)))
-    (dolist (file (find-files (asdf:system-source-directory system-designator)
-                              #'lisp-pathname-p))
-      (format t "~&~A " file)
-      (let ((ms (measure-time (add-file inverted-index file))))
-        (format t "[~D ms]~%" ms)))
-    inverted-index))
+  (dbi:with-transaction (database-connection *database*)
+    (let ((inverted-index (make-inverted-index)))
+      (dolist (file (find-files (asdf:system-source-directory system-designator)
+                                #'lisp-pathname-p))
+        (add-file-with-time inverted-index file))
+      (flush-inverted-index inverted-index)
+      inverted-index)))
 
 ;;;
 (defstruct (range (:constructor make-range (start end))) start end)

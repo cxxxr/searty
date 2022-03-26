@@ -28,7 +28,8 @@
 (defun skip-whitespaces (lexer)
   (loop :for c := (lexer-peek-char lexer)
         :while (and c (whitespacep c))
-        :do (lexer-read-char lexer)))
+        :do (lexer-read-char lexer)
+        :finally (return c)))
 
 (deftype token-kind ()
   '(member

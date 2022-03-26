@@ -11,12 +11,9 @@
           (lexer-position lexer))))
 
 (defun lexer-read-char (lexer)
-  (let ((c (lexer-peek-char lexer)))
-    (if c
-        (progn
-          (incf (lexer-position lexer))
-          c)
-        nil)))
+  (when-let ((c (lexer-peek-char lexer)))
+    (incf (lexer-position lexer))
+    c))
 
 (defun lexer-unread-char (lexer c)
   (declare (ignore c))
@@ -29,13 +26,9 @@
           :do (write-char c out))))
 
 (defun skip-whitespaces (lexer)
-  (loop
-    (let ((c (lexer-peek-char lexer)))
-      (when (null c)
-        (return nil))
-      (unless (whitespacep c)
-        (return c))
-      (lexer-read-char lexer))))
+  (loop :for c := (lexer-peek-char lexer)
+        :while (and c (whitespacep c))
+        :do (lexer-read-char lexer)))
 
 (deftype token-kind ()
   '(member

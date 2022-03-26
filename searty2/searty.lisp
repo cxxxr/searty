@@ -1,7 +1,5 @@
 (in-package :searty2)
 
-(declaim (optimize (speed 0) (safety 3) (debug 3)))
-
 (defconstant +null-char+ (code-char 0))
 
 (defun make-bounding-string (string start-bounding end-bounding)

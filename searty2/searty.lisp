@@ -186,19 +186,22 @@
   (some #'posting-null-p postings))
 
 ;; TODO
-(defun search-and (inverted-index query)
-  (let* ((tokens (mapcan #'tokenize-trigram (tokenize query)))
-         (postings (make-postings inverted-index tokens))
-         (matched (make-matched)))
-    (loop :until (end-posting-one-or-more-p postings)
-          :do (cond ((same-document-p postings)
-                     (loop :for posting :across postings
-                           :do (loop :for pos :in (posting-positions posting)
-                                     :do (add-matched matched (posting-document-id posting) pos 1)))
-                     (postings-next postings))
-                    (t
-                     (next-minimum-posting postings))))
-    (normalize-matched matched)))
+(defun search-and (query)
+  (let ((tokens (mapcar (curry #'resolve-token *database*)
+                        (mapcan #'tokenize-trigram (tokenize query)))))
+    (unless (some #'null tokens)
+      (let* ((inverted-index (resolve-inverted-index-by-token-ids *database* (mapcar #'token-id tokens)))
+             (postings (make-postings inverted-index tokens))
+             (matched (make-matched)))
+        (loop :until (end-posting-one-or-more-p postings)
+              :do (cond ((same-document-p postings)
+                         (loop :for posting :across postings
+                               :do (loop :for pos :in (posting-positions posting)
+                                         :do (add-matched matched (posting-document-id posting) pos 1)))
+                         (postings-next postings))
+                        (t
+                         (next-minimum-posting postings))))
+        (normalize-matched matched)))))
 
 (defun compute-relative-positions-list (postings)
   (loop :for posting :across postings

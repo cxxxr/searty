@@ -44,10 +44,12 @@
     document))
 
 (defun add-file (inverted-index file)
-  (let ((document (create-document file)))
-    (dolist (token (tokenize-file file))
-      (dolist (trigram-token (tokenize-trigram token :start-bounding t :end-bounding t))
-        (inverted-index-insert inverted-index (document-id document) trigram-token)))))
+  (let ((document (create-document file))
+        (tokens (mapcan (lambda (token)
+                          (tokenize-trigram token :start-bounding t :end-bounding t))
+                        (tokenize-file file))))
+    (dolist (token tokens)
+      (inverted-index-insert inverted-index (document-id document) token))))
 
 (defun index-lisp-system (system-designator)
   (let ((inverted-index (make-inverted-index)))
@@ -108,12 +110,8 @@
 (defstruct (posting (:constructor %make-posting (token locations))) token locations)
 
 (defun make-posting (inverted-index token)
-  (or (dolist (inverted-value (inverted-index-get inverted-index
-                                                 (token-term token)))
-        (when (eq :symbol (inverted-value-kind inverted-value))
-          (let ((locations (inverted-value-locations inverted-value)))
-            (return (%make-posting token locations)))))
-      (%make-posting token nil)))
+  (let ((locations (inverted-index-get inverted-index token)))
+    (%make-posting token locations)))
 
 (defun make-postings (inverted-index tokens)
   (let ((postings (make-array (length tokens))))

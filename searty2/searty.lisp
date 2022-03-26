@@ -1,8 +1,5 @@
 (in-package :searty2)
 
-(defun insert-sort (item list predicate &key key)
-  (merge 'list (list item) list predicate :key key))
-
 (defconstant +null-char+ (code-char 0))
 
 (defun make-bounding-string (string start-bounding end-bounding)

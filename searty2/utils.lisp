@@ -20,3 +20,6 @@
                     (unless (search "/.git/" (namestring dir))
                       (find-files dir test)))
                   (uiop:subdirectories directory))))
+
+(defun insert-sort (item list predicate &key key)
+  (merge 'list (list item) list predicate :key key))

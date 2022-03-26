@@ -24,7 +24,7 @@
       (let ((result (execute-search searcher (make-instance 'and-matcher
                                                             :text "bbbbbbbb"))))
         (ok (set-equal result
-                       (list (searty::make-matched :token (resolve-token database "bbbbbbbb")
+                       (list (searty::make-matched :token (resolve-token-by-term database "bbbbbbbb")
                                                    :document-id (document-id doc-3)
                                                    :positions '(1)))
                        :test #'searty::matched-equal)))
@@ -32,26 +32,26 @@
       (let ((result (execute-search searcher (make-instance 'and-matcher
                                                             :text "foo"))))
         (ok (set-equal result
-                       (list (searty::make-matched :token (resolve-token database "foo")
+                       (list (searty::make-matched :token (resolve-token-by-term database "foo")
                                                    :document-id (document-id doc-1)
                                                    :positions '(0))
-                             (searty::make-matched :token (resolve-token database "foo")
+                             (searty::make-matched :token (resolve-token-by-term database "foo")
                                                    :document-id (document-id doc-2)
                                                    :positions '(0)))
                        :test #'searty::matched-equal)))
       (let ((result (execute-search searcher (make-instance 'and-matcher
                                                             :text "xxx yyy"))))
         (ok (set-equal result
-                       (list (searty::make-matched :token (resolve-token database "xxx")
+                       (list (searty::make-matched :token (resolve-token-by-term database "xxx")
                                                    :document-id (document-id doc-1)
                                                    :positions '(1))
-                             (searty::make-matched :token (resolve-token database "yyy")
+                             (searty::make-matched :token (resolve-token-by-term database "yyy")
                                                    :document-id (document-id doc-1)
                                                    :positions '(2))
-                             (searty::make-matched :token (resolve-token database "xxx")
+                             (searty::make-matched :token (resolve-token-by-term database "xxx")
                                                    :document-id (document-id doc-2)
                                                    :positions '(2))
-                             (searty::make-matched :token (resolve-token database "yyy")
+                             (searty::make-matched :token (resolve-token-by-term database "yyy")
                                                    :document-id (document-id doc-2)
                                                    :positions '(3)))
                        :test #'searty::matched-equal))))))

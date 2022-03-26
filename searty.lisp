@@ -16,7 +16,9 @@
 (defgeneric resolve-document-by-pathname (database pathname))
 (defgeneric resolve-document-by-ids (database id))
 (defgeneric create-token (database term))
-(defgeneric resolve-token (database term))
+(defgeneric resolve-token (database token))
+(defgeneric resolve-token-by-term (database term))
+(defgeneric resolve-tokens (database terms))
 (defgeneric resolve-inverted-index (database token-ids))
 (defgeneric resolve-whole-inverted-index (database))
 (defgeneric upsert-inverted-index (database token-id encoded-doc-locations))
@@ -65,30 +67,43 @@
                     (sxql:set= :id id :term term)))
     (make-token :id id :term term)))
 
-(defun make-token-from-record (record)
+(defun make-token-from-record (record position kind)
   (destructuring-bind (&key ((:|id| id))
                             ((:|term| term)))
       record
-    (make-token :id id :term term)))
+    (make-token :id id :term term :position position :kind kind)))
 
-(defmethod resolve-token ((database database) term)
+(defmethod resolve-token ((database database) token)
+  (when-let ((records
+              (resolve-sxql (database-connection database)
+                            (sxql:select (:term :id)
+                              (sxql:from :token)
+                              (sxql:where (:= :term (token-term token)))
+                              (sxql:limit 1)))))
+    (make-token-from-record (first records)
+                            (token-position token)
+                            (token-kind token))))
+
+(defmethod resolve-token-by-term ((database database) term)
   (when-let ((records
               (resolve-sxql (database-connection database)
                             (sxql:select (:term :id)
                               (sxql:from :token)
                               (sxql:where (:= :term term))
                               (sxql:limit 1)))))
-    (make-token-from-record (first records))))
+    (make-token-from-record (first records)
+                            nil
+                            nil)))
 
 (defmethod resolve-tokens ((database database) terms)
-  (mapcar #'make-token-from-record
+  (mapcar (lambda (record) (make-token-from-record record nil nil))
           (resolve-sxql (database-connection database)
                         (sxql:select (:term :id)
                           (sxql:from :token)
                           (sxql:where (:in :term terms))))))
 
 (defmethod resolve-tokens-with-submatch ((database database) term)
-  (mapcar #'make-token-from-record
+  (mapcar (lambda (record) (make-token-from-record record nil nil))
           (resolve-sxql (database-connection database)
                         (sxql:select (:term :id)
                           (sxql:from :token)
@@ -165,7 +180,7 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
       document)))
 
 (defmethod add-token ((indexer indexer) token document)
-  (let ((storage-token (or (resolve-token (indexer-database indexer) (token-term token))
+  (let ((storage-token (or (resolve-token (indexer-database indexer) token)
                            (create-token (indexer-database indexer) (token-term token)))))
     (insert-doc-location (indexer-inverted-index indexer)
                          (token-id storage-token)

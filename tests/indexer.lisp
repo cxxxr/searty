@@ -16,9 +16,9 @@
           (ok (uiop:pathname-equal doc-file (document-pathname document)))
           (ok (equal "foo bar baz" (document-body document)))
           ;; token
-          (let ((tok-1 (resolve-token database "foo"))
-                (tok-2 (resolve-token database "bar"))
-                (tok-3 (resolve-token database "baz")))
+          (let ((tok-1 (resolve-token-by-term database "foo"))
+                (tok-2 (resolve-token-by-term database "bar"))
+                (tok-3 (resolve-token-by-term database "baz")))
             (ok tok-1)
             (ok tok-2)
             (ok tok-3)

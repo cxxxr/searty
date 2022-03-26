@@ -30,6 +30,7 @@
    :resolve-document-by-pathname
    :create-token
    :resolve-token
+   :resolve-token-by-term
    :resolve-inverted-index
    :upsert-inverted-index
    :resolve-whole-inverted-index

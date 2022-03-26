@@ -37,10 +37,12 @@
                 (insert-sort (token-position token) (location-positions loc) #'<))))))
 
 (defun inverted-index-tokens (inverted-index)
-  (maphash (lambda (key value)
-             (declare (ignore value))
-             (hashkey-token key))
-           inverted-index))
+  (let ((tokens '()))
+    (maphash (lambda (key value)
+               (declare (ignore value))
+               (push (hashkey-token key) tokens))
+             (inverted-index-table inverted-index))
+    tokens))
 
 (defun insert-locations (loc locations)
   (insert-sort loc locations #'id< :key #'location-document-id))
@@ -64,10 +66,11 @@
 
 (defun inverted-index-merge (destination source)
   (maphash (lambda (hashkey locations)
-             (setf (gethash hashkey destination)
-                   (merge-inverted-values (gethash hashkey destination)
+             (setf (gethash hashkey (inverted-index-table destination))
+                   (merge-inverted-values (gethash hashkey (inverted-index-table destination))
                                           locations)))
-           source))
+           (inverted-index-table source))
+  destination)
 
 (defun inverted-index-foreach (inverted-index function)
   (maphash (lambda (hashkey locations)

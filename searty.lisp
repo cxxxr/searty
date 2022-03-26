@@ -319,3 +319,22 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
            (resolve-inverted-index (searcher-database searcher)
                                    (mapcar #'token-id tokens))))
     (match query tokens inverted-index)))
+
+
+(defclass lisp-tokenizer () ())
+
+(defmethod tokenize ((tokenizer lisp-tokenizer) text)
+  (tokenize-lisp text))
+
+(defclass lisp-searcher (searcher) ())
+
+(defmethod execute-search ((searcher lisp-searcher) query)
+  (let* ((tokens
+           (loop :for term :in (tokenize (searcher-tokenizer searcher)
+                                         (query-text query))
+                 :append (resolve-tokens-with-submatch (searcher-database searcher) term))))
+    (loop :for token :in tokens
+          :append (let ((inverted-index
+                          (resolve-inverted-index (searcher-database searcher)
+                                                  (list (token-id token)))))
+                    (match query (list token) inverted-index)))))

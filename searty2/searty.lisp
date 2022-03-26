@@ -32,8 +32,9 @@
           :collect (make-token :term term :kind kind :position pos))))
 
 (defun tokenize-file (file)
-  (tokenize
-   (read-file-into-string file)))
+  (mapcan (lambda (token)
+            (tokenize-trigram token :start-bounding t :end-bounding t))
+          (tokenize (read-file-into-string file))))
 
 ;; TODO: idとdocumentをマッピングするためにあるが、rdbmsがあれば不要になるので削除する
 (defvar *document-table* (make-hash-table :test 'equal))
@@ -61,9 +62,7 @@
 
 (defun add-file (inverted-index file)
   (let ((document (create-document file))
-        (tokens (mapcan (lambda (token)
-                          (tokenize-trigram token :start-bounding t :end-bounding t))
-                        (tokenize-file file))))
+        (tokens (tokenize-file file)))
     (dolist (token tokens)
       (inverted-index-insert inverted-index (document-id document) token))
     ;; TODO: index-lisp-systemで最後に一度だけ行うようにする

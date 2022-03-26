@@ -43,8 +43,8 @@
 (defun add-file (inverted-index file)
   (let ((document (create-document file)))
     (dolist (token (tokenize-file file))
-      (dolist (token (tokenize-trigram token :start-bounding t :end-bounding t))
-        (inverted-index-insert inverted-index document token)))))
+      (dolist (trigram-token (tokenize-trigram token :start-bounding t :end-bounding t))
+        (inverted-index-insert inverted-index document trigram-token)))))
 
 (defun index-lisp-system (system-designator)
   (let ((inverted-index (make-inverted-index)))

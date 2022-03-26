@@ -4,7 +4,8 @@
                "cl-ansi-text"
                "sxql"
                "flexi-streams"
-               "cl-dbi")
+               "cl-dbi"
+               "babel")
   :serial t
   :pathname "searty2"
   :components ((:file "package")

@@ -23,7 +23,7 @@
   (execute-sxql (database-connection database)
                 (sxql:insert-into :token
                   (sxql:set= :id (token-id token)
-                             :term (token-term token)
+                             :term (babel:string-to-octets (token-term token))
                              :kind (encode-token-kind (token-kind token)))))
   token)
 
@@ -32,7 +32,7 @@
                (resolve-sxql (database-connection database)
                              (sxql:select :id
                                (sxql:from :token)
-                               (sxql:where (:and (:= :term (token-term token))
+                               (sxql:where (:and (:= :term (babel:string-to-octets (token-term token)))
                                                  (:= :kind (encode-token-kind (token-kind token)))))
                                (sxql:limit 1)))))
     (let* ((record (first records))

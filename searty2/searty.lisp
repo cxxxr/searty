@@ -35,9 +35,12 @@
   (tokenize
    (read-file-into-string file)))
 
+(defvar *document-table* (make-hash-table :test 'equal))
+
 (defun create-document (pathname)
   (let ((document (make-document pathname (read-file-into-string pathname))))
     ;; (insert-document *database* document)
+    (setf (gethash (document-id document) *document-table*) document)
     document))
 
 (defun add-file (inverted-index file)
@@ -243,9 +246,10 @@
               (incf pos (1+ (length line))))))
 
 (defun pretty-print-matched (matched)
-  (maphash (lambda (id ranges)
-             (dolist (range ranges)
-               (read-file-range id range)))
+  (maphash (lambda (document-id ranges)
+             (let ((document (gethash document-id *document-table*)))
+               (dolist (range ranges)
+                 (read-file-range (document-pathname document) range))))
            (matched-document-positions-map matched)))
 
 (eval-when ()

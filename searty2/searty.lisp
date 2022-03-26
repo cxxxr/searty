@@ -84,7 +84,8 @@
                          :test #'document=)))
           (if (null loc)
               (setf (trigram-value-locations trigram-value)
-                    (insert-sort (make-location :document document :positions (list (token-position token)))
+                    (insert-sort (make-location :document document
+                                                :positions (list (token-position token)))
                                  (trigram-value-locations trigram-value)
                                  #'document<
                                  :key #'location-document))

@@ -50,15 +50,6 @@
    :decode-doc-locations-from-vector
    :check-inverted-index-corruption))
 
-(defpackage :searty.lisp-tokenizer
-  (:use :cl :alexandria)
-  (:export :make-token
-           :token-term
-           :token-position
-           :token-kind
-           :tokenize))
-
 (defpackage :searty2
   (:use :cl
-        :alexandria
-        :searty.lisp-tokenizer))
+        :alexandria))

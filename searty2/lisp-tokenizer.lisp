@@ -1,4 +1,4 @@
-(in-package :searty.lisp-tokenizer)
+(in-package :searty2)
 
 (defstruct (lexer (:constructor make-lexer (text)))
   text

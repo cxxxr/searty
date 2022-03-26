@@ -330,9 +330,9 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 
 (defmethod execute-search ((searcher lisp-searcher) query)
   (let* ((tokens
-           (loop :for term :in (tokenize (searcher-tokenizer searcher)
-                                         (query-text query))
-                 :append (resolve-tokens-with-submatch (searcher-database searcher) term))))
+           (loop :for token :in (tokenize (searcher-tokenizer searcher)
+                                          (query-text query))
+                 :append (resolve-tokens-with-submatch (searcher-database searcher) (token-term token)))))
     (loop :for token :in tokens
           :append (let ((inverted-index
                           (resolve-inverted-index (searcher-database searcher)

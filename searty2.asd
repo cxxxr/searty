@@ -7,4 +7,5 @@
   :components ((:file "package")
                (:file "utils")
                (:file "lisp-tokenizer")
+               (:file "sql")
                (:file "searty")))

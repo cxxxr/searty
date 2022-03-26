@@ -35,12 +35,9 @@
   (tokenize
    (read-file-into-string file)))
 
-(defstruct (document (:constructor %make-document (pathname)))
-  (id (random-uuid))
-  pathname)
-
-(defun new-document (pathname)
-  (let ((document (%make-document pathname)))
+(defun create-document (pathname)
+  (let ((document (make-document pathname (read-file-into-string pathname))))
+    (insert-document *database* document)
     document))
 
 (defun document= (document1 document2)
@@ -101,7 +98,7 @@
   (insert-inverted-index inverted-index document token :symbol))
 
 (defun add-file (inverted-index file)
-  (let ((document (new-document file)))
+  (let ((document (create-document file)))
     (dolist (token (tokenize-file file))
       (add-symbol inverted-index document token)
       (dolist (token (tokenize-trigram token :start-bounding t :end-bounding t))

@@ -40,12 +40,6 @@
     ;; (insert-document *database* document)
     document))
 
-(defun document= (document1 document2)
-  (equal (document-id document1) (document-id document2)))
-
-(defun document< (document1 document2)
-  (equal (document-id document1) (document-id document2)))
-
 (defstruct inverted-value kind locations)
 (defstruct location document positions)
 

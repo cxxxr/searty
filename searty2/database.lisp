@@ -18,6 +18,12 @@
   (print-unreadable-object (document stream :type t)
     (princ (document-pathname document) stream)))
 
+(defun document= (document1 document2)
+  (equal (document-id document1) (document-id document2)))
+
+(defun document< (document1 document2)
+  (equal (document-id document1) (document-id document2)))
+
 (defun insert-document (database document)
   (execute-sxql (database-connection database)
                 (sxql:insert-into :document

@@ -12,7 +12,5 @@
                (:file "inverted-index")
                (:file "sql")
                (:file "searty")
-               (:file "main")
-
-               )
+               (:file "main"))
   :in-order-to ((test-op (test-op searty-tests))))

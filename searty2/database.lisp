@@ -17,16 +17,30 @@
                              :body (document-body document))))
   document)
 
+(defun make-documents-from-records (records)
+  (mapcar (lambda (record)
+            (let ((id (getf record :|id|))
+                  (pathname (getf record :|pathname|))
+                  (body (getf record :|body|)))
+              (make-document :id id :pathname pathname :body body)))
+          records))
+
 (defun resolve-document-by-id (database id)
-  (when-let ((records (resolve-sxql (database-connection database)
-                                    (sxql:select (:pathname :body)
-                                      (sxql:from :document)
-                                      (sxql:where (:= :id id))
-                                      (sxql:limit 1)))))
-    (let* ((record (first records))
-           (pathname (getf record :|pathname|))
-           (body (getf record :|body|)))
-      (make-document :id id :pathname pathname :body body))))
+  (when-let (document
+             (make-documents-from-records
+              (resolve-sxql (database-connection database)
+                            (sxql:select (:id :pathname :body)
+                              (sxql:from :document)
+                              (sxql:where (:= :id id))
+                              (sxql:limit 1)))))
+    (first document)))
+
+(defun resolve-documents-by-ids (database ids)
+  (make-documents-from-records
+   (resolve-sxql (database-connection database)
+                 (sxql:select (:id :pathname :body)
+                   (sxql:from :document)
+                   (sxql:where (:in :id ids))))))
 
 (defun insert-token (database token)
   (unless (token-id token)

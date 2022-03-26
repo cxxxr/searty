@@ -271,11 +271,14 @@
               (incf pos (1+ (length line))))))
 
 (defun pretty-print-matched (matched)
-  (maphash (lambda (document-id ranges)
-             (let ((document (resolve-document-by-id *database* document-id))) ; N+1
-               (dolist (range ranges)
-                 (read-file-range (document-pathname document) range))))
-           (matched-document-positions-map matched)))
+  (let ((documents
+          (let ((ids (hash-table-keys (matched-document-positions-map matched))))
+            (resolve-documents-by-ids *database* ids))))
+    (maphash (lambda (document-id ranges)
+               (let ((document (find document-id documents :key #'document-id :test #'id=)))
+                 (dolist (range ranges)
+                   (read-file-range (document-pathname document) range))))
+             (matched-document-positions-map matched))))
 
 (eval-when ()
   (setq *database* (make-instance 'database))

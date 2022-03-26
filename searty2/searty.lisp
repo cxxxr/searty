@@ -44,7 +44,7 @@
   (let ((document (create-document file)))
     (dolist (token (tokenize-file file))
       (dolist (trigram-token (tokenize-trigram token :start-bounding t :end-bounding t))
-        (inverted-index-insert inverted-index document trigram-token)))))
+        (inverted-index-insert inverted-index (document-id document) trigram-token)))))
 
 (defun index-lisp-system (system-designator)
   (let ((inverted-index (make-inverted-index)))
@@ -59,9 +59,9 @@
 (defstruct matched
   (document-positions-map (make-hash-table :test 'equal)))
 
-(defun add-matched (matched document position length)
+(defun add-matched (matched document-id position length)
   (push (make-range position (+ position length))
-        (gethash (document-pathname document)
+        (gethash document-id
                  (matched-document-positions-map matched))))
 
 (defun normalize-ranges (ranges)
@@ -126,8 +126,8 @@
 (defun posting-location (posting)
   (first (posting-locations posting)))
 
-(defun posting-document (posting)
-  (location-document (posting-location posting)))
+(defun posting-document-id (posting)
+  (location-document-id (posting-location posting)))
 
 (defun posting-positions (posting)
   (location-positions (posting-location posting)))
@@ -145,17 +145,17 @@
   (let ((min-posting (aref postings 0)))
     (loop :for i :from 1 :below (length postings)
           :for posting := (aref postings i)
-          :do (when (document< (posting-document posting)
-                               (posting-document min-posting))
+          :do (when (id< (posting-document-id posting)
+                         (posting-document-id min-posting))
                 (setf min-posting posting)))
     (posting-next min-posting)))
 
 (defun same-document-p (postings)
-  (let ((first-document (posting-document (aref postings 0))))
+  (let ((first-document-id (posting-document-id (aref postings 0))))
     (loop :for i :from 1 :below (length postings)
           :for posting := (aref postings i)
-          :always (document= first-document
-                             (posting-document posting)))))
+          :always (id= first-document-id
+                       (posting-document-id posting)))))
 
 (defun end-posting-one-or-more-p (postings)
   (some #'posting-null-p postings))
@@ -164,7 +164,7 @@
   (loop :for term :being :each :hash-key :of token-locations-map :using (:hash-value locs)
         :collect (list term
                        (mapcar (lambda (loc)
-                                 (list (document-pathname (location-document loc))
+                                 (list (location-document-id loc)
                                        (location-positions loc)))
                                locs))))
 
@@ -176,7 +176,7 @@
           :do (cond ((same-document-p postings)
                      (loop :for posting :across postings
                            :do (loop :for pos :in (posting-positions posting)
-                                     :do (add-matched matched (posting-document posting) pos 1)))
+                                     :do (add-matched matched (posting-document-id posting) pos 1)))
                      (postings-next postings))
                     (t
                      (next-minimum-posting postings))))
@@ -213,7 +213,7 @@
                              :for offset :from 0
                              :do (dolist (pos positions)
                                    (add-matched matched
-                                                (posting-document posting)
+                                                (posting-document-id posting)
                                                 (+ pos offset)
                                                 3))))
                      (postings-next postings))
@@ -243,9 +243,9 @@
               (incf pos (1+ (length line))))))
 
 (defun pretty-print-matched (matched)
-  (maphash (lambda (pathname ranges)
+  (maphash (lambda (id ranges)
              (dolist (range ranges)
-               (read-file-range pathname range)))
+               (read-file-range id range)))
            (matched-document-positions-map matched)))
 
 (eval-when ()

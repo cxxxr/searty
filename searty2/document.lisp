@@ -1,5 +1,11 @@
 (in-package :searty2)
 
+(defun id< (id1 id2)
+  (string< id1 id2))
+
+(defun id= (id1 id2)
+  (string= id1 id2))
+
 (defstruct (document (:constructor make-document (pathname body)))
   (id (random-uuid))
   pathname

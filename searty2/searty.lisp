@@ -1,5 +1,7 @@
 (in-package :searty2)
 
+(declaim (optimize (speed 0) (safety 3) (debug 3)))
+
 (defconstant +null-char+ (code-char 0))
 
 (defun make-bounding-string (string start-bounding end-bounding)
@@ -42,37 +44,43 @@
 (defun save-inverted-index (inverted-index)
   (inverted-index-foreach
    inverted-index
-   (lambda (token locations)
+   (lambda (token-id locations)
      (upsert-inverted-index *database*
-                            token
+                            token-id
                             locations))))
 
 (defun flush-inverted-index (inverted-index)
   (let* ((storage-inverted-index
-           (resolve-inverted-index *database* (inverted-index-tokens inverted-index)))
+           (resolve-inverted-index *database* (inverted-index-token-ids inverted-index)))
          (merged-inverted-index
            (inverted-index-merge inverted-index storage-inverted-index)))
     (save-inverted-index merged-inverted-index)))
 
 (defun create-document (pathname)
   (let ((document (make-document pathname (read-file-into-string pathname))))
-    ;; (insert-document *database* document)
-    (setf (gethash (document-id document) *document-table*) document)
+    (insert-document *database* document)
+    ;; (setf (gethash (document-id document) *document-table*) document)
     document))
 
 (defun add-file (inverted-index file)
-  (let ((document (create-document file))
-        (tokens (tokenize-file file)))
-    (dolist (token tokens)
-      (inverted-index-insert inverted-index (document-id document) token))
-    ;; TODO: index-lisp-systemで最後に一度だけ行うようにする
-    (flush-inverted-index inverted-index)))
+  (dbi:with-transaction (database-connection *database*)
+    (let ((document (create-document file))
+          (tokens (tokenize-file file)))
+      (dolist (token tokens)
+        ;; NOTE: このresolve-token, insert-token内でtoken-idがセットされる
+        (unless (resolve-token *database* token)
+          (insert-token *database* token))
+        (inverted-index-insert inverted-index (document-id document) token))
+      ;; TODO: index-lisp-systemで最後に一度だけ行うようにする
+      (flush-inverted-index inverted-index))))
 
 (defun index-lisp-system (system-designator)
   (let ((inverted-index (make-inverted-index)))
     (dolist (file (find-files (asdf:system-source-directory system-designator)
                               #'lisp-pathname-p))
-      (add-file inverted-index file))
+      (format t "~&~A " file)
+      (let ((ms (measure-time (add-file inverted-index file))))
+        (format t "[~D ms]~%" ms)))
     inverted-index))
 
 ;;;
@@ -261,6 +269,8 @@
               (incf pos (1+ (length line))))))
 
 (defun pretty-print-matched (matched)
+  matched
+  #+(or)
   (maphash (lambda (document-id ranges)
              (let ((document (gethash document-id *document-table*)))
                (dolist (range ranges)

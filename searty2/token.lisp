@@ -34,6 +34,7 @@
     (7 :block-comment)))
 
 (defstruct token
+  id
   term
   position
   kind)

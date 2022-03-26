@@ -31,3 +31,9 @@
   (make-array (length bytes)
               :element-type '(unsigned-byte 8)
               :initial-contents (coerce bytes 'list)))
+
+(defmacro measure-time (form)
+  (with-unique-names (start)
+    `(let ((,start (get-internal-real-time)))
+       ,form
+       (floor (- (get-internal-real-time) ,start) 1000))))

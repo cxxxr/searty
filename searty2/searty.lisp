@@ -69,7 +69,7 @@
      (setf (gethash term (inverted-index-symbol-table inverted-index))
            value))))
 
-(defun insert-inverted-index (inverted-index document token from)
+(defun inverted-index-insert (inverted-index document token from)
   (let* ((inverted-values (inverted-index-get inverted-index (token-term token) from))
          (trigram-value (find (token-kind token) inverted-values :key #'trigram-value-kind)))
     (if (null trigram-value)
@@ -93,10 +93,10 @@
                     (insert-sort (token-position token) (location-positions loc) #'<)))))))
 
 (defun add-token (inverted-index document token)
-  (insert-inverted-index inverted-index document token :trigram))
+  (inverted-index-insert inverted-index document token :trigram))
 
 (defun add-symbol (inverted-index document token)
-  (insert-inverted-index inverted-index document token :symbol))
+  (inverted-index-insert inverted-index document token :symbol))
 
 (defun add-file (inverted-index file)
   (let ((document (create-document file)))

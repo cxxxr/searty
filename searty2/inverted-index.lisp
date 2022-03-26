@@ -65,6 +65,9 @@
            (inverted-index-table source))
   destination)
 
+(defun inverted-index-clear (inverted-index)
+  (clrhash (inverted-index-table inverted-index)))
+
 (defun inverted-index-foreach (inverted-index function)
   (maphash function
            (inverted-index-table inverted-index)))

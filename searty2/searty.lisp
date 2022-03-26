@@ -54,7 +54,8 @@
            (resolve-inverted-index *database* (inverted-index-token-ids inverted-index)))
          (merged-inverted-index
            (inverted-index-merge inverted-index storage-inverted-index)))
-    (save-inverted-index merged-inverted-index)))
+    (save-inverted-index merged-inverted-index))
+  (inverted-index-clear inverted-index))
 
 (defun create-document (pathname)
   (let ((document (make-document pathname (read-file-into-string pathname))))

@@ -9,6 +9,7 @@
   :serial t
   :components ((:file "package")
                (:file "utils")
+               (:file "lisp-tokenizer")
                (:file "inverted-index")
                (:file "sql")
                (:file "searty")

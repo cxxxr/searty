@@ -1,0 +1,104 @@
+(in-package :searty-tests)
+
+(defun test (actual expected)
+  (testing (prin1-to-string expected)
+    (ok (length= actual expected))
+    (loop :for lit1 :in actual
+          :for lit2 :in expected
+          :do (ok (equal (token-term lit1) (getf lit2 :term)))
+              (ok (equal (token-position lit1) (getf lit2 :position))))))
+
+(deftest lisp-tokenizer
+  (test (tokenize-lisp "foo")
+        '((:TERM "foo" :POSITION 0)))
+
+  (test (tokenize-lisp "   foo")
+        '((:TERM "foo" :POSITION 3)))
+
+  (test (tokenize-lisp "'foo")
+        '((:TERM "'" :POSITION 0)
+          (:TERM "foo" :POSITION 1)))
+
+  (test (tokenize-lisp "'(xyz)")
+        '((:TERM "'" :POSITION 0)
+          (:TERM "(" :POSITION 1)
+          (:TERM "xyz" :POSITION 2)
+          (:TERM ")" :POSITION 5)))
+
+  (test (tokenize-lisp "(cons car cdr)")
+        '((:TERM "(" :POSITION 0)
+          (:TERM "cons" :POSITION 1)
+          (:TERM "car" :POSITION 6)
+          (:TERM "cdr" :POSITION 10)
+          (:TERM ")" :POSITION 13)))
+
+  (test (tokenize-lisp "|f  \\|oo| xxx")
+        '((:TERM "|f  \\|oo|" :POSITION 0)
+          (:TERM "xxx" :POSITION 10)))
+
+  (test (tokenize-lisp "\"abcd\"")
+        '((:TERM "\"abcd\"" :POSITION 0)))
+
+  (test (tokenize-lisp "\"foo\\\"xbar\"")
+        '((:TERM "\"foo\\\"xbar\"" :POSITION 0)))
+
+  (test (tokenize-lisp "foo; comment
+")
+        '((:TERM "foo" :POSITION 0 :KIND :SYMBOL)
+          (:TERM " comment" :POSITION 3 :KIND :LINE-COMMENT)))
+
+  (test (tokenize-lisp "foo;
+")
+        '((:TERM "foo" :POSITION 0 :KIND :SYMBOL)
+          (:TERM "" :POSITION 3 :KIND :LINE-COMMENT)))
+
+  (test (tokenize-lisp "foo;comment
+")
+        '((:TERM "foo" :POSITION 0 :KIND :SYMBOL)
+          (:TERM "comment" :POSITION 3 :KIND :LINE-COMMENT)))
+
+  (test (tokenize-lisp "foo;comment
+bar")
+        '((:TERM "foo" :POSITION 0 :KIND :SYMBOL)
+          (:TERM "comment" :POSITION 3 :KIND :LINE-COMMENT)
+          (:TERM "bar" :POSITION 12 :KIND :SYMBOL)))
+
+  (test (tokenize-lisp "#\\space")
+        '((:TERM "space" :POSITION 0 :KIND :CHARACTER)))
+
+  (test (tokenize-lisp "#\\'")
+        '((:TERM "'" :POSITION 0 :KIND :CHARACTER)))
+
+  (test (tokenize-lisp "#'car")
+        '((:TERM "car" :POSITION 0 :KIND :FUNCTION-OBJECT)))
+
+  (test (tokenize-lisp "#'(lambda ())")
+        '((:TERM "#'" :POSITION 0 :KIND T)
+          (:TERM "(" :POSITION 2 :KIND T)
+          (:TERM "lambda" :POSITION 3 :KIND :SYMBOL)
+          (:TERM "(" :POSITION 10 :KIND T)
+          (:TERM ")" :POSITION 11 :KIND T)
+          (:TERM ")" :POSITION 12 :KIND T)))
+
+  (test (tokenize-lisp "#(abc)")
+        '((:TERM "#(" :POSITION 0 :KIND T)
+          (:TERM "abc" :POSITION 2 :KIND :SYMBOL)
+          (:TERM ")" :POSITION 5 :KIND T)))
+
+  (test (tokenize-lisp "#:foo")
+        '((:TERM "foo" :POSITION 0 :KIND :UNINTERN-SYMBOL)))
+
+  (test (tokenize-lisp "#| foo #||# |#")
+        '((:TERM " foo #||# " :POSITION 0 :KIND :BLOCK-COMMENT)))
+
+  (test (tokenize-lisp "#1=(x y z)")
+        '((:TERM "#1=" :POSITION 0 :KIND T)
+          (:TERM "(" :POSITION 3 :KIND T)
+          (:TERM "x" :POSITION 4 :KIND :SYMBOL)
+          (:TERM "y" :POSITION 6 :KIND :SYMBOL)
+          (:TERM "z" :POSITION 8 :KIND :SYMBOL)
+          (:TERM ")" :POSITION 9 :KIND T)))
+  (test (tokenize-lisp "abc あいうえお xyz")
+        '((:TERM "abc" :POSITION 0 :KIND :SYMBOL)
+          (:TERM "あいうえお" :POSITION 4 :KIND :SYMBOL)
+          (:TERM "xyz" :POSITION 10 :KIND :SYMBOL))))

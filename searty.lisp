@@ -2,7 +2,7 @@
 
 ;;; entities
 (defstruct document id pathname body)
-(defstruct token id term)
+(defstruct token id term kind position)
 
 
 (defparameter *sqlite3-schema-file* (namestring (asdf:system-relative-pathname :searty "schema.sql")))

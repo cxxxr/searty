@@ -8,6 +8,8 @@
    :coerce-unsigned-byte-vector
    :lisp-pathname-p
    :find-files
+   ;; lisp-tokenizer
+   :tokenize-lisp
    ;; sqlite
    :sqlite3-init-database
    ;; entities
@@ -16,6 +18,8 @@
    :document-body
    :token-id
    :token-term
+   :token-kind
+   :token-position
    ;; tokenizer
    :tokenize
    :tokenizer

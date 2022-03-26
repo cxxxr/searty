@@ -1,5 +1,8 @@
 (in-package :searty)
 
+(defun whitespacep (c)
+  (member c '(#\Space #\Tab #\Linefeed #\Return #\Page)))
+
 (defun ngram (string n)
   (if (< (length string) n)
       (list string)

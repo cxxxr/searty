@@ -31,22 +31,6 @@
         :do (lexer-read-char lexer)
         :finally (return c)))
 
-(deftype token-kind ()
-  '(member
-    t
-    :string
-    :symbol
-    :character
-    :function-object
-    :unintern-symbol
-    :line-comment
-    :block-comment))
-
-(defstruct token
-  term
-  position
-  kind)
-
 (defvar *macro-character-table*
   (plist-hash-table '(#\( scan-one-char
                       #\) scan-one-char

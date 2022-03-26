@@ -8,7 +8,12 @@
   :pathname "searty2"
   :components ((:file "package")
                (:file "utils")
-               (:file "lisp-tokenizer")
                (:file "sql")
+
+               (:file "token")
+               (:file "document")
+               (:file "inverted-index")
+
+               (:file "lisp-tokenizer")
                (:file "database")
                (:file "searty")))

@@ -1,5 +1,6 @@
 (defsystem "searty2"
   :depends-on ("alexandria"
+               "uuid"
                "cl-ansi-text")
   :serial t
   :pathname "searty2"

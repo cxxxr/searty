@@ -23,3 +23,6 @@
 
 (defun insert-sort (item list predicate &key key)
   (merge 'list (list item) list predicate :key key))
+
+(defun random-uuid ()
+  (princ-to-string (uuid:make-v4-uuid)))

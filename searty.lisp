@@ -15,7 +15,7 @@
 (defgeneric create-document (database pathname text))
 (defgeneric resolve-document-by-pathname (database pathname))
 (defgeneric resolve-document-by-ids (database id))
-(defgeneric create-token (database term))
+(defgeneric create-token (database token))
 (defgeneric resolve-token (database token))
 (defgeneric resolve-token-by-term (database term))
 (defgeneric resolve-tokens (database terms))
@@ -60,12 +60,12 @@
                           (sxql:from :document)
                           (sxql:where (:in :id ids))))))
 
-(defmethod create-token ((database database) term)
+(defmethod create-token ((database database) token)
   (let ((id (random-uuid)))
     (execute-sxql (database-connection database)
                   (sxql:insert-into :token
-                    (sxql:set= :id id :term term)))
-    (make-token :id id :term term)))
+                    (sxql:set= :id id :term (token-term token))))
+    (make-token :id id :term (token-term token) :kind (token-kind token))))
 
 (defun make-token-from-record (record position kind)
   (destructuring-bind (&key ((:|id| id))
@@ -181,7 +181,7 @@ ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
 
 (defmethod add-token ((indexer indexer) token document)
   (let ((storage-token (or (resolve-token (indexer-database indexer) token)
-                           (create-token (indexer-database indexer) (token-term token)))))
+                           (create-token (indexer-database indexer) token))))
     (insert-doc-location (indexer-inverted-index indexer)
                          (token-id storage-token)
                          (document-id document)

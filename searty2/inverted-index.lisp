@@ -58,9 +58,9 @@
   destination-locations)
 
 (defun inverted-index-merge (destination source)
-  (maphash (lambda (hashkey locations)
-             (setf (gethash hashkey (inverted-index-table destination))
-                   (merge-inverted-values (gethash hashkey (inverted-index-table destination))
+  (maphash (lambda (token-id locations)
+             (setf (gethash token-id (inverted-index-table destination))
+                   (merge-inverted-values (gethash token-id (inverted-index-table destination))
                                           locations)))
            (inverted-index-table source))
   destination)

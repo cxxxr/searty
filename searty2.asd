@@ -3,6 +3,7 @@
                "uuid"
                "cl-ansi-text"
                "sxql"
+               "flexi-streams"
                "cl-dbi")
   :serial t
   :pathname "searty2"

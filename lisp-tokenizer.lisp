@@ -1,8 +1,41 @@
 (in-package :searty.lisp-tokenizer)
 
-(defstruct scanner
+(defstruct (lexer (:constructor make-lexer (text)))
   text
-  position)
+  (position 0))
+
+(defun lexer-peek-char (lexer)
+  (when (< (lexer-position lexer)
+           (length (lexer-text lexer)))
+    (char (lexer-text lexer)
+          (lexer-position lexer))))
+
+(defun lexer-read-char (lexer)
+  (let ((c (lexer-peek-char lexer)))
+    (if c
+        (progn
+          (incf (lexer-position lexer))
+          c)
+        nil)))
+
+(defun lexer-unread-char (lexer c)
+  (declare (ignore c))
+  (decf (lexer-position lexer)))
+
+(defun lexer-read-line (lexer)
+  (with-output-to-string (out)
+    (loop :for c := (lexer-read-char lexer)
+          :until (member c '(#\newline nil))
+          :do (write-char c out))))
+
+(defun skip-whitespaces (lexer)
+  (loop
+    (let ((c (lexer-peek-char lexer)))
+      (when (null c)
+        (return nil))
+      (unless (whitespacep c)
+        (return c))
+      (lexer-read-char lexer))))
 
 (deftype token-kind ()
   '(member
@@ -49,58 +82,58 @@
 (defun whitespacep (c)
   (member c '(#\Space #\Tab #\Linefeed #\Return #\Page)))
 
-(defun exact-char (stream expected)
-  (assert (char= expected (read-char stream))))
+(defun exact-char (lexer expected)
+  (assert (char= expected (lexer-read-char lexer))))
 
-(defun scan-one-char (stream)
-  (make-token :position (file-position stream)
-              :term (string (read-char stream))
+(defun scan-one-char (lexer)
+  (make-token :position (lexer-position lexer)
+              :term (string (lexer-read-char lexer))
               :kind t))
 
-(defun scan-line-comment (stream)
-  (let ((position (file-position stream)))
-    (exact-char stream #\;)
-    (make-token :term (read-line stream)
+(defun scan-line-comment (lexer)
+  (let ((position (lexer-position lexer)))
+    (exact-char lexer #\;)
+    (make-token :term (lexer-read-line lexer)
                 :position position
                 :kind :line-comment)))
 
-(defun scan-string (stream)
-  (let ((position (file-position stream))
+(defun scan-string (lexer)
+  (let ((position (lexer-position lexer))
         (term (with-output-to-string (out)
-                (exact-char stream #\")
+                (exact-char lexer #\")
                 (write-char #\" out)
-                (loop :for c := (read-char stream)
+                (loop :for c := (lexer-read-char lexer)
                       :do (case c
                             (#\"
                              (write-char c out)
                              (return))
                             (#\\
                              (write-char c out)
-                             (write-char (read-char stream) out))
+                             (write-char (lexer-read-char lexer) out))
                             (otherwise
                              (write-char c out)))))))
     (make-token :position position
                 :term term
                 :kind :string)))
 
-(defun scan-multiple-escape (stream)
+(defun scan-multiple-escape (lexer)
   (with-output-to-string (out)
-    (exact-char stream #\|)
+    (exact-char lexer #\|)
     (write-char #\| out)
-    (loop :for c := (read-char stream)
+    (loop :for c := (lexer-read-char lexer)
           :do (case c
                 (#\|
                  (write-char #\| out)
                  (return))
                 (#\\
                  (write-char #\\ out)
-                 (write-char (read-char stream) out))
+                 (write-char (lexer-read-char lexer) out))
                 (otherwise
                  (write-char c out))))))
 
-(defun scan-symbol-name (stream)
+(defun scan-symbol-name (lexer)
   (with-output-to-string (out)
-    (loop :for c := (peek-char nil stream nil)
+    (loop :for c := (lexer-peek-char lexer)
           :do (cond ((null c)
                      (return))
                     ((whitespacep c)
@@ -109,43 +142,43 @@
                      (return))
                     ((char= c #\\)
                      (write-char c out)
-                     (read-char stream))
+                     (lexer-read-char lexer))
                     ((char= c #\|)
-                     (write-string (scan-multiple-escape stream) out))
+                     (write-string (scan-multiple-escape lexer) out))
                     (t
                      (write-char c out)
-                     (read-char stream))))))
+                     (lexer-read-char lexer))))))
 
-(defun scan-symbol (stream)
-  (let ((pos (file-position stream))
-        (term (scan-symbol-name stream)))
+(defun scan-symbol (lexer)
+  (let ((pos (lexer-position lexer))
+        (term (scan-symbol-name lexer)))
     (make-token :position pos
                 :term term
                 :kind :symbol)))
 
-(defun scan-dispatch-macro-arg (stream)
+(defun scan-dispatch-macro-arg (lexer)
   (let ((arg (with-output-to-string (out)
-               (loop :for c := (peek-char nil stream)
+               (loop :for c := (lexer-peek-char lexer)
                      :while (and c (digit-char-p c))
                      :do (write-char c out)
-                         (read-char stream)))))
+                         (lexer-read-char lexer)))))
     (if (length= arg 0)
         nil
         (parse-integer arg))))
 
-(defun scan-dispatch-macro-character (stream)
-  (let ((position (file-position stream)))
-    (exact-char stream #\#)
-    (let ((arg (scan-dispatch-macro-arg stream))
-          (scanner (gethash (peek-char nil stream)
+(defun scan-dispatch-macro-character (lexer)
+  (let ((position (lexer-position lexer)))
+    (exact-char lexer #\#)
+    (let ((arg (scan-dispatch-macro-arg lexer))
+          (scanner (gethash (lexer-peek-char lexer)
                             *dispatch-macro-character-table*
                             'scan-sharp-others)))
-      (funcall scanner stream arg position))))
+      (funcall scanner lexer arg position))))
 
-(defun scan-sharp-others (stream arg position)
+(defun scan-sharp-others (lexer arg position)
   (make-token :term (if arg
-                        (format nil "#~D~C" arg (read-char stream))
-                        (format nil "#~C" (read-char stream)))
+                        (format nil "#~D~C" arg (lexer-read-char lexer))
+                        (format nil "#~C" (lexer-read-char lexer)))
               :position position
               :kind t))
 
@@ -154,46 +187,46 @@
       (whitespacep c)
       (gethash c *macro-character-table*)))
 
-(defun scan-character (stream arg position)
+(defun scan-character (lexer arg position)
   (declare (ignore arg))
-  (exact-char stream #\\)
-  (let ((char (read-char stream))
-        (next-char (peek-char nil stream nil)))
+  (exact-char lexer #\\)
+  (let ((char (lexer-read-char lexer))
+        (next-char (lexer-peek-char lexer)))
     (cond ((delimiter-char-p next-char)
            (make-token :term (string char)
                        :position position
                        :kind :character))
           (t
-           (unread-char char stream)
-           (make-token :term (scan-symbol-name stream)
+           (lexer-unread-char lexer char)
+           (make-token :term (scan-symbol-name lexer)
                        :position position
                        :kind :character)))))
 
-(defun scan-function (stream arg position)
+(defun scan-function (lexer arg position)
   (declare (ignore arg))
-  (exact-char stream #\')
-  (if (char= #\( (peek-char nil stream))
+  (exact-char lexer #\')
+  (if (char= #\( (lexer-peek-char lexer))
       (make-token :term "#'"
                   :position position
                   :kind t)
-      (make-token :term (scan-symbol-name stream)
+      (make-token :term (scan-symbol-name lexer)
                   :position position
                   :kind :function-object)))
 
-(defun scan-unintern-symbol (stream arg position)
+(defun scan-unintern-symbol (lexer arg position)
   (declare (ignore arg))
-  (exact-char stream #\:)
-  (make-token :term (scan-symbol-name stream)
+  (exact-char lexer #\:)
+  (make-token :term (scan-symbol-name lexer)
               :position position
               :kind :unintern-symbol))
 
-(defun scan-block-comment (stream arg position)
+(defun scan-block-comment (lexer arg position)
   (declare (ignore arg))
-  (exact-char stream #\|)
+  (exact-char lexer #\|)
   (let ((term (with-output-to-string (out)
                 (loop :with depth := 1
                       :for prev := nil :then c
-                      :and c := (read-char stream)
+                      :and c := (lexer-read-char lexer)
                       :do (cond ((and prev
                                       (char= prev #\#)
                                       (char= c #\|))
@@ -209,18 +242,18 @@
                 :position position
                 :kind :block-comment)))
 
-(defun scan-token (stream)
-  (unless (peek-char t stream nil)
+(defun scan-token (lexer)
+  (unless (skip-whitespaces lexer)
     (return-from scan-token (values nil t)))
-  (if-let ((scanner (gethash (peek-char nil stream) *macro-character-table*)))
-    (funcall scanner stream)
-    (scan-symbol stream)))
+  (if-let ((scanner (gethash (lexer-peek-char lexer) *macro-character-table*)))
+    (funcall scanner lexer)
+    (scan-symbol lexer)))
 
 (defun tokenize (text)
-  (with-input-from-string (stream text)
+  (let ((lexer (make-lexer text)))
     (let ((tokens '()))
       (loop
-        (multiple-value-bind (token eof) (scan-token stream)
+        (multiple-value-bind (token eof) (scan-token lexer)
           (when eof
             (return))
           (when token

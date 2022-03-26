@@ -37,7 +37,7 @@
 
 (defun create-document (pathname)
   (let ((document (make-document pathname (read-file-into-string pathname))))
-    (insert-document *database* document)
+    ;; (insert-document *database* document)
     document))
 
 (defun document= (document1 document2)
@@ -50,34 +50,24 @@
 (defstruct location document positions)
 
 (defstruct inverted-index
-  (trigram-table (make-hash-table :test 'equal))
-  (symbol-table (make-hash-table :test 'equal)))
+  (table (make-hash-table :test 'equal)))
 
-(defun inverted-index-get (inverted-index term from)
-  (ecase from
-    (:trigram
-     (gethash term (inverted-index-trigram-table inverted-index)))
-    (:symbol
-     (gethash term (inverted-index-symbol-table inverted-index)))))
+(defun inverted-index-get (inverted-index term)
+  (gethash term (inverted-index-table inverted-index)))
 
-(defun (setf inverted-index-get) (value inverted-index term from)
-  (ecase from
-    (:trigram
-     (setf (gethash term (inverted-index-trigram-table inverted-index))
-           value))
-    (:symbol
-     (setf (gethash term (inverted-index-symbol-table inverted-index))
-           value))))
+(defun (setf inverted-index-get) (value inverted-index term)
+  (setf (gethash term (inverted-index-table inverted-index))
+        value))
 
-(defun inverted-index-insert (inverted-index document token from)
-  (let* ((inverted-values (inverted-index-get inverted-index (token-term token) from))
+(defun inverted-index-insert (inverted-index document token)
+  (let* ((inverted-values (inverted-index-get inverted-index (token-term token)))
          (trigram-value (find (token-kind token) inverted-values :key #'trigram-value-kind)))
     (if (null trigram-value)
         (push (make-trigram-value
                :kind (token-kind token)
                :locations (list (make-location :document document
                                                :positions (list (token-position token)))))
-              (inverted-index-get inverted-index (token-term token) from))
+              (inverted-index-get inverted-index (token-term token)))
         (let ((loc (find document
                          (trigram-value-locations trigram-value)
                          :key (lambda (loc) (location-document loc))
@@ -92,18 +82,11 @@
               (setf (location-positions loc)
                     (insert-sort (token-position token) (location-positions loc) #'<)))))))
 
-(defun add-token (inverted-index document token)
-  (inverted-index-insert inverted-index document token :trigram))
-
-(defun add-symbol (inverted-index document token)
-  (inverted-index-insert inverted-index document token :symbol))
-
 (defun add-file (inverted-index file)
   (let ((document (create-document file)))
     (dolist (token (tokenize-file file))
-      (add-symbol inverted-index document token)
       (dolist (token (tokenize-trigram token :start-bounding t :end-bounding t))
-        (add-token inverted-index document token)))))
+        (inverted-index-insert inverted-index document token)))))
 
 (defun index-lisp-system (system-designator)
   (let ((inverted-index (make-inverted-index)))
@@ -165,8 +148,7 @@
 
 (defun make-posting (inverted-index token)
   (or (dolist (trigram-value (inverted-index-get inverted-index
-                                                 (token-term token)
-                                                 :trigram))
+                                                 (token-term token)))
         (when (eq :symbol (trigram-value-kind trigram-value))
           (let ((locations (trigram-value-locations trigram-value)))
             (return (%make-posting token locations)))))

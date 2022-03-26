@@ -105,10 +105,10 @@
 (defstruct (posting (:constructor %make-posting (token locations))) token locations)
 
 (defun make-posting (inverted-index token)
-  (or (dolist (trigram-value (inverted-index-get inverted-index
+  (or (dolist (inverted-value (inverted-index-get inverted-index
                                                  (token-term token)))
-        (when (eq :symbol (trigram-value-kind trigram-value))
-          (let ((locations (trigram-value-locations trigram-value)))
+        (when (eq :symbol (inverted-value-kind inverted-value))
+          (let ((locations (inverted-value-locations inverted-value)))
             (return (%make-posting token locations)))))
       (%make-posting token nil)))
 

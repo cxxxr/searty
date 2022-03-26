@@ -9,11 +9,9 @@
   :components ((:file "package")
                (:file "utils")
                (:file "sql")
-
                (:file "token")
                (:file "document")
                (:file "inverted-index")
-
-               (:file "lisp-tokenizer")
                (:file "database")
+               (:file "lisp-tokenizer")
                (:file "searty")))

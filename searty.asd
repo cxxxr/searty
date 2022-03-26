@@ -14,6 +14,7 @@
                (:file "searty")
                (:file "main")
 
+               (:file "searty2/utils")
                (:file "searty2/lisp-tokenizer")
                (:file "searty2/searty2"))
   :in-order-to ((test-op (test-op searty-tests))))

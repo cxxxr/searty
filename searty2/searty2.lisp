@@ -27,10 +27,10 @@
 
 (defun tokenize-trigram (token &key start-bounding end-bounding)
   (let ((kind (token-kind token)))
-    (loop :for term :in (searty:ngram (make-bounding-string (token-term token)
-                                                            start-bounding
-                                                            end-bounding)
-                                      3)
+    (loop :for term :in (ngram (make-bounding-string (token-term token)
+                                                     start-bounding
+                                                     end-bounding)
+                               3)
           :for pos :from (1- (token-position token))
           :collect (make-token :term term :kind kind :position pos))))
 
@@ -117,8 +117,8 @@
 
 (defun index-lisp-system (system-designator)
   (let ((inverted-index (make-inverted-index)))
-    (dolist (file (searty:find-files (asdf:system-source-directory system-designator)
-                                     #'searty:lisp-pathname-p))
+    (dolist (file (find-files (asdf:system-source-directory system-designator)
+                              #'lisp-pathname-p))
       (add-file inverted-index file))
     inverted-index))
 

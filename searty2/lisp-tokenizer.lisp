@@ -79,9 +79,6 @@
                       #\. scan-sharp-others)
                     :test #'equal))
 
-(defun whitespacep (c)
-  (member c '(#\Space #\Tab #\Linefeed #\Return #\Page)))
-
 (defun exact-char (lexer expected)
   (assert (char= expected (lexer-read-char lexer))))
 

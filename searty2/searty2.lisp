@@ -311,15 +311,19 @@
   (with-open-file (in file)
     (loop :with pos := 0
           :for line := (read-line in)
+          :for line-number :from 1
           :do (when (<= pos (range-start range) (+ pos (length line)))
-                (format t "~&~A:~A~A~A~%"
-                        file
-                        (subseq line 0 (- (range-start range) pos))
-                        (cl-ansi-text:red (subseq line
-                                                  (- (range-start range) pos)
-                                                  (- (range-end range) pos)))
-                        (subseq line (- (range-end range) pos)))
-                (return))
+                (let ((start (- (range-start range) pos))
+                      (end (- (range-end range) pos)))
+                  (format t "~&~A:~D:~D:~D:~A~A~A~%"
+                          file
+                          line-number
+                          start
+                          end
+                          (subseq line 0 start)
+                          (cl-ansi-text:red (subseq line start end))
+                          (subseq line end))
+                  (return)))
               (incf pos (1+ (length line))))))
 
 (defun pretty-print-matched (matched)

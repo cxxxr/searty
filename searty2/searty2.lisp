@@ -5,8 +5,6 @@
 
 (defconstant +null-char+ (code-char 0))
 
-(defstruct token term kind pos)
-
 (defun make-bounding-string (string start-bounding end-bounding)
   (cond ((and start-bounding end-bounding)
          (format nil
@@ -33,23 +31,12 @@
                                                             start-bounding
                                                             end-bounding)
                                       3)
-          :for pos :from (1- (token-pos token))
-          :collect (make-token :term term :kind kind :pos pos))))
-
-(defun convert-tokens (tokens)
-  (loop :for token :in tokens
-        :collect (make-token :term (searty.lisp-tokenizer:token-term token)
-                             :kind (searty.lisp-tokenizer:token-kind token)
-                             :pos (searty.lisp-tokenizer:token-position token))))
-
-(defun tokenize (string)
-  (convert-tokens
-   (searty.lisp-tokenizer:tokenize string)))
+          :for pos :from (1- (token-position token))
+          :collect (make-token :term term :kind kind :position pos))))
 
 (defun tokenize-file (file)
-  (convert-tokens
-   (searty.lisp-tokenizer:tokenize
-    (read-file-into-string file))))
+  (tokenize
+   (read-file-into-string file)))
 
 (defvar *document-counter* 0)
 (defvar *document-table* (make-hash-table :test 'eql))
@@ -100,7 +87,7 @@
         (push (make-trigram-value
                :kind (token-kind token)
                :locations (list (make-location :document document
-                                               :positions (list (token-pos token)))))
+                                               :positions (list (token-position token)))))
               (inverted-index-get inverted-index (token-term token) from))
         (let ((loc (find (document-id document)
                          (trigram-value-locations trigram-value)
@@ -108,12 +95,12 @@
                          :test #'=)))
           (if (null loc)
               (setf (trigram-value-locations trigram-value)
-                    (insert-sort (make-location :document document :positions (list (token-pos token)))
+                    (insert-sort (make-location :document document :positions (list (token-position token)))
                                  (trigram-value-locations trigram-value)
                                  #'document<
                                  :key #'location-document))
               (setf (location-positions loc)
-                    (insert-sort (token-pos token) (location-positions loc) #'<)))))))
+                    (insert-sort (token-position token) (location-positions loc) #'<)))))))
 
 (defun add-token (inverted-index document token)
   (insert-inverted-index inverted-index document token :trigram))

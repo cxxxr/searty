@@ -49,7 +49,3 @@
    :encode-doc-locations-to-vector
    :decode-doc-locations-from-vector
    :check-inverted-index-corruption))
-
-(defpackage :searty2
-  (:use :cl
-        :alexandria))

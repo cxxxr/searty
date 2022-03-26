@@ -21,7 +21,7 @@
   (let ((inverted-index (make-inverted-index))
         (kind-set (delete-duplicates (mapcar (compose #'encode-token-kind #'token-kind) tokens))))
     (dolist (record records)
-      (let ((term (getf record :|token|))
+      (let ((term (getf record :|term|))
             (kind (getf record :|kind|))
             (encoded-values (getf record :|encoded_values|)))
         (when (find kind kind-set)
@@ -33,15 +33,15 @@
 (defun resolve-inverted-index (database tokens)
   (decode-inverted-index-records
    (resolve-sxql (database-connection database)
-                 (sxql:select (:token :kind :encoded_values)
+                 (sxql:select (:term :kind :encoded_values)
                    (sxql:from :inverted_index)
-                   (sxql:where (:in :token (mapcar #'token-term tokens)))))
+                   (sxql:where (:in :term (mapcar #'token-term tokens)))))
    tokens))
 
 (defun upsert-inverted-index (database token locations)
   (let ((encoded-locations (encode-locations-to-vector locations)))
     (execute-sql (database-connection database)
-                 "INSERT INTO inverted_index (token, kind, encoded_values) VALUES (?, ?, ?)
+                 "INSERT INTO inverted_index (term, kind, encoded_values) VALUES (?, ?, ?)
 ON CONFLICT(token_id) DO UPDATE SET encoded_values = ?"
                  (list (token-term token)
                        (token-kind token)

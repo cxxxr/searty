@@ -185,14 +185,6 @@
 (defun end-posting-one-or-more-p (postings)
   (some #'posting-null-p postings))
 
-(defun convert-token-locations-map (token-locations-map)
-  (loop :for term :being :each :hash-key :of token-locations-map :using (:hash-value locs)
-        :collect (list term
-                       (mapcar (lambda (loc)
-                                 (list (location-document-id loc)
-                                       (location-positions loc)))
-                               locs))))
-
 ;; TODO
 (defun search-and (inverted-index query)
   (let* ((tokens (mapcan #'tokenize-trigram (tokenize query)))

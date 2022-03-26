@@ -61,7 +61,7 @@
                 :kind :line-comment)))
 
 (defun scan-string (stream)
-  (let ((pos (file-position stream))
+  (let ((position (file-position stream))
         (term (with-output-to-string (out)
                 (exact-char stream #\")
                 (write-char #\" out)
@@ -75,7 +75,7 @@
                              (write-char (read-char stream) out))
                             (otherwise
                              (write-char c out)))))))
-    (make-token :position pos
+    (make-token :position position
                 :term term
                 :kind :string)))
 

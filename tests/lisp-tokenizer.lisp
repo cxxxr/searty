@@ -9,74 +9,70 @@
               (ok (equal (token-position lit1) (getf lit2 :position))))))
 
 (deftest lisp-tokenizer
-  (test (with-input-from-string (in "foo") (tokenize in))
+  (test (tokenize "foo")
         '((:TERM "foo" :POSITION 0)))
 
-  (test (with-input-from-string (in "   foo") (tokenize in))
+  (test (tokenize "   foo")
         '((:TERM "foo" :POSITION 3)))
 
-  (test (with-input-from-string (in "'foo") (tokenize in))
+  (test (tokenize "'foo")
         '((:TERM "'" :POSITION 0)
           (:TERM "foo" :POSITION 1)))
 
-  (test (with-input-from-string (in "'(xyz)") (tokenize in))
+  (test (tokenize "'(xyz)")
         '((:TERM "'" :POSITION 0)
           (:TERM "(" :POSITION 1)
           (:TERM "xyz" :POSITION 2)
           (:TERM ")" :POSITION 5)))
 
-  (test (with-input-from-string (in "(cons car cdr)") (tokenize in))
+  (test (tokenize "(cons car cdr)")
         '((:TERM "(" :POSITION 0)
           (:TERM "cons" :POSITION 1)
           (:TERM "car" :POSITION 6)
           (:TERM "cdr" :POSITION 10)
           (:TERM ")" :POSITION 13)))
 
-  (test (with-input-from-string (in "|f  \\|oo| xxx") (tokenize in))
+  (test (tokenize "|f  \\|oo| xxx")
         '((:TERM "|f  \\|oo|" :POSITION 0)
           (:TERM "xxx" :POSITION 10)))
 
-  (test (with-input-from-string (in "\"abcd\"") (tokenize in))
+  (test (tokenize "\"abcd\"")
         '((:TERM "\"abcd\"" :POSITION 0)))
 
-  (test (with-input-from-string (in "\"foo\\\"xbar\"") (tokenize in))
+  (test (tokenize "\"foo\\\"xbar\"")
         '((:TERM "\"foo\\\"xbar\"" :POSITION 0)))
 
-  (test (with-input-from-string (in "foo; comment
+  (test (tokenize "foo; comment
 ")
-          (tokenize in))
         '((:TERM "foo" :POSITION 0 :KIND :SYMBOL)
           (:TERM " comment" :POSITION 3 :KIND :LINE-COMMENT)))
 
-  (test (with-input-from-string (in "foo;
+  (test (tokenize "foo;
 ")
-          (tokenize in))
         '((:TERM "foo" :POSITION 0 :KIND :SYMBOL)
           (:TERM "" :POSITION 3 :KIND :LINE-COMMENT)))
 
-  (test (with-input-from-string (in "foo;comment
+  (test (tokenize "foo;comment
 ")
-          (tokenize in))
         '((:TERM "foo" :POSITION 0 :KIND :SYMBOL)
           (:TERM "comment" :POSITION 3 :KIND :LINE-COMMENT)))
 
-  (test (with-input-from-string (in "foo;comment
+  (test (tokenize "foo;comment
 bar")
-          (tokenize in))
         '((:TERM "foo" :POSITION 0 :KIND :SYMBOL)
           (:TERM "comment" :POSITION 3 :KIND :LINE-COMMENT)
           (:TERM "bar" :POSITION 12 :KIND :SYMBOL)))
 
-  (test (with-input-from-string (in "#\\space") (tokenize in))
+  (test (tokenize "#\\space")
         '((:TERM "space" :POSITION 0 :KIND :CHARACTER)))
 
-  (test (with-input-from-string (in "#\\'") (tokenize in))
+  (test (tokenize "#\\'")
         '((:TERM "'" :POSITION 0 :KIND :CHARACTER)))
 
-  (test (with-input-from-string (in "#'car") (tokenize in))
+  (test (tokenize "#'car")
         '((:TERM "car" :POSITION 0 :KIND :FUNCTION-OBJECT)))
 
-  (test (with-input-from-string (in "#'(lambda ())") (tokenize in))
+  (test (tokenize "#'(lambda ())")
         '((:TERM "#'" :POSITION 0 :KIND T)
           (:TERM "(" :POSITION 2 :KIND T)
           (:TERM "lambda" :POSITION 3 :KIND :SYMBOL)
@@ -84,18 +80,18 @@ bar")
           (:TERM ")" :POSITION 11 :KIND T)
           (:TERM ")" :POSITION 12 :KIND T)))
 
-  (test (with-input-from-string (in "#(abc)") (tokenize in))
+  (test (tokenize "#(abc)")
         '((:TERM "#(" :POSITION 0 :KIND T)
           (:TERM "abc" :POSITION 2 :KIND :SYMBOL)
           (:TERM ")" :POSITION 5 :KIND T)))
 
-  (test (with-input-from-string (in "#:foo") (tokenize in))
+  (test (tokenize "#:foo")
         '((:TERM "foo" :POSITION 0 :KIND :UNINTERN-SYMBOL)))
 
-  (test (with-input-from-string (in "#| foo #||# |#") (tokenize in))
+  (test (tokenize "#| foo #||# |#")
         '((:TERM " foo #||# " :POSITION 0 :KIND :BLOCK-COMMENT)))
 
-  (test (with-input-from-string (in "#1=(x y z)") (tokenize in))
+  (test (tokenize "#1=(x y z)")
         '((:TERM "#1=" :POSITION 0 :KIND T)
           (:TERM "(" :POSITION 3 :KIND T)
           (:TERM "x" :POSITION 4 :KIND :SYMBOL)

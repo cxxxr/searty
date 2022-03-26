@@ -1,5 +1,9 @@
 (in-package :searty.lisp-tokenizer)
 
+(defstruct scanner
+  text
+  position)
+
 (deftype token-kind ()
   '(member
     t
@@ -212,12 +216,13 @@
     (funcall scanner stream)
     (scan-symbol stream)))
 
-(defun tokenize (stream)
-  (let ((tokens '()))
-    (loop
-      (multiple-value-bind (token eof) (scan-token stream)
-        (when eof
-          (return))
-        (when token
-          (push token tokens))))
-    (nreverse tokens)))
+(defun tokenize (text)
+  (with-input-from-string (stream text)
+    (let ((tokens '()))
+      (loop
+        (multiple-value-bind (token eof) (scan-token stream)
+          (when eof
+            (return))
+          (when token
+            (push token tokens))))
+      (nreverse tokens))))

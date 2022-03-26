@@ -51,7 +51,7 @@
 
 (defun flush-inverted-index (inverted-index)
   (let* ((storage-inverted-index
-           (resolve-inverted-index *database* (inverted-index-token-ids inverted-index)))
+           (resolve-inverted-index-by-token-ids *database* (inverted-index-token-ids inverted-index)))
          (merged-inverted-index
            (inverted-index-merge inverted-index storage-inverted-index)))
     (save-inverted-index merged-inverted-index))
@@ -235,7 +235,7 @@
                                              :end-bounding end-bounding))
                          (tokenize query)))
          (tokens (mapcar (curry #'resolve-token *database*) tokens))
-         (inverted-index (resolve-inverted-index *database* (mapcar #'token-id tokens)))
+         (inverted-index (resolve-inverted-index-by-token-ids *database* (mapcar #'token-id tokens)))
          (postings (make-postings inverted-index tokens))
          (matched (make-matched)))
     (loop :until (some #'posting-null-p postings)

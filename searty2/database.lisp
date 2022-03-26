@@ -73,7 +73,7 @@
               (decode-doc-locations-from-vector encoded-values))))
     inverted-index))
 
-(defun resolve-inverted-index (database token-ids)
+(defun resolve-inverted-index-by-token-ids (database token-ids)
   (decode-inverted-index-records
    (resolve-sxql (database-connection database)
                  (sxql:select (:token_id :encoded_values)

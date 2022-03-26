@@ -38,9 +38,6 @@
             (tokenize-trigram token :start-bounding t :end-bounding t))
           (tokenize (read-file-into-string file))))
 
-;; TODO: idとdocumentをマッピングするためにあるが、rdbmsがあれば不要になるので削除する
-(defvar *document-table* (make-hash-table :test 'equal))
-
 (defun save-inverted-index (inverted-index)
   (inverted-index-foreach
    inverted-index
@@ -60,7 +57,6 @@
 (defun create-document (pathname)
   (let ((document (make-document :pathname pathname :body (read-file-into-string pathname))))
     (insert-document *database* document)
-    ;; (setf (gethash (document-id document) *document-table*) document)
     document))
 
 (defun add-file (inverted-index file)

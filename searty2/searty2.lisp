@@ -36,7 +36,6 @@
           :for pos :from (1- (token-pos token))
           :collect (make-token :term term :kind kind :pos pos))))
 
-
 (defun convert-tokens (tokens)
   (loop :for token :in tokens
         :collect (make-token :term (searty.lisp-tokenizer:token-term token)

@@ -8,11 +8,11 @@
                "cl-ansi-text")
   :serial t
   :components ((:file "package")
+               (:file "lisp-tokenizer")
                (:file "utils")
                (:file "inverted-index")
                (:file "sql")
                (:file "searty")
-               (:file "lisp-tokenizer")
                (:file "main")
 
                (:file "searty2/searty2"))

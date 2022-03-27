@@ -69,18 +69,28 @@
       (setf (token-id token) id))
     token))
 
+(defun make-tokens-from-records (records)
+  (loop :for record :in records
+        :collect (let ((id (getf record :|id|))
+                       (term (babel:octets-to-string (getf record :|term|)))
+                       (kind (getf record :|kind|)))
+                   (make-token :id id :term term :kind kind))))
+
 (defun resolve-token-by-id (database id)
-  (when-let* ((records
-               (resolve-sxql (database-connection database)
-                             (sxql:select (:id :term :kind)
-                               (sxql:from :token)
-                               (sxql:where (:= :id id))
-                               (sxql:limit 1)))))
-    (let* ((record (first records))
-           (id (getf record :|id|))
-           (term (babel:octets-to-string (getf record :|term|)))
-           (kind (getf record :|kind|)))
-      (make-token :id id :term term :kind kind))))
+  (when-let ((tokens (make-tokens-from-records
+                      (resolve-sxql (database-connection database)
+                                    (sxql:select (:id :term :kind)
+                                      (sxql:from :token)
+                                      (sxql:where (:= :id id))
+                                      (sxql:limit 1))))))
+    (first tokens)))
+
+(defun resolve-tokens-by-ids (database ids)
+  (make-tokens-from-records
+   (resolve-sxql (database-connection database)
+                 (sxql:select (:id :term :kind)
+                   (sxql:from :token)
+                   (sxql:where (:in :id ids))))))
 
 (defun decode-inverted-index-records (records)
   (let ((inverted-index (make-inverted-index)))

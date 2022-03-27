@@ -182,9 +182,6 @@
           :always (id= first-document-id
                        (posting-document-id posting)))))
 
-(defun end-posting-one-or-more-p (postings)
-  (some #'posting-null-p postings))
-
 ;; TODO
 (defun search-and (query)
   (let ((tokens (mapcar (curry #'resolve-token *database*)
@@ -194,7 +191,7 @@
                                                                   (mapcar #'token-id tokens)))
              (postings (make-postings inverted-index tokens))
              (matched (make-matched)))
-        (loop :until (end-posting-one-or-more-p postings)
+        (loop :until (some #'posting-null-p postings)
               :do (cond ((same-document-p postings)
                          (loop :for posting :across postings
                                :do (loop :for pos :in (posting-positions posting)

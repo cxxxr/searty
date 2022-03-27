@@ -42,6 +42,9 @@
   (test (searty::tokenize "\"foo\\\"xbar\"")
         '((:TERM "\"foo\\\"xbar\"" :POSITION 0)))
 
+  (test (searty::tokenize "#:\\|")
+        '((:ID NIL :TERM "\\|" :POSITION 0 :KIND :UNINTERN-SYMBOL)))
+
   (test (searty::tokenize "foo; comment
 ")
         '((:TERM "foo" :POSITION 0 :KIND :SYMBOL)

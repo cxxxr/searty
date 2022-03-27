@@ -116,8 +116,8 @@
                     ((gethash c *macro-character-table*)
                      (return))
                     ((char= c #\\)
-                     (write-char c out)
-                     (lexer-read-char lexer))
+                     (write-char (lexer-read-char lexer) out)
+                     (write-char (lexer-read-char lexer) out))
                     ((char= c #\|)
                      (write-string (scan-multiple-escape lexer) out))
                     (t

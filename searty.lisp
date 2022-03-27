@@ -271,13 +271,8 @@
                    (read-file-range (document-pathname document) range))))
              (matched-document-positions-map matched))))
 
-(eval-when ()
-  (setq *database* (make-instance 'database))
-  (defparameter $ (index-lisp-system :searty))
-  (pretty-print-matched (search-phrase "defun")))
-
 ;;;
-(defun pprint-inverted-index (inverted-index)
+(defun dump-inverted-index (inverted-index)
   (let ((table (make-hash-table :test 'equal)))
     (inverted-index-foreach inverted-index
                             (lambda (token-id locations)
@@ -298,3 +293,6 @@
     (terpri)
     (write-line "------------------------------ RESULT ------------------------------")
     (pretty-print-matched (apply #'search-phrase search-phrase-arguments))))
+
+(eval-when ()
+  (search-phrase-example "defun"))

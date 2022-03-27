@@ -182,7 +182,6 @@
           :always (id= first-document-id
                        (posting-document-id posting)))))
 
-;; TODO
 (defun search-and (query)
   (let ((tokens (mapcar (curry #'resolve-token *database*)
                         (mapcan #'tokenize-trigram (tokenize query)))))
@@ -190,19 +189,14 @@
       (let* ((inverted-index (resolve-inverted-index-by-token-ids *database*
                                                                   (mapcar #'token-id tokens)))
              (postings (make-postings inverted-index tokens))
-             (matched (make-matched)))
+             (document-ids '()))
         (loop :until (some #'posting-null-p postings)
               :do (cond ((same-document-p postings)
-                         (loop :for posting :across postings
-                               :do (loop :for pos :in (posting-positions posting)
-                                         :do (add-matched matched
-                                                          (posting-document-id posting)
-                                                          pos
-                                                          3)))
+                         (push (posting-document-id (aref postings 0)) document-ids)
                          (postings-next postings))
                         (t
                          (next-minimum-posting postings))))
-        (normalize-matched matched)))))
+        (resolve-documents-by-ids *database* document-ids)))))
 
 (defun compute-relative-positions-list (postings)
   (loop :for posting :across postings

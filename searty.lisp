@@ -215,7 +215,8 @@
     (intersection-positions relative-positions-list)))
 
 (defun search-phrase (query &key start-bounding end-bounding)
-  (let ((tokens (mapcar (curry #'resolve-token *database*)
+  (let ((matched (make-matched))
+        (tokens (mapcar (curry #'resolve-token *database*)
                         (mapcan (lambda (token)
                                   (tokenize-trigram token
                                                     :start-bounding start-bounding
@@ -223,8 +224,7 @@
                                 (tokenize query)))))
     (unless (some #'null tokens)
       (let* ((inverted-index (resolve-inverted-index-by-token-ids *database* (mapcar #'token-id tokens)))
-             (postings (make-postings inverted-index tokens))
-             (matched (make-matched)))
+             (postings (make-postings inverted-index tokens)))
         (loop :until (some #'posting-null-p postings)
               :do (cond ((same-document-p postings)
                          (when-let ((positions (phrase-match-p postings)))
@@ -237,10 +237,10 @@
                                                     3))))
                          (postings-next postings))
                         (t
-                         (next-minimum-posting postings))))
-        (normalize-matched matched
-                           :start-bounding start-bounding
-                           :end-bounding end-bounding)))))
+                         (next-minimum-posting postings))))))
+    (normalize-matched matched
+                       :start-bounding start-bounding
+                       :end-bounding end-bounding)))
 
 (defun read-file-range (file range)
   (with-open-file (in file)
@@ -289,3 +289,12 @@
                                                     (location-positions loc)))
                                             locations))))
     (hash-table-alist table)))
+
+(defun search-phrase-example (&rest search-phrase-arguments)
+  (let ((*database* (make-instance 'database)))
+    (write-line "------------------------------ INDEX ------------------------------")
+    (sqlite3-init-database)
+    (index-lisp-system :searty)
+    (terpri)
+    (write-line "------------------------------ RESULT ------------------------------")
+    (pretty-print-matched (apply #'search-phrase search-phrase-arguments))))

@@ -273,16 +273,18 @@
 
 ;;;
 (defun dump-inverted-index (inverted-index)
-  (let ((table (make-hash-table :test 'equal)))
+  (let ((table (make-hash-table :test 'equal))
+        (tokens (resolve-tokens-by-ids *database* (inverted-index-token-ids inverted-index)))
+        (documents (resolve-documents-by-ids *database* (collect-all-document-ids inverted-index))))
     (inverted-index-foreach inverted-index
                             (lambda (token-id locations)
-                              (setf (gethash (token-term (resolve-token-by-id *database* token-id))
-                                             table)
-                                    (mapcar (lambda (loc)
-                                              (cons (resolve-document-by-id *database*
-                                                                            (location-document-id loc))
-                                                    (location-positions loc)))
-                                            locations))))
+                              (let ((token (find token-id tokens :test #'id= :key #'token-id)))
+                                (setf (gethash (token-term token) table)
+                                      (mapcar (lambda (loc)
+                                                (let ((document (find (location-document-id loc) documents :test #'id= :key #'document-id)))
+                                                  (cons document
+                                                        (location-positions loc))))
+                                              locations)))))
     (hash-table-alist table)))
 
 (defun search-phrase-example (&rest search-phrase-arguments)

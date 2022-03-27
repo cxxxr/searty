@@ -68,6 +68,16 @@
 (defun inverted-index-clear (inverted-index)
   (clrhash (inverted-index-table inverted-index)))
 
+(defun collect-all-document-ids (inverted-index)
+  (let ((document-ids (make-hash-table :test 'equal)))
+    (maphash (lambda (token-id locations)
+               (declare (ignore token-id))
+               (dolist (loc locations)
+                 (setf (gethash (location-document-id loc) document-ids)
+                       t)))
+             (inverted-index-table inverted-index))
+    (hash-table-keys document-ids)))
+
 (defun inverted-index-foreach (inverted-index function)
   (maphash function
            (inverted-index-table inverted-index)))

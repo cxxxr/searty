@@ -1,4 +1,4 @@
-(in-package :searty2)
+(in-package :searty)
 
 (defun id< (id1 id2)
   (string< id1 id2))

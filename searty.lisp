@@ -1,4 +1,4 @@
-(in-package :searty2)
+(in-package :searty)
 
 (defconstant +null-char+ (code-char 0))
 

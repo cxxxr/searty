@@ -1,4 +1,4 @@
-(in-package :searty2)
+(in-package :searty)
 
 (defparameter *sqlite3-database-file* "/tmp/searty.sqlite3")
 

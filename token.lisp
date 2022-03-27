@@ -1,4 +1,4 @@
-(in-package :searty2)
+(in-package :searty)
 
 (deftype token-kind ()
   '(member

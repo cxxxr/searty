@@ -1,4 +1,4 @@
-(in-package :searty2)
+(in-package :searty)
 
 (defun whitespacep (c)
   (member c '(#\Space #\Tab #\Linefeed #\Return #\Page)))

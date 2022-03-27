@@ -1,4 +1,4 @@
-(in-package :searty2)
+(in-package :searty)
 
 (defstruct (lexer (:constructor make-lexer (text)))
   text

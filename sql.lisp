@@ -1,4 +1,4 @@
-(in-package :searty2)
+(in-package :searty)
 
 (defvar *sql-logger-stream* nil)
 

@@ -1,2 +1,2 @@
-(defpackage :searty2
+(defpackage :searty
   (:use :cl :alexandria))

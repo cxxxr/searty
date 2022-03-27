@@ -1,4 +1,4 @@
-(defsystem "searty2"
+(defsystem "searty"
   :depends-on ("alexandria"
                "uuid"
                "cl-ansi-text"
@@ -7,7 +7,6 @@
                "cl-dbi"
                "babel")
   :serial t
-  :pathname "searty2"
   :components ((:file "package")
                (:file "utils")
                (:file "sql")

@@ -294,7 +294,9 @@
                               (let ((token (find token-id tokens :test #'id= :key #'token-id)))
                                 (setf (gethash (token-term token) table)
                                       (mapcar (lambda (loc)
-                                                (let ((document (find (location-document-id loc) documents :test #'id= :key #'document-id)))
+                                                (let ((document (find (location-document-id loc) documents
+                                                                      :test #'id=
+                                                                      :key #'document-id)))
                                                   (cons document
                                                         (location-positions loc))))
                                               locations)))))

@@ -83,17 +83,17 @@
       inverted-index)))
 
 (defun index-directory (inverted-index directory)
-  (dbi:with-transaction (database-connection *database*)
-    (dolist (file (find-files directory #'lisp-pathname-p))
-      (add-file-with-time inverted-index file))
-    (flush-inverted-index inverted-index)))
+  (let ((*database* (make-instance 'database)))
+    (dbi:with-transaction (database-connection *database*)
+      (dolist (file (find-files directory #'lisp-pathname-p))
+        (add-file-with-time inverted-index file))
+      (flush-inverted-index inverted-index))))
 
 (defun index-quicklisp (root-directory)
   (sqlite3-init-database)
-  (let ((*database* (make-instance 'database)))
-    (let ((inverted-index (make-inverted-index)))
-      (dolist (dir (uiop:subdirectories root-directory))
-        (index-directory inverted-index dir)))))
+  (let ((inverted-index (make-inverted-index)))
+    (dolist (dir (uiop:subdirectories root-directory))
+      (index-directory inverted-index dir))))
 
 ;;;
 (defstruct (range (:constructor make-range (start end))) start end)

@@ -33,10 +33,10 @@
                              (token-position token))
           :collect (make-token :term term :kind kind :position pos))))
 
-(defun tokenize-file (file)
+(defun tokenize-file (text)
   (mapcan (lambda (token)
             (tokenize-trigram token :start-bounding t :end-bounding t))
-          (tokenize (read-file-into-string file))))
+          (tokenize text)))
 
 (defun save-inverted-index (inverted-index)
   (inverted-index-foreach
@@ -54,14 +54,19 @@
     (save-inverted-index merged-inverted-index))
   (inverted-index-clear inverted-index))
 
-(defun create-document (pathname)
-  (let ((document (make-document :pathname pathname :body (read-file-into-string pathname))))
+(defun create-document (pathname body)
+  (let ((document (make-document :pathname pathname :body body)))
     (insert-document *database* document)
     document))
 
+(defun read-file-into-string* (file)
+  (or (ignore-errors (read-file-into-string file))
+      (read-file-into-string file :external-format :cp932)))
+
 (defun add-file (inverted-index file)
-  (let ((document (create-document file))
-        (tokens (tokenize-file file)))
+  (let* ((text (read-file-into-string* file))
+         (document (create-document file text))
+         (tokens (tokenize-file text)))
     (dolist (token tokens)
       ;; NOTE: このresolve-token, insert-token内でtoken-idがセットされる
       (unless (resolve-token *database* token)

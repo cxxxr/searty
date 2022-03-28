@@ -236,7 +236,9 @@
                                                     :end-bounding end-bounding))
                                 (tokenize query)))))
     (unless (some #'null tokens)
-      (let* ((inverted-index (resolve-inverted-index-by-token-ids *database* (mapcar #'token-id tokens)))
+      (let* ((inverted-index (resolve-inverted-index-by-token-ids
+                              *database*
+                              (mapcar #'token-id tokens)))
              (postings (make-postings inverted-index tokens)))
         (loop :until (some #'posting-null-p postings)
               :do (cond ((same-document-p postings)
@@ -294,7 +296,8 @@
                               (let ((token (find token-id tokens :test #'id= :key #'token-id)))
                                 (setf (gethash (token-term token) table)
                                       (mapcar (lambda (loc)
-                                                (let ((document (find (location-document-id loc) documents
+                                                (let ((document (find (location-document-id loc)
+                                                                      documents
                                                                       :test #'id=
                                                                       :key #'document-id)))
                                                   (cons document

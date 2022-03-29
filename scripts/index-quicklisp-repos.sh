@@ -2,7 +2,7 @@
 
 ROOT_DIR=${1%/}
 
-sqlite3 /tmp/searty.sqlite3 < ../schema.sql
+sqlite3 /tmp/searty.sqlite3 < ../schema.sqlite3
 
 for dir in $(ls -1 $ROOT_DIR)
 do

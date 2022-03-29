@@ -79,7 +79,7 @@
     (format t "[~D ms]~%" ms)))
 
 (defun index-lisp-system (system-designator)
-  (let ((*database* (make-instance 'database)))
+  (let ((*database* (make-instance 'sqlite3-database)))
     (let ((inverted-index (make-inverted-index)))
       (dbi:with-transaction (database-connection *database*)
         (dolist (file (find-files (asdf:system-source-directory system-designator)
@@ -88,7 +88,7 @@
         (flush-inverted-index inverted-index)))))
 
 (defun index-lisp-repository (root-directory)
-  (let ((*database* (make-instance 'database)))
+  (let ((*database* (make-instance 'sqlite3-database)))
     (let ((inverted-index (make-inverted-index)))
       (dbi:with-transaction (database-connection *database*)
         (dolist (file (find-files root-directory #'lisp-pathname-p))

@@ -1,7 +1,7 @@
 (in-package :searty)
 
 (defun search-phrase-example (&rest search-phrase-arguments)
-  (let ((*database* (make-instance 'database)))
+  (let ((*database* (make-instance 'sqlite3-database)))
     (write-line "------------------------------ INDEX ------------------------------")
     (sqlite3-init-database)
     (index-lisp-system :searty)

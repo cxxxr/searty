@@ -8,12 +8,23 @@
 
 (defvar *database*)
 
+(defgeneric insert-document (database document))
+(defgeneric resolve-document-by-id (database id))
+(defgeneric resolve-documents-by-ids (database ids))
+(defgeneric insert-token (database token))
+(defgeneric resolve-token (database token))
+(defgeneric resolve-token-by-id (database id))
+(defgeneric resolve-tokens-by-ids (database ids))
+(defgeneric resolve-inverted-index-by-token-ids (database token-ids))
+(defgeneric resolve-whole-inverted-index (database))
+(defgeneric upsert-inverted-index (database token-id locations))
+
 (defclass database ()
   ((connection :initarg :connection
                :initform (dbi:connect :sqlite3 :database-name *sqlite3-database-file*)
                :reader database-connection)))
 
-(defun insert-document (database document)
+(defmethod insert-document (database document)
   (execute-sxql (database-connection database)
                 (sxql:insert-into :document
                   (sxql:set= :id (document-id document)
@@ -21,7 +32,7 @@
                              :body (document-body document))))
   document)
 
-(defun make-documents-from-records (records)
+(defmethod make-documents-from-records (records)
   (mapcar (lambda (record)
             (let ((id (getf record :|id|))
                   (pathname (getf record :|pathname|))
@@ -29,7 +40,7 @@
               (make-document :id id :pathname pathname :body body)))
           records))
 
-(defun resolve-document-by-id (database id)
+(defmethod resolve-document-by-id (database id)
   (when-let (document
              (make-documents-from-records
               (resolve-sxql (database-connection database)
@@ -39,14 +50,14 @@
                               (sxql:limit 1)))))
     (first document)))
 
-(defun resolve-documents-by-ids (database ids)
+(defmethod resolve-documents-by-ids (database ids)
   (make-documents-from-records
    (resolve-sxql (database-connection database)
                  (sxql:select (:id :pathname :body)
                    (sxql:from :document)
                    (sxql:where (:in :id ids))))))
 
-(defun insert-token (database token)
+(defmethod insert-token (database token)
   (unless (token-id token)
     (setf (token-id token) (random-uuid)))
   (execute-sxql (database-connection database)
@@ -56,7 +67,7 @@
                              :kind (encode-token-kind (token-kind token)))))
   token)
 
-(defun resolve-token (database token)
+(defmethod resolve-token (database token)
   (when-let* ((records
                (resolve-sxql (database-connection database)
                              (sxql:select :id
@@ -76,7 +87,7 @@
                        (kind (getf record :|kind|)))
                    (make-token :id id :term term :kind kind))))
 
-(defun resolve-token-by-id (database id)
+(defmethod resolve-token-by-id (database id)
   (when-let ((tokens (make-tokens-from-records
                       (resolve-sxql (database-connection database)
                                     (sxql:select (:id :term :kind)
@@ -85,7 +96,7 @@
                                       (sxql:limit 1))))))
     (first tokens)))
 
-(defun resolve-tokens-by-ids (database ids)
+(defmethod resolve-tokens-by-ids (database ids)
   (make-tokens-from-records
    (resolve-sxql (database-connection database)
                  (sxql:select (:id :term :kind)
@@ -101,20 +112,20 @@
               (decode-doc-locations-from-vector encoded-values))))
     inverted-index))
 
-(defun resolve-inverted-index-by-token-ids (database token-ids)
+(defmethod resolve-inverted-index-by-token-ids (database token-ids)
   (decode-inverted-index-records
    (resolve-sxql (database-connection database)
                  (sxql:select (:token_id :encoded_values)
                    (sxql:from :inverted_index)
                    (sxql:where (:in :token_id token-ids))))))
 
-(defun resolve-whole-inverted-index (database)
+(defmethod resolve-whole-inverted-index (database)
   (decode-inverted-index-records
    (resolve-sxql (database-connection database)
                  (sxql:select (:token_id :encoded_values)
                    (sxql:from :inverted_index)))))
 
-(defun upsert-inverted-index (database token-id locations)
+(defmethod upsert-inverted-index (database token-id locations)
   (let ((encoded-locations (encode-locations-to-vector locations)))
     (execute-sql (database-connection database)
                  "INSERT INTO inverted_index (token_id, encoded_values) VALUES (?, ?)

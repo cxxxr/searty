@@ -97,9 +97,8 @@
 
 (defun index-quicklisp (root-directory)
   (sqlite3-init-database)
-  (let ((inverted-index (make-inverted-index)))
-    (dolist (dir (uiop:subdirectories root-directory))
-      (index-directory inverted-index dir))))
+  (dolist (dir (uiop:subdirectories root-directory))
+    (index-lisp-repository dir)))
 
 ;;;
 (defstruct (range (:constructor make-range (start end))) start end)

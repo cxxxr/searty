@@ -1,2 +1,3 @@
 (defpackage :searty
-  (:use :cl :alexandria))
+  (:use :cl :alexandria)
+  (:export :index-lisp-repository))

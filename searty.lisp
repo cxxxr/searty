@@ -87,12 +87,13 @@
           (add-file-with-time inverted-index file))
         (flush-inverted-index inverted-index)))))
 
-(defun index-lisp-repository (inverted-index root-directory)
+(defun index-lisp-repository (root-directory)
   (let ((*database* (make-instance 'database)))
-    (dbi:with-transaction (database-connection *database*)
-      (dolist (file (find-files root-directory #'lisp-pathname-p))
-        (add-file-with-time inverted-index file))
-      (flush-inverted-index inverted-index))))
+    (let ((inverted-index (make-inverted-index)))
+      (dbi:with-transaction (database-connection *database*)
+        (dolist (file (find-files root-directory #'lisp-pathname-p))
+          (add-file-with-time inverted-index file))
+        (flush-inverted-index inverted-index)))))
 
 (defun index-quicklisp (root-directory)
   (sqlite3-init-database)

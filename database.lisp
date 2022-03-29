@@ -62,12 +62,13 @@
 
 (defmethod resolve-token ((database database) token)
   (when-let* ((records
-               (resolve-sxql (database-connection database)
-                             (sxql:select :id
-                               (sxql:from :token)
-                               (sxql:where (:and (:= :term (babel:string-to-octets (token-term token)))
-                                                 (:= :kind (encode-token-kind (token-kind token)))))
-                               (sxql:limit 1)))))
+               (resolve-sxql
+                (database-connection database)
+                (sxql:select :id
+                  (sxql:from :token)
+                  (sxql:where (:and (:= :term (babel:string-to-octets (token-term token)))
+                                    (:= :kind (encode-token-kind (token-kind token)))))
+                  (sxql:limit 1)))))
     (let* ((record (first records))
            (id (getf record :|id|)))
       (setf (token-id token) id))

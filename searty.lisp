@@ -291,7 +291,7 @@
                    (read-file-range (document-pathname document) range))))
              (matched-document-positions-map matched))))
 
-;;;
+;; for debug
 (defun dump-inverted-index (inverted-index)
   (let ((table (make-hash-table :test 'equal))
         (tokens (resolve-tokens-by-ids *database* (inverted-index-token-ids inverted-index)))
@@ -309,15 +309,3 @@
                                                         (location-positions loc))))
                                               locations)))))
     (hash-table-alist table)))
-
-(defun search-phrase-example (&rest search-phrase-arguments)
-  (let ((*database* (make-instance 'database)))
-    (write-line "------------------------------ INDEX ------------------------------")
-    (sqlite3-init-database)
-    (index-lisp-system :searty)
-    (terpri)
-    (write-line "------------------------------ RESULT ------------------------------")
-    (pretty-print-matched (apply #'search-phrase search-phrase-arguments))))
-
-(eval-when ()
-  (search-phrase-example "defun"))

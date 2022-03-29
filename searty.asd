@@ -14,5 +14,6 @@
                (:file "document")
                (:file "inverted-index")
                (:file "database")
+               (:file "sqlite3-database")
                (:file "lisp-tokenizer")
                (:file "searty")))

@@ -16,7 +16,6 @@ exec ros -Q -- $0 "$@"
   '())
 
 (defun index (directories)
-  (searty::sqlite3-init-database)
   (dolist (directory directories)
     (assert (uiop:directory-pathname-p (probe-file directory)))
     (searty:index-lisp-repository directory)))

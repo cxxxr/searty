@@ -101,22 +101,23 @@
   (let ((inverted-index (make-inverted-index)))
     (dolist (record records)
       (let ((token-id (getf record :|token_id|))
-            (encoded-values (getf record :|encoded_values|)))
+            (locations-data-filepath (getf record :|locations_data_file|)))
         (setf (inverted-index-get inverted-index token-id)
-              (decode-doc-locations-from-vector encoded-values))))
+              (decode-doc-locations-from-vector
+               (read-file-into-byte-vector locations-data-filepath)))))
     inverted-index))
 
 (defmethod resolve-inverted-index-by-token-ids ((database database) token-ids)
   (decode-inverted-index-records
    (resolve-sxql (database-connection database)
-                 (sxql:select (:token_id :encoded_values)
+                 (sxql:select (:token_id :locations_data_file)
                    (sxql:from :inverted_index)
                    (sxql:where (:in :token_id token-ids))))))
 
 (defmethod resolve-whole-inverted-index ((database database))
   (decode-inverted-index-records
    (resolve-sxql (database-connection database)
-                 (sxql:select (:token_id :encoded_values)
+                 (sxql:select (:token_id :locations_data_file)
                    (sxql:from :inverted_index)))))
 
 (defmethod upsert-inverted-index ((database database) token-id locations)

@@ -18,13 +18,13 @@
     (let ((loc (find document-id
                      locations
                      :key #'location-document-id
-                     :test #'id=)))
+                     :test #'document-id=)))
       (if (null loc)
           (setf (inverted-index-get inverted-index (token-id token))
                 (insert-sort (make-location :document-id document-id
                                             :positions (list (token-position token)))
                              locations
-                             #'id<
+                             #'document-id<
                              :key #'location-document-id))
           (setf (location-positions loc)
                 (insert-sort (token-position token) (location-positions loc) #'<))))))
@@ -38,7 +38,7 @@
     token-ids))
 
 (defun insert-locations (loc locations)
-  (insert-sort loc locations #'id< :key #'location-document-id))
+  (insert-sort loc locations #'document-id< :key #'location-document-id))
 
 (defun merge-positions (positions1 positions2)
   (merge 'list positions1 positions2 #'<))
@@ -48,7 +48,7 @@
     (if-let ((dest-loc
               (find (location-document-id source-loc)
                     destination-locations
-                    :test #'id=
+                    :test #'document-id=
                     :key #'location-document-id)))
       (setf (location-positions dest-loc)
             (merge-positions (location-positions dest-loc)
@@ -108,7 +108,7 @@
         :do (write-byte (char-code c) stream)))
 
 (defun encode-location (location stream)
-  (encode-uuid (location-document-id location) stream)
+  (encode-positive-integer (location-document-id location) stream)
   (encode-positive-integer-list (location-positions location) stream))
 
 (defun encode-locations (locations stream)
@@ -148,7 +148,7 @@
     (map 'string #'code-char uuid)))
 
 (defun decode-location (stream)
-  (let ((document-id (decode-uuid stream))
+  (let ((document-id (decode-positive-integer stream))
         (positions (decode-positive-integer-list stream)))
     (make-location :document-id document-id
                    :positions positions)))

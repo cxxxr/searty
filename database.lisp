@@ -5,6 +5,7 @@
 (defgeneric insert-document (database document))
 (defgeneric resolve-document-by-id (database id))
 (defgeneric resolve-documents-by-ids (database ids))
+(defgeneric resolve-document-id-by-pathname (database pathname))
 (defgeneric insert-token (database token))
 (defgeneric resolve-token (database token))
 (defgeneric resolve-token-by-id (database id))
@@ -21,8 +22,7 @@
 (defmethod insert-document ((database database) document)
   (execute-sxql (database-connection database)
                 (sxql:insert-into :document
-                  (sxql:set= :id (document-id document)
-                             :pathname (namestring (document-pathname document))
+                  (sxql:set= :pathname (namestring (document-pathname document))
                              :body (document-body document))))
   document)
 
@@ -50,6 +50,15 @@
                  (sxql:select (:id :pathname :body)
                    (sxql:from :document)
                    (sxql:where (:in :id ids))))))
+
+(defmethod resolve-document-id-by-pathname ((database database) pathname)
+  (when-let ((records
+              (resolve-sxql (database-connection database)
+                            (sxql:select :id
+                              (sxql:from :document)
+                              (sxql:where (:= :pathname (namestring pathname)))
+                              (sxql:limit 1)))))
+    (getf (first records) :|id|)))
 
 (defmethod insert-token ((database database) token)
   (unless (token-id token)

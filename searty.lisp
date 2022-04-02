@@ -48,6 +48,8 @@
 (defun create-document (pathname body)
   (let ((document (make-document :pathname pathname :body body)))
     (insert-document *database* document)
+    (let ((id (resolve-document-id-by-pathname *database* pathname)))
+      (setf (document-id document) id))
     document))
 
 (defun read-file-into-string* (file)
@@ -170,8 +172,8 @@
   (let ((min-posting (aref postings 0)))
     (loop :for i :from 1 :below (length postings)
           :for posting := (aref postings i)
-          :do (when (id< (posting-document-id posting)
-                         (posting-document-id min-posting))
+          :do (when (document-id< (posting-document-id posting)
+                                  (posting-document-id min-posting))
                 (setf min-posting posting)))
     (posting-next min-posting)))
 
@@ -179,8 +181,8 @@
   (let ((first-document-id (posting-document-id (aref postings 0))))
     (loop :for i :from 1 :below (length postings)
           :for posting := (aref postings i)
-          :always (id= first-document-id
-                       (posting-document-id posting)))))
+          :always (document-id= first-document-id
+                                (posting-document-id posting)))))
 
 (defun search-and (query)
   (let ((tokens (mapcar (curry #'resolve-token *database*)
@@ -268,7 +270,7 @@
           (let ((ids (hash-table-keys (matched-document-positions-map matched))))
             (resolve-documents-by-ids *database* ids))))
     (maphash (lambda (document-id ranges)
-               (let ((document (find document-id documents :key #'document-id :test #'id=)))
+               (let ((document (find document-id documents :key #'document-id :test #'document-id=)))
                  (dolist (range ranges)
                    (read-file-range (document-pathname document) range))))
              (matched-document-positions-map matched))))
@@ -285,7 +287,7 @@
                                       (mapcar (lambda (loc)
                                                 (let ((document (find (location-document-id loc)
                                                                       documents
-                                                                      :test #'id=
+                                                                      :test #'document-id=
                                                                       :key #'document-id)))
                                                   (cons document
                                                         (location-positions loc))))

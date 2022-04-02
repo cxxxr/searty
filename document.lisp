@@ -1,13 +1,13 @@
 (in-package :searty)
 
-(defun id< (id1 id2)
-  (string< id1 id2))
+(defun document-id= (id1 id2)
+  (= id1 id2))
 
-(defun id= (id1 id2)
-  (string= id1 id2))
+(defun document-id< (id1 id2)
+  (< id1 id2))
 
 (defstruct document
-  (id (random-uuid))
+  id
   pathname
   body)
 

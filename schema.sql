@@ -1,6 +1,6 @@
 DROP TABLE IF EXISTS document;
 CREATE TABLE document (
-  id TEXT PRIMARY KEY,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
   pathname TEXT,
   body TEXT
 );

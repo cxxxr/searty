@@ -11,6 +11,7 @@
 (defgeneric resolve-tokens-by-ids (database ids))
 (defgeneric resolve-inverted-index-by-token-ids (database token-ids))
 (defgeneric resolve-whole-inverted-index (database))
+(defgeneric resolve-locations (database token-id))
 (defgeneric upsert-inverted-index (database token-id locations))
 
 (defclass database ()
@@ -119,6 +120,9 @@
    (resolve-sxql (database-connection database)
                  (sxql:select (:token_id :locations_data_file)
                    (sxql:from :inverted_index)))))
+
+(defmethod resolve-locations ((database database) token-id)
+  (error "unimplemented"))
 
 (defmethod upsert-inverted-index ((database database) token-id locations)
   (error "unimplemented ~S" '(upsert-inverted-index (database) t t)))

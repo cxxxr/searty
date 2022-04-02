@@ -15,6 +15,12 @@
   (:default-initargs
    :connection (dbi:connect :sqlite3 :database-name *sqlite3-database-file*)))
 
+(defmethod resolve-locations ((database sqlite3-database) token-id)
+  (let ((filepath (merge-pathnames token-id *index-directory*)))
+    (when (uiop:file-exists-p filepath)
+      (with-open-file (in filepath :element-type '(unsigned-byte 8))
+        (decode-locations in)))))
+
 (defmethod upsert-inverted-index ((database sqlite3-database) token-id locations)
   (let* ((encoded-locations (encode-locations-to-vector locations))
          (filepath (merge-pathnames token-id *index-directory*)))

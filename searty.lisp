@@ -282,7 +282,7 @@
         (documents (resolve-documents-by-ids *database* (collect-all-document-ids inverted-index))))
     (inverted-index-foreach inverted-index
                             (lambda (token-id locations)
-                              (let ((token (find token-id tokens :test #'id= :key #'token-id)))
+                              (let ((token (find token-id tokens :test #'uuid= :key #'token-id)))
                                 (setf (gethash (token-term token) table)
                                       (mapcar (lambda (loc)
                                                 (let ((document (find (location-document-id loc)

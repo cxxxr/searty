@@ -1,5 +1,8 @@
 (in-package :searty)
 
+(defun uuid= (id1 id2)
+  (string= id1 id2))
+
 (defun document-id= (id1 id2)
   (= id1 id2))
 

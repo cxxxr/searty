@@ -71,12 +71,22 @@
   (let ((ms (measure-time (add-file inverted-index file))))
     (format t "[~D ms]~%" ms)))
 
+(defun date ()
+  (multiple-value-bind (second minute hour date month year)
+      (decode-universal-time (get-universal-time))
+    (format nil "~A/~A/~A ~2,'0D:~2,'0D:~2,'0D" year month date hour minute second)))
+
+(defun flush-inverted-index-with-time (inverted-index)
+  (format t "~&index flush: ~A~%" (date))
+  (flush-inverted-index inverted-index)
+  (format t "~&index flushed: ~A~%" (date)))
+
 (defun index-lisp-repository (root-directory &optional (*database* (make-instance 'sqlite3-database)))
   (let ((inverted-index (make-inverted-index)))
     (dbi:with-transaction (database-connection *database*)
       (dolist (file (find-files root-directory #'lisp-pathname-p))
         (add-file-with-time inverted-index file))
-      (flush-inverted-index inverted-index)
+      (flush-inverted-index-with-time inverted-index)
       inverted-index)))
 
 (defun index-quicklisp (root-directory)

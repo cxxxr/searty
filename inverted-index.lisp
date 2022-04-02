@@ -43,7 +43,7 @@
 (defun merge-positions (positions1 positions2)
   (merge 'list positions1 positions2 #'<))
 
-(defun merge-inverted-values (destination-locations source-locations)
+(defun merge-locations (destination-locations source-locations)
   (dolist (source-loc source-locations)
     (if-let ((dest-loc
               (find (location-document-id source-loc)
@@ -60,8 +60,8 @@
 (defun inverted-index-merge (destination source)
   (maphash (lambda (token-id locations)
              (setf (gethash token-id (inverted-index-table destination))
-                   (merge-inverted-values (gethash token-id (inverted-index-table destination))
-                                          locations)))
+                   (merge-locations (gethash token-id (inverted-index-table destination))
+                                    locations)))
            (inverted-index-table source))
   destination)
 

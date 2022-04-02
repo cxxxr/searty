@@ -41,7 +41,7 @@
 (defun flush-inverted-index (inverted-index)
   (do-inverted-index (token-id locations inverted-index)
     (when-let ((storage-locations (resolve-locations *database* token-id)))
-      (merge-inverted-values locations storage-locations))
+      (merge-locations locations storage-locations))
     (upsert-inverted-index *database* token-id locations))
   (inverted-index-clear inverted-index))
 

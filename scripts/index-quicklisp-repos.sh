@@ -14,8 +14,8 @@ sqlite3 ../index/searty.db < ../schema.sql
 for dir in $(ls -1 $ROOT_DIR)
 do
     repo=$ROOT_DIR/$dir
-
-    ./searty-index $repo
+    echo $repo
+    time ./searty-index $repo
     if [ $? -ne 0 ]
     then
         echo $repo >> failure.txt

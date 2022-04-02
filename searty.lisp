@@ -82,7 +82,8 @@
     (format t "~&index flushed (~A ms): ~A~%" time (date))))
 
 (defun index-lisp-repository (root-directory &optional (*database* (make-instance 'sqlite3-database)))
-  (let ((inverted-index (make-inverted-index)))
+  (let ((root-directory (uiop:ensure-directory-pathname root-directory))
+        (inverted-index (make-inverted-index)))
     (dbi:with-transaction (database-connection *database*)
       (dolist (file (find-files root-directory #'lisp-pathname-p))
         (add-file-with-time inverted-index file))

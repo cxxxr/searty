@@ -38,20 +38,11 @@
             (tokenize-trigram token :start-bounding t :end-bounding t))
           (tokenize text)))
 
-(defun save-inverted-index (inverted-index)
-  (inverted-index-foreach
-   inverted-index
-   (lambda (token-id locations)
-     (upsert-inverted-index *database*
-                            token-id
-                            locations))))
-
 (defun flush-inverted-index (inverted-index)
-  (let* ((storage-inverted-index
-           (resolve-inverted-index-by-token-ids *database* (inverted-index-token-ids inverted-index)))
-         (merged-inverted-index
-           (inverted-index-merge inverted-index storage-inverted-index)))
-    (save-inverted-index merged-inverted-index))
+  (do-inverted-index (token-id locations inverted-index)
+    (when-let ((storage-locations (resolve-locations *database* token-id)))
+      (merge-inverted-values locations storage-locations))
+    (upsert-inverted-index *database* token-id locations))
   (inverted-index-clear inverted-index))
 
 (defun create-document (pathname body)

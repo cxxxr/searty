@@ -82,6 +82,10 @@
   (maphash function
            (inverted-index-table inverted-index)))
 
+(defmacro do-inverted-index ((token-id locations inverted-index) &body body)
+  `(inverted-index-foreach ,inverted-index
+                           (lambda (,token-id ,locations) ,@body)))
+
 ;;; encode/decode
 (defun encode-positive-integer (v stream)
   (let ((bytes '()))

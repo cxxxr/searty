@@ -74,25 +74,19 @@
 (defun date ()
   (multiple-value-bind (second minute hour date month year)
       (decode-universal-time (get-universal-time))
-    (format nil "~A/~A/~A ~2,'0D:~2,'0D:~2,'0D" year month date hour minute second)))
+    (format nil "[~A/~A/~A ~2,'0D:~2,'0D:~2,'0D]" year month date hour minute second)))
 
 (defun flush-inverted-index-with-time (inverted-index)
   (format t "~&index flush: ~A~%" (date))
-  (flush-inverted-index inverted-index)
-  (format t "~&index flushed: ~A~%" (date)))
+  (let ((time (measure-time (flush-inverted-index inverted-index))))
+    (format t "~&index flushed (~A ms): ~A~%" time (date))))
 
 (defun index-lisp-repository (root-directory &optional (*database* (make-instance 'sqlite3-database)))
   (let ((inverted-index (make-inverted-index)))
     (dbi:with-transaction (database-connection *database*)
       (dolist (file (find-files root-directory #'lisp-pathname-p))
         (add-file-with-time inverted-index file))
-      (flush-inverted-index-with-time inverted-index)
-      inverted-index)))
-
-(defun index-quicklisp (root-directory)
-  (sqlite3-init-database)
-  (dolist (dir (uiop:subdirectories root-directory))
-    (index-lisp-repository dir)))
+      (flush-inverted-index-with-time inverted-index))))
 
 ;;;
 (defstruct (range (:constructor make-range (start end))) start end)

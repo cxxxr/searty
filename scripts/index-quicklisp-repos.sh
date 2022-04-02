@@ -3,16 +3,18 @@
 if [ $# -ne 1 ]
 then
     echo 'usage: $0 directory'
+    exit 1
 fi
 
 ROOT_DIR=${1%/}
 
-rm ../index/*
+find ../index -type f | xargs rm
 sqlite3 ../index/searty.db < ../schema.sql
 
 for dir in $(ls -1 $ROOT_DIR)
 do
     repo=$ROOT_DIR/$dir
+
     ./searty-index $repo
     if [ $? -ne 0 ]
     then

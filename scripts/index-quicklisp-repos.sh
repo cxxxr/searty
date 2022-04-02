@@ -11,6 +11,11 @@ ROOT_DIR=${1%/}
 find ../index -type f | xargs rm
 sqlite3 ../index/searty.db < ../schema.sql
 
+if [ -f failure.txt ]
+then
+    rm failure.txt
+fi
+
 for dir in $(ls -1 $ROOT_DIR)
 do
     repo=$ROOT_DIR/$dir

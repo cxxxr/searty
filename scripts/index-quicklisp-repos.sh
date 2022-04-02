@@ -8,7 +8,7 @@ fi
 ROOT_DIR=${1%/}
 
 rm ../index/*
-sqlite3 ../index/searty.sqlite3 < ../schema.sqlite3
+sqlite3 ../index/searty.db < ../schema.sql
 
 for dir in $(ls -1 $ROOT_DIR)
 do

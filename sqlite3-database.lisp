@@ -3,9 +3,9 @@
 (defparameter *index-directory*
   (asdf:system-relative-pathname :searty "index/"))
 (defparameter *sqlite3-database-file*
-  (namestring (asdf:system-relative-pathname :searty (merge-pathnames "searty.sqlite3" *index-directory*))))
+  (namestring (asdf:system-relative-pathname :searty (merge-pathnames "searty.db" *index-directory*))))
 (defparameter *sqlite3-schema-file*
-  (namestring (asdf:system-relative-pathname :searty "schema.sqlite3")))
+  (namestring (asdf:system-relative-pathname :searty "schema.sql")))
 
 (defun sqlite3-init-database ()
   (uiop:run-program `("sqlite3" "-init" ,*sqlite3-schema-file* ,*sqlite3-database-file*)))

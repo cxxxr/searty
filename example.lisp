@@ -4,7 +4,7 @@
   (let ((*database* (make-instance 'sqlite3-database)))
     (write-line "------------------------------ INDEX ------------------------------")
     (sqlite3-init-database)
-    (index-lisp-system :searty)
+    (index-lisp-repository (asdf:system-source-directory :searty) *database*)
     (terpri)
     (write-line "------------------------------ RESULT ------------------------------")
     (pretty-print-matched (apply #'search-phrase search-phrase-arguments))))

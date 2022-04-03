@@ -23,9 +23,9 @@ fi
 for dir in $(ls -1 $ROOT_DIR)
 do
     repo=$ROOT_DIR/$dir
+    echo
     echo '---' $repo
     ./searty-index $repo
-    echo
     if [ $? -ne 0 ]
     then
         echo $repo >> failure.txt

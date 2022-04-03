@@ -85,7 +85,12 @@
   (let ((inverted-index (make-inverted-index)))
     (dbi:with-transaction (database-connection *database*)
       (dolist (file files)
-        (add-file-with-time inverted-index file))
+        ;; 重複を防ぐために既に登録されているファイルはインデックスしない
+        ;; 例:
+        ;; 3b-swf-20120107-gitは3b-swf-swc.asdと3b-swf.asdがあるが、
+        ;; 3b-swf-swcが3b-swfに依存してるため、3b-swfを二重に見る問題がある
+        (unless (resolve-document-id-by-pathname *database* file)
+          (add-file-with-time inverted-index file)))
       (flush-inverted-index-with-time inverted-index))))
 
 (defun set-compile-file (function)

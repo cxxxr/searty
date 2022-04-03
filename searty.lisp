@@ -131,6 +131,35 @@
                      (typep c 'asdf:cl-source-file))
           :collect (first (asdf::input-files o c)))))
 
+(defun init-index ()
+  (let ((index-dir (namestring (asdf:system-relative-pathname :searty "index/"))))
+    (uiop:run-program (list "rm" "-rf" index-dir))
+    (uiop:run-program (list "mkdir" index-dir))
+    (uiop:run-program (list "sqlite3" "-init" *sqlite3-schema-file* *sqlite3-database-file*))))
+
+(defmacro with-asdf ((root-directory) &body body)
+  `(let ((asdf:*system-definition-search-functions*
+           '(asdf::sysdef-central-registry-search))
+         (asdf:*central-registry*
+           (uiop:subdirectories ,root-directory)))
+     ,@body))
+
+(defun index-quicklisp-repository (root-directory name)
+  (let ((root-directory (uiop:ensure-directory-pathname root-directory)))
+    (with-asdf (root-directory)
+      (let ((dir (uiop:ensure-directory-pathname (merge-pathnames name root-directory))))
+        (dolist (asd-file (asdf/source-registry:directory-asd-files dir))
+          (index-lisp-system (pathname-name asd-file)))))))
+
+(defun index-quicklisp-releases (root-directory)
+  (init-index)
+  (let ((root-directory (uiop:ensure-directory-pathname root-directory)))
+    (with-asdf (root-directory)
+      (dolist (dir (uiop:subdirectories root-directory))
+        (dolist (asd-file (asdf/source-registry:directory-asd-files dir))
+          (format t "~&--- ~A~%" asd-file)
+          (index-lisp-system (pathname-name asd-file)))))))
+
 ;;;
 (defstruct (range (:constructor make-range (start end))) start end)
 

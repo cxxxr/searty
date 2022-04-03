@@ -5,6 +5,7 @@
                "sxql"
                "flexi-streams"
                "cl-dbi"
+               "dbd-sqlite3"
                "babel")
   :serial t
   :components ((:file "package")

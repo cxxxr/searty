@@ -18,7 +18,9 @@ exec ros -Q -- $0 "$@"
 (defun index (directories)
   (dolist (directory directories)
     (assert (uiop:directory-pathname-p (probe-file directory)))
-    (searty:index-lisp-repository directory)))
+    (dolist (asd-file (asdf/source-registry:directory-asd-files directory))
+      (asdf:load-asd asd-file)
+      (searty::index-lisp-system (pathname-name asd-file)))))
 
 (defun main (&rest argv)
   (declare (ignorable argv))
@@ -26,6 +28,5 @@ exec ros -Q -- $0 "$@"
                        #'index
                        :command-line argv
                        :name "searty-index"
-                       :rest-arity t)
-  )
+                       :rest-arity t))
 ;;; vim: set ft=lisp lisp:

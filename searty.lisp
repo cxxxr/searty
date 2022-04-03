@@ -81,13 +81,40 @@
   (let ((time (measure-time (flush-inverted-index inverted-index))))
     (format t "~&index flushed (~A ms): ~A~%" time (date))))
 
-(defun index-lisp-repository (root-directory &optional (*database* (make-instance 'sqlite3-database)))
-  (let ((root-directory (uiop:ensure-directory-pathname root-directory))
-        (inverted-index (make-inverted-index)))
+(defun index-lisp-files (files)
+  (let ((inverted-index (make-inverted-index)))
     (dbi:with-transaction (database-connection *database*)
-      (dolist (file (find-files root-directory #'lisp-pathname-p))
+      (dolist (file files)
         (add-file-with-time inverted-index file))
       (flush-inverted-index-with-time inverted-index))))
+
+(defun index-lisp-repository (root-directory &optional (*database* (make-instance 'sqlite3-database)))
+  (index-lisp-files
+   (find-files (uiop:ensure-directory-pathname root-directory)
+               #'lisp-pathname-p)))
+
+(defun set-compile-file (function)
+  (sb-ext:without-package-locks
+    (setf (fdefinition 'compile-file) function)))
+
+(defun compile-system-and-collect-input-files (system)
+  (let ((input-files '()))
+    (let ((compile-file-function #'compile-file))
+      (sb-ext:without-package-locks
+        (unwind-protect
+             (progn
+               (set-compile-file
+                (lambda (input-file &rest args)
+                  (push input-file input-files)
+                  (apply compile-file-function input-file args)))
+               (asdf:compile-system system :force t))
+          (set-compile-file compile-file-function))))
+    (nreverse input-files)))
+
+(defun index-lisp-system (system)
+  (let ((files (compile-system-and-collect-input-files system))
+        (*database* (make-instance 'sqlite3-database)))
+    (index-lisp-files files)))
 
 ;;;
 (defstruct (range (:constructor make-range (start end))) start end)

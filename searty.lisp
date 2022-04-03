@@ -112,9 +112,24 @@
     (nreverse input-files)))
 
 (defun index-lisp-system (system)
-  (let ((files (compile-system-and-collect-input-files system))
+  (let ((files (collect-cl-source-files system))
         (*database* (make-instance 'sqlite3-database)))
     (index-lisp-files files)))
+
+(defclass nop-plan (asdf:sequential-plan) ())
+
+(defmethod asdf:perform-plan ((plan nop-plan) &key))
+
+(defun collect-cl-source-files (system)
+  (multiple-value-bind (operation plan)
+      (asdf:operate 'asdf:compile-op system :plan-class 'nop-plan :force t)
+    (declare (ignore operation))
+    (loop :for action :in (asdf/plan:plan-actions plan)
+          :for o := (asdf/action:action-operation action)
+          :for c := (asdf/action:action-component action)
+          :when (and (typep o 'asdf:compile-op)
+                     (typep c 'asdf:cl-source-file))
+          :collect (first (asdf::input-files o c)))))
 
 ;;;
 (defstruct (range (:constructor make-range (start end))) start end)

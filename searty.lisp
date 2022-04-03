@@ -153,12 +153,15 @@
                                   :collect (lambda (asd-file) (push asd-file asd-files)))
     asd-files))
 
-(defun index-quicklisp-repository (root-directory name)
-  (let ((root-directory (uiop:ensure-directory-pathname root-directory)))
+(defun index-quicklisp-repository (directory)
+  (let* ((directory (uiop:ensure-directory-pathname directory))
+         (root-directory (uiop:pathname-parent-directory-pathname directory)))
     (with-asdf (root-directory)
-      (let ((dir (uiop:ensure-directory-pathname (merge-pathnames name root-directory))))
-        (dolist (asd-file (collect-asd-files dir))
-          (index-lisp-system (pathname-name asd-file) dir))))))
+      (dolist (asd-file (collect-asd-files directory))
+        (index-lisp-system (pathname-name asd-file) directory)))))
+
+;; (index-quicklisp-repository #P"/home/user/cl-sources/releases/2022-04-01/able-20171227-git/")
+;; -- LTK not found
 
 (defun index-quicklisp-releases (root-directory)
   (init-index)

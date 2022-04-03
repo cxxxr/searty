@@ -16,11 +16,8 @@ exec ros -Q -- $0 "$@"
   '())
 
 (defun index (args)
-  (destructuring-bind (repository-directory) args
-    (let* ((repository-directory (uiop:ensure-directory-pathname repository-directory))
-           (root-directory (uiop:pathname-parent-directory-pathname repository-directory)))
-      (searty::index-quicklisp-repository root-directory
-                                          (enough-namestring repository-directory root-directory)))))
+  (destructuring-bind (directory) args
+    (searty::index-quicklisp-repository directory)))
 
 (defun main (&rest argv)
   (declare (ignorable argv))

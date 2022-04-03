@@ -9,6 +9,10 @@ fi
 ROOT_DIR=${1%/}
 
 find ../index -type f | xargs rm
+if [ ! -d ../index ]
+then
+    mkdir ../index
+fi
 sqlite3 ../index/searty.db < ../schema.sql
 
 if [ -f failure.txt ]

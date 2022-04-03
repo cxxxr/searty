@@ -146,11 +146,18 @@
            (uiop:subdirectories ,root-directory)))
      ,@body))
 
+(defun collect-asd-files (directory)
+  (let ((asd-files '()))
+    (asdf::register-asd-directory directory
+                                  :recurse t
+                                  :collect (lambda (asd-file) (push asd-file asd-files)))
+    asd-files))
+
 (defun index-quicklisp-repository (root-directory name)
   (let ((root-directory (uiop:ensure-directory-pathname root-directory)))
     (with-asdf (root-directory)
       (let ((dir (uiop:ensure-directory-pathname (merge-pathnames name root-directory))))
-        (dolist (asd-file (asdf/source-registry:directory-asd-files dir))
+        (dolist (asd-file (collect-asd-files dir))
           (index-lisp-system (pathname-name asd-file) dir))))))
 
 (defun index-quicklisp-releases (root-directory)
@@ -158,7 +165,7 @@
   (let ((root-directory (uiop:ensure-directory-pathname root-directory)))
     (with-asdf (root-directory)
       (dolist (dir (uiop:subdirectories root-directory))
-        (dolist (asd-file (asdf/source-registry:directory-asd-files dir))
+        (dolist (asd-file (collect-asd-files dir))
           (format t "~&--- ~A~%" asd-file)
           (index-lisp-system (pathname-name asd-file) dir))))))
 

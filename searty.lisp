@@ -88,11 +88,6 @@
         (add-file-with-time inverted-index file))
       (flush-inverted-index-with-time inverted-index))))
 
-(defun index-lisp-repository (root-directory &optional (*database* (make-instance 'sqlite3-database)))
-  (index-lisp-files
-   (find-files (uiop:ensure-directory-pathname root-directory)
-               #'lisp-pathname-p)))
-
 (defun set-compile-file (function)
   (sb-ext:without-package-locks
     (setf (fdefinition 'compile-file) function)))
@@ -111,16 +106,11 @@
           (set-compile-file compile-file-function))))
     (nreverse input-files)))
 
-(defun index-lisp-system (system)
-  (let ((files (collect-cl-source-files system))
-        (*database* (make-instance 'sqlite3-database)))
-    (index-lisp-files files)))
-
 (defclass nop-plan (asdf:sequential-plan) ())
 
 (defmethod asdf:perform-plan ((plan nop-plan) &key))
 
-(defun collect-cl-source-files (system)
+(defun collect-cl-source-files (system base-directory)
   (multiple-value-bind (operation plan)
       (asdf:operate 'asdf:compile-op system :plan-class 'nop-plan :force t)
     (declare (ignore operation))
@@ -129,7 +119,14 @@
           :for c := (asdf/action:action-component action)
           :when (and (typep o 'asdf:compile-op)
                      (typep c 'asdf:cl-source-file))
-          :collect (first (asdf::input-files o c)))))
+          :append (let ((file (first (asdf::input-files o c))))
+                    (when (uiop:subpathp file base-directory)
+                      (list file))))))
+
+(defun index-lisp-system (system base-directory)
+  (let ((files (collect-cl-source-files system base-directory))
+        (*database* (make-instance 'sqlite3-database)))
+    (index-lisp-files files)))
 
 (defun init-index ()
   (let ((index-dir (namestring (asdf:system-relative-pathname :searty "index/"))))
@@ -149,7 +146,7 @@
     (with-asdf (root-directory)
       (let ((dir (uiop:ensure-directory-pathname (merge-pathnames name root-directory))))
         (dolist (asd-file (asdf/source-registry:directory-asd-files dir))
-          (index-lisp-system (pathname-name asd-file)))))))
+          (index-lisp-system (pathname-name asd-file) dir))))))
 
 (defun index-quicklisp-releases (root-directory)
   (init-index)
@@ -158,7 +155,7 @@
       (dolist (dir (uiop:subdirectories root-directory))
         (dolist (asd-file (asdf/source-registry:directory-asd-files dir))
           (format t "~&--- ~A~%" asd-file)
-          (index-lisp-system (pathname-name asd-file)))))))
+          (index-lisp-system (pathname-name asd-file) dir))))))
 
 ;;;
 (defstruct (range (:constructor make-range (start end))) start end)

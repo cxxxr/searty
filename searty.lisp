@@ -167,9 +167,6 @@
       (dolist (asd-file (collect-asd-files directory))
         (index-lisp-system (pathname-name asd-file) directory)))))
 
-;; (index-quicklisp-repository #P"/home/user/cl-sources/releases/2022-04-01/able-20171227-git/")
-;; -- LTK not found
-
 (defun index-quicklisp-releases (root-directory)
   (init-index)
   (let ((root-directory (uiop:ensure-directory-pathname root-directory)))

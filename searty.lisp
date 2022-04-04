@@ -139,12 +139,19 @@
     (uiop:run-program (list "mkdir" index-dir))
     (uiop:run-program (list "sqlite3" "-init" *sqlite3-schema-file* *sqlite3-database-file*))))
 
+(defun call-with-asdf (root-directory function)
+  (let ((asdf:*system-definition-search-functions*
+          '(asdf/system-registry:sysdef-source-registry-search))
+        (asdf/source-registry:*source-registry* nil))
+    (asdf::initialize-source-registry
+     `(:source-registry
+       (:tree ,root-directory)
+       #+sbcl (:directory (:home ".sbcl/systems/"))
+       :ignore-inherited-configuration))
+    (funcall function)))
+
 (defmacro with-asdf ((root-directory) &body body)
-  `(let ((asdf:*system-definition-search-functions*
-           '(asdf::sysdef-central-registry-search))
-         (asdf:*central-registry*
-           (uiop:subdirectories ,root-directory)))
-     ,@body))
+  `(call-with-asdf ,root-directory (lambda () ,@body)))
 
 (defun collect-asd-files (directory)
   (let ((asd-files '()))

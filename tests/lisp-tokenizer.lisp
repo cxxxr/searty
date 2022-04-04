@@ -104,4 +104,7 @@ bar")
   (test (searty::tokenize "abc あいうえお xyz")
         '((:TERM "abc" :POSITION 0 :KIND :SYMBOL)
           (:TERM "あいうえお" :POSITION 4 :KIND :SYMBOL)
-          (:TERM "xyz" :POSITION 10 :KIND :SYMBOL))))
+          (:TERM "xyz" :POSITION 10 :KIND :SYMBOL)))
+
+  (test (searty::tokenize "#|#|foo|#|#")
+        '((:TERM "#|foo|#" :POSITION 0 :KIND :BLOCK-COMMENT))))

@@ -200,19 +200,20 @@
   (exact-char lexer #\|)
   (let ((term (with-output-to-string (out)
                 (loop :with depth := 1
-                      :for prev := nil :then c
-                      :and c := (lexer-read-char lexer)
-                      :do (cond ((and prev
-                                      (char= prev #\#)
-                                      (char= c #\|))
-                                 (incf depth))
-                                ((and prev
-                                      (char= prev #\|)
-                                      (char= c #\#))
+                      :for c := (lexer-read-char lexer)
+                      :do (cond ((and (eql #\# c)
+                                      (eql #\| (lexer-peek-char lexer)))
+                                 (lexer-read-char lexer)
+                                 (incf depth)
+                                 (write-string "#|" out))
+                                ((and (eql #\| c)
+                                      (eql #\# (lexer-peek-char lexer)))
+                                 (lexer-read-char lexer)
                                  (when (zerop (decf depth))
-                                   (return))))
-                          (when prev
-                            (write-char prev out))))))
+                                   (return))
+                                 (write-string "|#" out))
+                                (t
+                                 (write-char c out)))))))
     (make-token :term term
                 :position position
                 :kind :block-comment)))

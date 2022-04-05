@@ -1,12 +1,46 @@
 #!/bin/bash
 
-if [ $# -ne 1 ]
+PROGRAM=$0
+J=12
+N=0
+ROOT_DIR=''
+
+usage() {
+    echo "usage: $PROGRAM [-j N] [-n N] directory"
+}
+
+list_dirs() {
+    if [ $N -eq 0 ]
+    then
+        ls -1 $ROOT_DIR
+    else
+        ls -1 $ROOT_DIR | head -n $N
+    fi
+}
+
+while (( $# > 0 ))
+do
+    case $1 in
+        -j)
+            shift
+            J=$1
+            ;;
+        -n)
+            shift
+            N=$1
+            ;;
+        *)
+            ROOT_DIR=${1%/}
+            ;;
+        esac
+        shift
+done
+
+if [ -z $ROOT_DIR ]
 then
-    echo 'usage: $0 directory'
+    usage
     exit 1
 fi
-
-ROOT_DIR=${1%/}
 
 rm -rf ../index
 mkdir ../index
@@ -16,13 +50,11 @@ then
     rm failure.txt
 fi
 
-rm result.txt
-
 temp=$(mktemp)
 
-for f in $(ls -1 $ROOT_DIR)
+for f in $(list_dirs)
 do
     echo $ROOT_DIR/$f >> $temp
 done
 
-parallel -a $temp -j20 ./index-repo.sh
+parallel -a $temp -j $J ./index-repo.sh

@@ -140,7 +140,8 @@
     (uiop:run-program (list "sqlite3" "-init" *sqlite3-schema-file* *sqlite3-database-file*))))
 
 (defun call-with-asdf (root-directory function)
-  (let ((asdf:*system-definition-search-functions*
+  (let (#+(or)
+        (asdf:*system-definition-search-functions*
           '(asdf/system-registry:sysdef-source-registry-search))
         (asdf/source-registry:*source-registry* nil))
     (asdf::initialize-source-registry

@@ -8,26 +8,21 @@ fi
 
 ROOT_DIR=${1%/}
 
-find ../index -type f | xargs rm
-if [ ! -d ../index ]
-then
-    mkdir ../index
-fi
-sqlite3 ../index/searty.db < ../schema.sql
+rm -rf ../index
+mkdir ../index
 
 if [ -f failure.txt ]
 then
     rm failure.txt
 fi
 
-for dir in $(ls -1 $ROOT_DIR)
+rm result.txt
+
+temp=$(mktemp)
+
+for f in $(ls -1 $ROOT_DIR)
 do
-    repo=$ROOT_DIR/$dir
-    echo
-    echo '---' $repo
-    ./searty-index.ros $repo
-    if [ $? -ne 0 ]
-    then
-        echo $repo >> failure.txt
-    fi
+    echo $ROOT_DIR/$f >> $temp
 done
+
+parallel -a $temp -j20 ./index-repo.sh

@@ -1,0 +1,73 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp(ql:quickload '(:cl-ppcre) :silent t)
+  )
+
+(defpackage :ros.script.gen-makefile.3858336297
+  (:use :cl))
+(in-package :ros.script.gen-makefile.3858336297)
+
+(defstruct system-dependency name file dependencies)
+
+(defun convert-system-name-to-object-name (string)
+  (let* ((string (ppcre:regex-replace-all "_" string "__"))
+         (string (ppcre:regex-replace-all "/" string "_"))
+         (string (concatenate 'string string ".finish")))
+    string))
+
+(defun load-systems.txt (systems.txt)
+  (with-open-file (in systems.txt)
+    (loop :for line := (read-line in nil)
+          :while line
+          :unless (char= #\# (char line 0))
+          :collect (destructuring-bind (project system-file system-name &rest dependencies)
+                       (uiop:split-string line)
+                     (declare (ignore project))
+                     (make-system-dependency :name system-name :file system-file :dependencies dependencies)))))
+
+(defun basename (dir)
+  (let* ((filename (princ-to-string dir))
+         (filename (string-right-trim "/" filename))
+         (pos (position #\/ filename :from-end t)))
+    (subseq filename (1+ pos))))
+
+(defun find-match-dir (name dirs)
+  (loop :with regex := (ppcre:create-scanner
+                        `(:sequence
+                          :start-anchor
+                          ,name "-" (:GREEDY-REPETITION 1 NIL :DIGIT-CLASS) "-git"
+                          :end-anchor))
+        :for dir :in dirs
+        :for basename := (basename dir)
+        :when (ppcre:scan regex basename)
+        :return dir))
+
+(defun generate-makefile-from-system-dependencies (system-dependencies root-directory output-stream)
+  (let ((dirs (uiop:subdirectories root-directory)))
+    (dolist (dep system-dependencies)
+      (let ((project-dir (find-match-dir (system-dependency-file dep) dirs))
+            (name (convert-system-name-to-object-name (system-dependency-name dep)))
+            (deps (mapcar #'convert-system-name-to-object-name (system-dependency-dependencies dep))))
+        (format output-stream "~A:" name)
+        (when deps
+          (format output-stream " ~{~A~^ ~}" deps))
+        (terpri output-stream)
+        (format output-stream "~C./searty-index ~A ~A~%" #\tab project-dir name)))))
+
+(defun main (&rest argv)
+  (declare (ignorable argv))
+  (destructuring-bind (systems.txt root-directory output-file) argv
+    (with-open-file (out output-file
+                         :direction :output
+                         :if-exists :supersede
+                         :if-does-not-exist :create)
+      (generate-makefile-from-system-dependencies (load-systems.txt systems.txt)
+                                                  root-directory
+                                                  out))))
+
+;;; vim: set ft=lisp lisp:

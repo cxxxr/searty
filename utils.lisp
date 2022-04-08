@@ -37,3 +37,9 @@
     `(let ((,start (get-internal-real-time)))
        ,form
        (floor (- (get-internal-real-time) ,start) 1000))))
+
+(defun basename (filename)
+  (string-right-trim "/"
+                     (enough-namestring
+                      filename
+                      (uiop:pathname-parent-directory-pathname filename))))

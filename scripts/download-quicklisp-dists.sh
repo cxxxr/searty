@@ -1,26 +1,27 @@
 #!/bin/bash
 
-if [ $# -eq 1 ]
-then
-    working_dir=$1
-else
-    working_dir=$(pwd)
-fi
+base_dir=$1
 
-VERSION=$(curl http://beta.quicklisp.org/dist/quicklisp.txt | grep 'canonical-distinfo-url: ' | sed 's/canonical-distinfo-url:\s*//' | cut -d '/' -f 6)
+quicklisp_txt=$(realpath "${base_dir}/quicklisp.txt")
+releases_txt=$(realpath "${base_dir}/releases.txt")
 
-release_dir="${working_dir}/releases/${VERSION}"
+version=$(grep 'version:' $quicklisp_txt | cut -d ' ' -f 2)
+
+release_dir=$(realpath "${base_dir}/${version}")
+rm -rf $release_dir
 mkdir -p $release_dir
-cd $release_dir
 
-curl "http://beta.quicklisp.org/dist/quicklisp/${VERSION}/releases.txt" -o releases.txt
-
-for url in $(grep -v '^#' releases.txt | cut -d ' ' -f 2)
+while read line
 do
-    name=$(echo $url | sed 's@http://beta.quicklisp.org/archive/\([^/]*\)/.*\.tgz@\1@')
-    file=$(echo $url | sed 's@http://beta.quicklisp.org/archive/\([^/]*\)/\(.*\.tgz\)@\2@')
-    curl $url -o "${release_dir}/${name}.tgz"
-done
+    echo $line | grep '^#' > /dev/null
+    if [ $? -eq 1 ]
+    then
+        project_name=$(echo $line | cut -d ' ' -f 1)
+        url=$(echo $line | cut -d ' ' -f 2)
+        echo $project_name $url
+        curl $url -o "${release_dir}/${project_name}.tgz"
+    fi
+done < $releases_txt
 
 cd $release_dir
 

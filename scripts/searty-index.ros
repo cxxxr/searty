@@ -5,26 +5,22 @@ exec ros -Q -- $0 "$@"
 |#
 (progn ;;init forms
   (ros:ensure-asdf)
-  #+quicklisp(ql:quickload '(:searty :command-line-arguments) :silent t)
+  #+quicklisp(ql:quickload '(:searty) :silent t)
   )
 
 (defpackage :ros.script.searty-index.3857544737
-  (:use :cl :command-line-arguments))
+  (:use :cl))
 (in-package :ros.script.searty-index.3857544737)
-
-(defparameter +command-line-spec+
-  '())
-
-(defun index (args)
-  (destructuring-bind (directory) args
-    (searty::index-quicklisp-repository directory)))
 
 (defun main (&rest argv)
   (declare (ignorable argv))
-  (handle-command-line +command-line-spec+
-                       #'index
-                       :command-line argv
-                       :name "searty-index"
-                       :rest-arity t))
+  (destructuring-bind (project-directory) argv
+    (let* ((name (searty:basename project-directory))
+           (index-dir (asdf:system-relative-pathname :searty (format nil "index/~A/" name)))
+           (searty::*index-directory* index-dir)
+           (searty::*sqlite3-database-file* (namestring (merge-pathnames "searty.db" index-dir))))
+      (ensure-directories-exist index-dir)
+      (searty::sqlite3-init-database)
+      (searty::index-quicklisp-repository project-directory))))
 
 ;;; vim: set ft=lisp lisp:

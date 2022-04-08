@@ -161,12 +161,19 @@
                                   :collect (lambda (asd-file) (push asd-file asd-files)))
     asd-files))
 
+(defun collect-system-names (asd-file)
+  (loop :for form :in (uiop:read-file-forms asd-file)
+        :when (and (consp form)
+                   (string-equal (first form) "DEFSYSTEM"))
+        :collect (string-downcase (second form))))
+
 (defun index-quicklisp-repository (directory)
   (let* ((directory (uiop:ensure-directory-pathname directory))
          (root-directory (uiop:pathname-parent-directory-pathname directory)))
     (with-asdf (root-directory)
       (dolist (asd-file (collect-asd-files directory))
-        (index-lisp-system (pathname-name asd-file) directory)))))
+        (dolist (system-name (collect-system-names asd-file))
+          (index-lisp-system system-name directory))))))
 
 (defun index-quicklisp-releases (root-directory)
   (init-index)

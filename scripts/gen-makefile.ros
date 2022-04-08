@@ -5,14 +5,14 @@ exec ros -Q -- $0 "$@"
 |#
 (progn ;;init forms
   (ros:ensure-asdf)
-  #+quicklisp(ql:quickload '(:cl-ppcre) :silent t)
+  #+quicklisp(ql:quickload '(:cl-ppcre :searty) :silent t)
   )
 
 (defpackage :ros.script.gen-makefile.3858336297
   (:use :cl))
 (in-package :ros.script.gen-makefile.3858336297)
 
-(defstruct system-dependency name file dependencies)
+(defstruct system-dependency project name file dependencies directory)
 
 (defun convert-system-name-to-object-name (string)
   (let* ((string (ppcre:regex-replace-all "_" string "__"))
@@ -27,37 +27,29 @@ exec ros -Q -- $0 "$@"
           :unless (char= #\# (char line 0))
           :collect (destructuring-bind (project system-file system-name &rest dependencies)
                        (uiop:split-string line)
-                     (declare (ignore project))
-                     (make-system-dependency :name system-name :file system-file :dependencies dependencies)))))
+                     (make-system-dependency :project project
+                                             :name system-name
+                                             :file system-file
+                                             :dependencies dependencies)))))
 
-(defun basename (dir)
-  (let* ((filename (princ-to-string dir))
-         (filename (string-right-trim "/" filename))
-         (pos (position #\/ filename :from-end t)))
-    (subseq filename (1+ pos))))
+(defun to-object-file (system-dependency)
+  (format nil "../~A/searty.db" (searty:basename (system-dependency-directory system-dependency))))
 
-(defun find-match-dir (name dirs)
-  (loop :with regex := (ppcre:create-scanner
-                        `(:sequence
-                          :start-anchor
-                          ,name "-" (:GREEDY-REPETITION 1 NIL :DIGIT-CLASS) "-git"
-                          :end-anchor))
-        :for dir :in dirs
-        :for basename := (basename dir)
-        :when (ppcre:scan regex basename)
-        :return dir))
+(defun generate-makefile-from-system-dependencies (system-dependencies output-stream)
+  (loop :for dep :in system-dependencies
+        :for project-dir := (system-dependency-directory dep)
+        :for deps := (mapcar #'convert-system-name-to-object-name (system-dependency-dependencies dep))
+        :do (format output-stream "~A:" (to-object-file dep))
+            (when deps
+              (format output-stream " ~{~A~^ ~}" deps))
+            (terpri output-stream)
+            (format output-stream "~C./searty-index.ros ~A~%" #\tab project-dir)))
 
-(defun generate-makefile-from-system-dependencies (system-dependencies root-directory output-stream)
-  (let ((dirs (uiop:subdirectories root-directory)))
-    (dolist (dep system-dependencies)
-      (let ((project-dir (find-match-dir (system-dependency-file dep) dirs))
-            (name (convert-system-name-to-object-name (system-dependency-name dep)))
-            (deps (mapcar #'convert-system-name-to-object-name (system-dependency-dependencies dep))))
-        (format output-stream "~A:" name)
-        (when deps
-          (format output-stream " ~{~A~^ ~}" deps))
-        (terpri output-stream)
-        (format output-stream "~C./searty-index ~A ~A~%" #\tab project-dir name)))))
+(defun resolve-directory (system-dependencies root-directory)
+  (loop :for dir :in (uiop:subdirectories root-directory)
+        :for dep :in system-dependencies
+        :do (setf (system-dependency-directory dep) dir))
+  system-dependencies)
 
 (defun main (&rest argv)
   (declare (ignorable argv))
@@ -66,8 +58,9 @@ exec ros -Q -- $0 "$@"
                          :direction :output
                          :if-exists :supersede
                          :if-does-not-exist :create)
-      (generate-makefile-from-system-dependencies (load-systems.txt systems.txt)
-                                                  root-directory
-                                                  out))))
+      (let ((system-dependencies (load-systems.txt systems.txt)))
+        (resolve-directory system-dependencies root-directory)
+        (generate-makefile-from-system-dependencies system-dependencies
+                                                    out)))))
 
 ;;; vim: set ft=lisp lisp:

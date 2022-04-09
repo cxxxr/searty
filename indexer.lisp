@@ -7,7 +7,7 @@
     (upsert-inverted-index *database* token-id locations))
   (inverted-index-clear inverted-index))
 
-(defun create-document (pathname body)
+(defun create-document (pathname body &optional (*database* *database*))
   (let ((document (make-document :pathname pathname :body body)))
     (insert-document *database* document)
     (let ((id (resolve-document-id-by-pathname *database* pathname)))

@@ -1,6 +1,7 @@
 #!/bin/bash
 
 base_dir=$1
+mkdir $base_dir
 
 download_quicklisp_index() {
     curl http://beta.quicklisp.org/dist/quicklisp.txt > "${base_dir}/quicklisp.txt"

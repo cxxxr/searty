@@ -17,4 +17,7 @@
                (:file "database")
                (:file "sqlite3-database")
                (:file "lisp-tokenizer")
+               (:file "tokenizer")
+               (:file "indexer")
+               (:file "searcher")
                (:file "searty")))

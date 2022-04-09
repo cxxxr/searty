@@ -43,3 +43,8 @@
                      (enough-namestring
                       filename
                       (uiop:pathname-parent-directory-pathname filename))))
+
+(defun date ()
+  (multiple-value-bind (second minute hour date month year)
+      (decode-universal-time (get-universal-time))
+    (format nil "[~A/~A/~A ~2,'0D:~2,'0D:~2,'0D]" year month date hour minute second)))

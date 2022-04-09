@@ -1,3 +1,5 @@
 searty.sqlite3
 index
 scripts/failure.txt
+scripts/success.txt
+scripts/Makefile

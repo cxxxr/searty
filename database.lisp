@@ -15,6 +15,7 @@
 (defgeneric resolve-token (database token))
 (defgeneric resolve-token-by-id (database id))
 (defgeneric resolve-tokens-by-ids (database ids))
+(defgeneric resolve-whole-tokens (database))
 (defgeneric resolve-inverted-index-by-token-ids (database token-ids))
 (defgeneric resolve-whole-inverted-index (database))
 (defgeneric resolve-locations (database token-id))
@@ -134,6 +135,12 @@
                  (sxql:select (:id :term :kind)
                    (sxql:from :token)
                    (sxql:where (:in :id ids))))))
+
+(defmethod resolve-whole-tokens ((database sqlite3-database))
+  (make-tokens-from-records
+   (resolve-sxql (database-connection database)
+                 (sxql:select (:id :term :kind)
+                   (sxql:from :token)))))
 
 (defun decode-inverted-index-records (records)
   (let ((inverted-index (make-inverted-index)))

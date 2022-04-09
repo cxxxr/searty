@@ -14,13 +14,7 @@ exec ros -Q -- $0 "$@"
 
 (defun main (&rest argv)
   (declare (ignorable argv))
-  (destructuring-bind (project-directory) argv
-    (let* ((name (searty:basename project-directory))
-           (index-dir (asdf:system-relative-pathname :searty (format nil "index/~A/" name)))
-           (searty::*index-directory* index-dir)
-           (searty::*sqlite3-database-file* (namestring (merge-pathnames "searty.db" index-dir))))
-      (ensure-directories-exist index-dir)
-      (searty::sqlite3-init-database)
-      (searty::index-quicklisp-repository project-directory))))
+  (destructuring-bind (system-name dist-dir output-dir) argv
+    (searty::index-system system-name dist-dir output-dir)))
 
 ;;; vim: set ft=lisp lisp:

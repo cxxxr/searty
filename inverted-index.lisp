@@ -1,6 +1,5 @@
 (in-package :searty)
 
-(defstruct inverted-value kind locations)
 (defstruct location document-id positions)
 
 (defstruct inverted-index

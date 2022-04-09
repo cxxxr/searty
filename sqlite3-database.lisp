@@ -1,9 +1,7 @@
 (in-package :searty)
 
 (defparameter *index-directory*
-  (if-let (dir (uiop:getenv "SEARTY_INDEX_DIRECTORY"))
-    (probe-file dir)
-    (asdf:system-relative-pathname :searty "index/")))
+  (asdf:system-relative-pathname :searty "index/"))
 
 (defparameter *sqlite3-database-file*
   (namestring (asdf:system-relative-pathname :searty (merge-pathnames "searty.db" *index-directory*))))

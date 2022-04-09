@@ -5,67 +5,62 @@ exec ros -Q -- $0 "$@"
 |#
 (progn ;;init forms
   (ros:ensure-asdf)
-  #+quicklisp(ql:quickload '(:cl-ppcre :searty) :silent t)
+  #+quicklisp(ql:quickload '(:alexandria) :silent t)
   )
 
-(defpackage :ros.script.gen-makefile.3858336297
+(defpackage :ros.script.gen-make.3858474593
   (:use :cl))
-(in-package :ros.script.gen-makefile.3858336297)
+(in-package :ros.script.gen-make.3858474593)
 
-(defstruct system-dependency project name file dependencies directory)
+(defstruct (system-spec (:conc-name ".")) project system-file system-name dependencies)
 
-(defun convert-system-name-to-object-name (string)
-  (let* ((string (ppcre:regex-replace-all "_" string "__"))
-         (string (ppcre:regex-replace-all "/" string "_"))
-         (string (concatenate 'string string ".finish")))
-    string))
+(defun parse-line (line)
+  (uiop:split-string line :separator " "))
 
-(defun load-systems (systems.txt)
-  (with-open-file (in systems.txt)
-    (loop :with dep-table := (make-hash-table :test 'equal)
-          :for line := (read-line in nil)
+(defun parse-file (file function)
+  (with-open-file (in file)
+    (loop :for line := (read-line in nil)
           :while line
-          :unless (char= #\# (char line 0))
-          :do (destructuring-bind (project system-file system-name &rest dependencies)
-                  (uiop:split-string line)
-                (declare (ignore system-file system-name))
-                (setf (gethash project dep-table)
-                      (union (gethash project dep-table)
-                             dependencies
-                             :test #'string=)))
-          :finally (return dep-table))))
+          :unless (alexandria:starts-with-subseq "#" line)
+          :collect (funcall function (parse-line line)))))
 
-(defun to-object-file (name)
-  (format nil "../~A/searty.db" name))
+(defun load-systems.txt (systems.txt)
+  (parse-file systems.txt
+              (lambda (parts)
+                (destructuring-bind (project system-file system-name &rest dependencies)
+                    parts
+                  (make-system-spec :project project
+                                    :system-file system-file
+                                    :system-name system-name
+                                    :dependencies dependencies)))))
 
-(defun resolve-directory (name directories)
-  (let* ((regex (ppcre:create-scanner `(:sequence :start-anchor ,name)))
-         (dir (loop :for dir :in directories
-                    :when (ppcre:scan regex (searty:basename dir))
-                    :return dir)))
-    (assert dir nil "~A not found" name)
-    dir))
+(defun system-to-object-name (system-name output-dir)
+  (merge-pathnames "searty.db"
+                   (uiop:ensure-directory-pathname (merge-pathnames system-name output-dir))))
 
-(defun generate-makefile-from-system-dependencies (system-dependencies root-directory output-stream)
-  (let ((dirs (sort (uiop:subdirectories root-directory)
-                    #'>
-                    :key (lambda (dir) (length (searty:basename dir))))))
-    (maphash (lambda (system-name dependencies)
-               (format output-stream "~A:" (to-object-file system-name))
-               (when dependencies
-                 (format output-stream "~{~A~^ ~}" (mapcar #'to-object-file dependencies)))
-               (format output-stream "~&~C./searty-index.ros ~A~%" #\tab (resolve-directory system-name dirs)))
-             system-dependencies)))
+(defun gen-makefile (systems.txt dist-dir output-dir stream)
+  (let ((system-specs (load-systems.txt systems.txt)))
+    (dolist (system-spec system-specs)
+      (format stream "~A:" (system-to-object-name (.system-name system-spec) output-dir))
+      (when (.dependencies system-spec)
+        (format stream
+                " ~{~A~^ ~}"
+                (mapcar (alexandria:rcurry #'system-to-object-name output-dir)
+                        (.dependencies system-spec))))
+      (format stream
+              "~%~C./searty-index.ros ~A ~A ~A~%"
+              #\tab
+              (.system-name system-spec)
+              dist-dir
+              output-dir))))
 
 (defun main (&rest argv)
   (declare (ignorable argv))
-  (destructuring-bind (systems.txt root-directory output-file) argv
-    (with-open-file (out output-file
-                         :direction :output
-                         :if-exists :supersede
-                         :if-does-not-exist :create)
-      (generate-makefile-from-system-dependencies (load-systems systems.txt)
-                                                  root-directory
-                                                  out))))
+  (destructuring-bind (systems.txt dist-dir output-dir makefile) argv
+    (with-open-file (out makefile :direction :output :if-exists :supersede)
+      (gen-makefile systems.txt
+                    (uiop:ensure-directory-pathname dist-dir)
+                    (uiop:ensure-directory-pathname output-dir)
+                    out))))
 
 ;;; vim: set ft=lisp lisp:

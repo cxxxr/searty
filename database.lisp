@@ -1,5 +1,9 @@
 (in-package :searty)
 
+(defparameter *sqlite3-index-directory* (asdf:system-relative-pathname :searty "index/"))
+(defparameter *sqlite3-database-file* (namestring (merge-pathnames "searty.db" *sqlite3-index-directory*)))
+(defparameter *sqlite3-schema-file* (namestring (asdf:system-relative-pathname :searty "schema.sql")))
+
 (defvar *database*)
 
 (defgeneric insert-document (database document))
@@ -20,7 +24,24 @@
   ((connection :initarg :connection
                :reader database-connection)))
 
-(defmethod insert-document ((database database) document)
+(defclass sqlite3-database (database)
+  ((index-directory :initarg :index-directory
+                    :initform *sqlite3-index-directory*
+                    :reader sqlite3-database-index-directory))
+  (:default-initargs
+   :connection (dbi:connect :sqlite3 :database-name *sqlite3-database-file*)))
+
+(defun sqlite3-init-database ()
+  (uiop:run-program `("sqlite3" "-init" ,*sqlite3-schema-file* ,*sqlite3-database-file*)))
+
+(defun make-sqlite3-database (index-directory)
+  (let* ((database-file (merge-pathnames "searty.db" index-directory))
+         (connection (dbi:connect :sqlite3 :database-name database-file)))
+    (make-instance 'sqlite3-database
+                   :connection connection
+                   :index-directory index-directory)))
+
+(defmethod insert-document ((database sqlite3-database) document)
   (execute-sxql (database-connection database)
                 (sxql:insert-into :document
                   (sxql:set= :pathname (namestring (document-pathname document))
@@ -35,7 +56,7 @@
               (make-document :id id :pathname pathname :body body)))
           records))
 
-(defmethod resolve-document-by-id ((database database) id)
+(defmethod resolve-document-by-id ((database sqlite3-database) id)
   (when-let (document
              (make-documents-from-records
               (resolve-sxql (database-connection database)
@@ -45,20 +66,20 @@
                               (sxql:limit 1)))))
     (first document)))
 
-(defmethod resolve-documents-by-ids ((database database) ids)
+(defmethod resolve-documents-by-ids ((database sqlite3-database) ids)
   (make-documents-from-records
    (resolve-sxql (database-connection database)
                  (sxql:select (:id :pathname :body)
                    (sxql:from :document)
                    (sxql:where (:in :id ids))))))
 
-(defmethod resolve-whole-documents ((database database))
+(defmethod resolve-whole-documents ((database sqlite3-database))
   (make-documents-from-records
    (resolve-sxql (database-connection database)
                  (sxql:select (:id :pathname :body)
                    (sxql:from :document)))))
 
-(defmethod resolve-document-id-by-pathname ((database database) pathname)
+(defmethod resolve-document-id-by-pathname ((database sqlite3-database) pathname)
   (when-let ((records
               (resolve-sxql (database-connection database)
                             (sxql:select :id
@@ -67,7 +88,7 @@
                               (sxql:limit 1)))))
     (getf (first records) :|id|)))
 
-(defmethod insert-token ((database database) token)
+(defmethod insert-token ((database sqlite3-database) token)
   (unless (token-id token)
     (setf (token-id token) (random-uuid)))
   (execute-sxql (database-connection database)
@@ -77,7 +98,7 @@
                              :kind (encode-token-kind (token-kind token)))))
   token)
 
-(defmethod resolve-token ((database database) token)
+(defmethod resolve-token ((database sqlite3-database) token)
   (when-let* ((records
                (resolve-sxql
                 (database-connection database)
@@ -98,7 +119,7 @@
                        (kind (getf record :|kind|)))
                    (make-token :id id :term term :kind kind))))
 
-(defmethod resolve-token-by-id ((database database) id)
+(defmethod resolve-token-by-id ((database sqlite3-database) id)
   (when-let ((tokens (make-tokens-from-records
                       (resolve-sxql (database-connection database)
                                     (sxql:select (:id :term :kind)
@@ -107,7 +128,7 @@
                                       (sxql:limit 1))))))
     (first tokens)))
 
-(defmethod resolve-tokens-by-ids ((database database) ids)
+(defmethod resolve-tokens-by-ids ((database sqlite3-database) ids)
   (make-tokens-from-records
    (resolve-sxql (database-connection database)
                  (sxql:select (:id :term :kind)
@@ -124,21 +145,30 @@
                (read-file-into-byte-vector locations-data-filepath)))))
     inverted-index))
 
-(defmethod resolve-inverted-index-by-token-ids ((database database) token-ids)
+(defmethod resolve-inverted-index-by-token-ids ((database sqlite3-database) token-ids)
   (decode-inverted-index-records
    (resolve-sxql (database-connection database)
                  (sxql:select (:token_id :locations_data_file)
                    (sxql:from :inverted_index)
                    (sxql:where (:in :token_id token-ids))))))
 
-(defmethod resolve-whole-inverted-index ((database database))
+(defmethod resolve-whole-inverted-index ((database sqlite3-database))
   (decode-inverted-index-records
    (resolve-sxql (database-connection database)
                  (sxql:select (:token_id :locations_data_file)
                    (sxql:from :inverted_index)))))
 
-(defmethod resolve-locations ((database database) token-id)
-  (error "unimplemented"))
+(defmethod resolve-locations ((database sqlite3-database) token-id)
+  (let ((filepath (merge-pathnames token-id (sqlite3-database-index-directory database))))
+    (when (uiop:file-exists-p filepath)
+      (with-open-file (in filepath :element-type '(unsigned-byte 8))
+        (decode-locations in)))))
 
-(defmethod upsert-inverted-index ((database database) token-id locations)
-  (error "unimplemented ~S" '(upsert-inverted-index (database) t t)))
+(defmethod upsert-inverted-index ((database sqlite3-database) token-id locations)
+  (let* ((encoded-locations (encode-locations-to-vector locations))
+         (filepath (merge-pathnames token-id (sqlite3-database-index-directory database))))
+    (write-byte-vector-into-file encoded-locations filepath :if-exists :supersede)
+    (execute-sql (database-connection database)
+                 "INSERT INTO inverted_index (token_id, locations_data_file) VALUES (?, ?)
+ON CONFLICT(token_id) DO NOTHING"
+                 (list token-id (namestring filepath)))))

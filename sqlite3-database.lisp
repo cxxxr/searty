@@ -4,7 +4,7 @@
   (asdf:system-relative-pathname :searty "index/"))
 
 (defparameter *sqlite3-database-file*
-  (namestring (asdf:system-relative-pathname :searty (merge-pathnames "searty.db" *index-directory*))))
+  (namestring (merge-pathnames "searty.db" *index-directory*)))
 (defparameter *sqlite3-schema-file*
   (namestring (asdf:system-relative-pathname :searty "schema.sql")))
 

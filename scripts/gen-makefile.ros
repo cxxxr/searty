@@ -34,21 +34,25 @@ exec ros -Q -- $0 "$@"
                                     :system-name system-name
                                     :dependencies dependencies)))))
 
-(defun system-to-object-name (system-name output-dir)
+(defun system-to-target-name (system-name output-dir)
   (merge-pathnames "searty.db"
                    (uiop:ensure-directory-pathname (merge-pathnames system-name output-dir))))
 
 (defun gen-makefile (systems.txt dist-dir output-dir stream)
   (let ((system-specs (load-systems.txt systems.txt)))
+    (format stream "all: ~{~A~^\\~%~5T~}~%"
+            (mapcar (alexandria:compose (alexandria:rcurry #'system-to-target-name output-dir)
+                                        #'.system-name)
+                    system-specs))
     (dolist (system-spec system-specs)
-      (format stream "~A:" (system-to-object-name (.system-name system-spec) output-dir))
+      (format stream "~A:" (system-to-target-name (.system-name system-spec) output-dir))
       (when (.dependencies system-spec)
         (format stream
                 " ~{~A~^ ~}"
-                (mapcar (alexandria:rcurry #'system-to-object-name output-dir)
+                (mapcar (alexandria:rcurry #'system-to-target-name output-dir)
                         (.dependencies system-spec))))
       (format stream
-              "~%~C./searty-index.ros ~A ~A ~A~%"
+              "~%~C./searty-index.sh ~A ~A ~A~%"
               #\tab
               (.system-name system-spec)
               dist-dir

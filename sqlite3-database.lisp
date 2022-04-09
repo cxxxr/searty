@@ -1,10 +1,10 @@
 (in-package :searty)
 
-(defparameter *index-directory*
+(defparameter *sqlite3-index-directory*
   (asdf:system-relative-pathname :searty "index/"))
 
 (defparameter *sqlite3-database-file*
-  (namestring (merge-pathnames "searty.db" *index-directory*)))
+  (namestring (merge-pathnames "searty.db" *sqlite3-index-directory*)))
 (defparameter *sqlite3-schema-file*
   (namestring (asdf:system-relative-pathname :searty "schema.sql")))
 
@@ -13,7 +13,7 @@
 
 (defclass sqlite3-database (database)
   ((index-directory :initarg :index-directory
-                    :initform *index-directory*
+                    :initform *sqlite3-index-directory*
                     :reader sqlite3-database-index-directory))
   (:default-initargs
    :connection (dbi:connect :sqlite3 :database-name *sqlite3-database-file*)))
@@ -26,14 +26,14 @@
                    :index-directory index-directory)))
 
 (defmethod resolve-locations ((database sqlite3-database) token-id)
-  (let ((filepath (merge-pathnames token-id *index-directory*)))
+  (let ((filepath (merge-pathnames token-id *sqlite3-index-directory*)))
     (when (uiop:file-exists-p filepath)
       (with-open-file (in filepath :element-type '(unsigned-byte 8))
         (decode-locations in)))))
 
 (defmethod upsert-inverted-index ((database sqlite3-database) token-id locations)
   (let* ((encoded-locations (encode-locations-to-vector locations))
-         (filepath (merge-pathnames token-id *index-directory*)))
+         (filepath (merge-pathnames token-id *sqlite3-index-directory*)))
     (write-byte-vector-into-file encoded-locations filepath :if-exists :supersede)
     (execute-sql (database-connection database)
                  "INSERT INTO inverted_index (token_id, locations_data_file) VALUES (?, ?)

@@ -90,9 +90,9 @@
 
 (defun index-system (system-name dist-dir output-dir)
   (let ((dist-dir dist-dir)
-        (*index-directory* (format nil "~A/~A/" output-dir system-name))
+        (*sqlite3-index-directory* (format nil "~A/~A/" output-dir system-name))
         (*sqlite3-database-file* (format nil "~A/~A/searty.db" output-dir system-name)))
-    (ensure-directories-exist *index-directory*)
+    (ensure-directories-exist *sqlite3-index-directory*)
     (sqlite3-init-database)
     (with-asdf (dist-dir)
       (index-lisp-system system-name))))

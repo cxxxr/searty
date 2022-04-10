@@ -5,8 +5,9 @@
 (defun log-sql (sql &optional params)
   (declare (ignorable params))
   (when *sql-logger-stream*
-    ;; (format *sql-logger-stream* "~&~A ~S~%" sql params)
-    (format *sql-logger-stream* "~&~A~%" sql)))
+    (format *sql-logger-stream* "~&~A ~S~%" sql params)
+    ;; (format *sql-logger-stream* "~&~A~%" sql)
+    ))
 
 (defun execute-sxql (connection sxql)
   (multiple-value-bind (sql params) (sxql:yield sxql)

@@ -18,6 +18,9 @@ CREATE INDEX token_term_index ON token(term, kind);
 
 DROP TABLE IF EXISTS inverted_index;
 CREATE TABLE inverted_index (
-  token_id TEXT PRIMARY KEY,
-  locations_data_file text
+  token_id TEXT,
+  document_id INTEGER,
+  positions BLOB
 );
+
+CREATE INDEX inverted_index_index ON inverted_index(token_id, document_id);

@@ -117,7 +117,7 @@
   (loop :for record :in records
         :collect (let ((id (getf record :|id|))
                        (term (babel:octets-to-string (getf record :|term|)))
-                       (kind (getf record :|kind|)))
+                       (kind (decode-token-kind (getf record :|kind|))))
                    (make-token :id id :term term :kind kind))))
 
 (defmethod resolve-token-by-id ((database sqlite3-database) id)

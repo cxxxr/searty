@@ -32,8 +32,8 @@
   (:default-initargs
    :connection (dbi:connect :sqlite3 :database-name *sqlite3-database-file*)))
 
-(defun sqlite3-init-database ()
-  (uiop:run-program `("sqlite3" "-init" ,*sqlite3-schema-file* ,*sqlite3-database-file*)))
+(defun sqlite3-init-database (&optional (database-file *sqlite3-database-file*))
+  (uiop:run-program `("sqlite3" "-init" ,*sqlite3-schema-file* ,database-file)))
 
 (defun make-sqlite3-database (index-directory)
   (let* ((database-file (merge-pathnames "searty.db" index-directory))

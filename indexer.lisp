@@ -18,7 +18,7 @@
   (or (ignore-errors (read-file-into-string file))
       (read-file-into-string file :external-format :cp932)))
 
-(defun add-file (inverted-index file)
+(defun add-file (file)
   (let* ((text (read-file-into-string* file))
          (document (create-document file text))
          (tokens (tokenize-file text)))
@@ -26,11 +26,11 @@
       ;; NOTE: このresolve-token, insert-token内でtoken-idがセットされる
       (unless (resolve-token *database* token)
         (insert-token *database* token))
-      (inverted-index-insert inverted-index (document-id document) token))))
+      (insert-posting *database* (token-id token) (document-id document) (token-position token)))))
 
-(defun add-file-with-time (inverted-index file)
+(defun add-file-with-time (file)
   (format t "~&~A " file)
-  (let ((ms (measure-time (add-file inverted-index file))))
+  (let ((ms (measure-time (add-file file))))
     (format t "[~D ms]~%" ms)))
 
 (defun flush-inverted-index-with-time (inverted-index)
@@ -39,16 +39,14 @@
     (format t "~&index flushed (~A ms): ~A~%" time (date))))
 
 (defun index-lisp-files (files)
-  (let ((inverted-index (make-inverted-index)))
-    (dbi:with-transaction (database-connection *database*)
-      (dolist (file files)
-        ;; 重複を防ぐために既に登録されているファイルはインデックスしない
-        ;; 例:
-        ;; 3b-swf-20120107-gitは3b-swf-swc.asdと3b-swf.asdがあるが、
-        ;; 3b-swf-swcが3b-swfに依存してるため、3b-swfを二重に見る問題がある
-        (unless (resolve-document-id-by-pathname *database* file)
-          (add-file-with-time inverted-index file)))
-      (flush-inverted-index-with-time inverted-index))))
+  (dbi:with-transaction (database-connection *database*)
+    (dolist (file files)
+      ;; 重複を防ぐために既に登録されているファイルはインデックスしない
+      ;; 例:
+      ;; 3b-swf-20120107-gitは3b-swf-swc.asdと3b-swf.asdがあるが、
+      ;; 3b-swf-swcが3b-swfに依存してるため、3b-swfを二重に見る問題がある
+      (unless (resolve-document-id-by-pathname *database* file)
+        (add-file-with-time file)))))
 
 (defclass nop-plan (asdf:sequential-plan) ())
 

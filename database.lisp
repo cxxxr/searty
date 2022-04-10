@@ -143,55 +143,66 @@
                    (sxql:from :token)))))
 
 (defun decode-inverted-index-records (records)
-  ;; TODO
-  (let ((inverted-index (make-inverted-index)))
+  (let ((inverted-index (make-inverted-index))
+        (prev-token-id nil)
+        (prev-document-id nil)
+        (positions '())
+        (locations '()))
     (dolist (record records)
       (let ((token-id (getf record :|token_id|))
             (document-id (getf record :|document_id|))
-            (positions-blob (getf record :|positions|)))
-        (push (make-location :document-id document-id
-                             :positions (with-open-stream (stream (flex:make-in-memory-input-stream positions-blob))
-                                          (decode-positive-integer-list stream)))
-              (inverted-index-get inverted-index token-id))))
-    (do-inverted-index (token-id locations inverted-index)
-      (setf (inverted-index-get inverted-index token-id)
-            (sort locations #'< :key #'location-document-id)))
+            (position (getf record :|position|)))
+        (cond ((or (and (equal prev-token-id token-id)
+                        (equal prev-document-id document-id))
+                   (and (null prev-token-id)
+                        (null prev-document-id)))
+               (push position positions))
+              ((equal prev-token-id token-id)
+               (push (make-location :document-id prev-document-id
+                                    :positions (nreverse positions))
+                     locations)
+               (setf positions (list position)))
+              (t
+               (push (make-location :document-id prev-document-id
+                                    :positions (nreverse positions))
+                     locations)
+               (setf (inverted-index-get inverted-index prev-token-id)
+                     (nreverse locations))
+               (setf locations '())
+               (setf positions (list position))))
+        (setf prev-token-id token-id
+              prev-document-id document-id)))
+    (push (make-location :document-id prev-document-id
+                         :positions (nreverse positions))
+          locations)
+    (setf (inverted-index-get inverted-index prev-token-id)
+          (nreverse locations))
     inverted-index))
 
 (defmethod resolve-inverted-index-by-token-ids ((database sqlite3-database) token-ids)
-  (decode-inverted-index-records
-   (resolve-sxql (database-connection database)
-                 (sxql:select (:token_id :document_id :positions)
-                   (sxql:from :inverted_index)
-                   (sxql:where (:in :token_id token-ids))))))
+  (let ((records
+          (resolve-sxql (database-connection database)
+                        (sxql:select (:token_id :document_id :position)
+                          (sxql:from :inverted_index)
+                          (sxql:where (:in :token_id token-ids))
+                          (sxql:order-by :token_id :document_id :position)))))
+    (defparameter $records records)
+    (let ((result (decode-inverted-index-records records)))
+      (defparameter $ii result)
+      result)))
 
 (defmethod resolve-whole-inverted-index ((database sqlite3-database))
-  (error "unimplemented")
-  #+(or)
-  (decode-inverted-index-records
-   (resolve-sxql (database-connection database)
-                 (sxql:select (:token_id :locations_data_file)
-                   (sxql:from :inverted_index)))))
+  (error "unimplemented"))
 
 (defmethod resolve-locations ((database sqlite3-database) token-id)
-  ;; TODO
-  (let ((inverted-index (resolve-inverted-index-by-token-ids database (list token-id))))
-    (assert (>= 1 (hash-table-count (inverted-index-table inverted-index))))
-    (maphash (lambda (token-id locations)
-               (declare (ignore token-id))
-               (return-from resolve-locations locations))
-             (inverted-index-table inverted-index))))
+  (error "unimplemented"))
 
 (defmethod upsert-inverted-index ((database sqlite3-database) token-id locations)
-  ;; TODO
+  (error "unimplemented"))
+
+(defmethod insert-posting ((database sqlite3-database) token-id document-id position)
   (execute-sxql (database-connection database)
-                (sxql:delete-from :inverted_index
-                  (sxql:where (:= :token_id token-id))))
-  (dolist (location locations)
-    (execute-sxql (database-connection database)
-                  (sxql:insert-into :inverted_index
-                    (sxql:set= :token_id token-id
-                               :document_id (location-document-id location)
-                               :positions (with-open-stream (stream (flex:make-in-memory-output-stream))
-                                            (encode-positive-integer-list (location-positions location) stream)
-                                            (coerce-unsigned-byte-vector (flex:get-output-stream-sequence stream))))))))
+                (sxql:insert-into :inverted_index
+                  (sxql:set= :token_id token-id
+                             :document_id document-id
+                             :position position))))

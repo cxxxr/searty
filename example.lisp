@@ -1,13 +1,9 @@
 (in-package :searty)
 
-(defun search-phrase-example (&rest search-phrase-arguments)
-  (let ((*database* (make-instance 'sqlite3-database)))
-    (write-line "------------------------------ INDEX ------------------------------")
-    (sqlite3-init-database)
-    (index-lisp-repository (asdf:system-source-directory :searty) *database*)
-    (terpri)
-    (write-line "------------------------------ RESULT ------------------------------")
-    (pretty-print-matched (apply #'search-phrase search-phrase-arguments))))
-
-(eval-when ()
-  (search-phrase-example "defun"))
+(defun test ()
+  (uiop:run-program '("rm" "-rf" "/tmp/searty/"))
+  (format t "index: ~D ms~%"
+          (measure-time (index-system "cl-ppcre" "/home/user/quicklisp-dist/2022-04-01/cl-ppcre-20220220-git/" "/tmp/searty/")))
+  (let ((*database* (make-sqlite3-database "/tmp/searty/cl-ppcre//")))
+    (format t "search: ~D ms~%"
+            (measure-time (pretty-print-matched (search-phrase "defun"))))))

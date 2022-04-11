@@ -23,7 +23,10 @@
     (make-instance 'database
                    :connection connection)))
 
-(defun delete-all-records (database)
+(defun connect-database ()
+  (setq *database* (make-database)))
+
+(defun delete-all-records (&optional (database *database*))
   (execute-sxql (database-connection database) (sxql:delete-from :document))
   (execute-sxql (database-connection database) (sxql:delete-from :token))
   (execute-sxql (database-connection database) (sxql:delete-from :inverted_index)))

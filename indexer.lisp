@@ -1,6 +1,6 @@
 (in-package :searty)
 
-(defun create-document (pathname body &optional (*database* *database*))
+(defun create-document (pathname body)
   (let ((document (make-document :pathname pathname :body body)))
     (insert-document *database* document)
     (let ((id (resolve-document-id-by-pathname *database* pathname)))
@@ -56,7 +56,7 @@
 
 (defun index-lisp-system (system)
   (let ((files (collect-cl-source-files system))
-        (*database* (make-instance 'sqlite3-database)))
+        (*database* (make-database)))
     (index-lisp-files files)))
 
 (defun call-with-asdf (root-directory function)
@@ -74,10 +74,7 @@
 (defmacro with-asdf ((root-directory) &body body)
   `(call-with-asdf ,root-directory (lambda () ,@body)))
 
-(defun index-system (system-name dist-dir output-dir)
-  (let ((dist-dir dist-dir)
-        (*sqlite3-database-file* (format nil "~A/~A/searty.db" output-dir system-name)))
-    (ensure-directories-exist *sqlite3-database-file*)
-    (sqlite3-init-database)
+(defun index-system (system-name dist-dir)
+  (let ((*database* (make-database)))
     (with-asdf (dist-dir)
       (index-lisp-system system-name))))

@@ -1,25 +1,24 @@
-DROP TABLE IF EXISTS document;
-CREATE TABLE document (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  pathname TEXT,
-  body TEXT
+CREATE TABLE IF NOT EXISTS document (
+  id BIGSERIAL NOT NULL,
+  pathname TEXT NOT NULL,
+  body TEXT NOT NULL
 );
 
 CREATE INDEX document_pathname_index ON document(pathname);
 
-DROP TABLE IF EXISTS token;
-CREATE TABLE token (
-  id TEXT PRIMARY KEY,
-  term BLOB,
-  kind INT
+CREATE TYPE token_kind AS ENUM ('unknown', 'string', 'symbol', 'character', 'function-object', 'unintern-symbol', 'line-comment', 'block-comment');
+
+CREATE TABLE IF NOT EXISTS token (
+  id UUID PRIMARY KEY,
+  term BYTEA,
+  kind TOKEN_kind
 );
 
 CREATE INDEX token_term_index ON token(term, kind);
 
-DROP TABLE IF EXISTS inverted_index;
-CREATE TABLE inverted_index (
-  token_id TEXT,
-  document_id INTEGER,
+CREATE TABLE IF NOT EXISTS inverted_index (
+  token_id UUID,
+  document_id BIGINT,
   position INTEGER
 );
 

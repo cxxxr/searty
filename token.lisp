@@ -12,17 +12,12 @@
     :block-comment))
 
 (defun encode-token-kind (token-kind)
-  (ecase token-kind
-    (t 0)
-    (:string 1)
-    (:symbol 2)
-    (:character 3)
-    (:function-object 4)
-    (:unintern-symbol 5)
-    (:line-comment 6)
-    (:block-comment 7)))
+  (check-type token-kind token-kind)
+  (if (eq token-kind t)
+      "unknown"
+      (string-downcase token-kind)))
 
-(defun decode-token-kind (int)
+(defun decode-token-kind (token-kind)
   (ecase int
     (0 t)
     (1 :string)

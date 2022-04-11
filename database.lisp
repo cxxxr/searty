@@ -1,8 +1,5 @@
 (in-package :searty)
 
-(defparameter *sqlite3-database-file* (namestring (asdf:system-relative-pathname :searty "index/searty.db")))
-(defparameter *sqlite3-schema-file* (namestring (asdf:system-relative-pathname :searty "schema.sql")))
-
 (defvar *database*)
 
 (defgeneric insert-document (database document))
@@ -21,20 +18,17 @@
   ((connection :initarg :connection
                :reader database-connection)))
 
-(defclass sqlite3-database (database)
-  ()
-  (:default-initargs
-   :connection (dbi:connect :sqlite3 :database-name *sqlite3-database-file*)))
-
-(defun sqlite3-init-database (&optional (database-file *sqlite3-database-file*))
-  (uiop:run-program `("sqlite3" "-init" ,*sqlite3-schema-file* ,database-file)))
-
-(defun make-sqlite3-database (database-file)
-  (let ((connection (dbi:connect :sqlite3 :database-name database-file)))
-    (make-instance 'sqlite3-database
+(defun make-database ()
+  (let ((connection (dbi:connect :postgres :database-name "searty" :username "searty_user" :password "searty")))
+    (make-instance 'database
                    :connection connection)))
 
-(defmethod insert-document ((database sqlite3-database) document)
+(defun delete-all-records (database)
+  (execute-sxql (database-connection database) (sxql:delete-from :document))
+  (execute-sxql (database-connection database) (sxql:delete-from :token))
+  (execute-sxql (database-connection database) (sxql:delete-from :inverted_index)))
+
+(defmethod insert-document ((database database) document)
   (execute-sxql (database-connection database)
                 (sxql:insert-into :document
                   (sxql:set= :pathname (namestring (document-pathname document))
@@ -49,7 +43,7 @@
               (make-document :id id :pathname pathname :body body)))
           records))
 
-(defmethod resolve-document-by-id ((database sqlite3-database) id)
+(defmethod resolve-document-by-id ((database database) id)
   (when-let (document
              (make-documents-from-records
               (resolve-sxql (database-connection database)
@@ -59,20 +53,20 @@
                               (sxql:limit 1)))))
     (first document)))
 
-(defmethod resolve-documents-by-ids ((database sqlite3-database) ids)
+(defmethod resolve-documents-by-ids ((database database) ids)
   (make-documents-from-records
    (resolve-sxql (database-connection database)
                  (sxql:select (:id :pathname :body)
                    (sxql:from :document)
                    (sxql:where (:in :id ids))))))
 
-(defmethod resolve-whole-documents ((database sqlite3-database))
+(defmethod resolve-whole-documents ((database database))
   (make-documents-from-records
    (resolve-sxql (database-connection database)
                  (sxql:select (:id :pathname :body)
                    (sxql:from :document)))))
 
-(defmethod resolve-document-id-by-pathname ((database sqlite3-database) pathname)
+(defmethod resolve-document-id-by-pathname ((database database) pathname)
   (when-let ((records
               (resolve-sxql (database-connection database)
                             (sxql:select :id
@@ -81,7 +75,7 @@
                               (sxql:limit 1)))))
     (getf (first records) :|id|)))
 
-(defmethod insert-token ((database sqlite3-database) token)
+(defmethod insert-token ((database database) token)
   (unless (token-id token)
     (setf (token-id token) (random-uuid)))
   (execute-sxql (database-connection database)
@@ -91,7 +85,7 @@
                              :kind (encode-token-kind (token-kind token)))))
   token)
 
-(defmethod resolve-token ((database sqlite3-database) token)
+(defmethod resolve-token ((database database) token)
   (when-let* ((records
                (resolve-sxql
                 (database-connection database)
@@ -112,7 +106,7 @@
                        (kind (decode-token-kind (getf record :|kind|))))
                    (make-token :id id :term term :kind kind))))
 
-(defmethod resolve-token-by-id ((database sqlite3-database) id)
+(defmethod resolve-token-by-id ((database database) id)
   (when-let ((tokens (make-tokens-from-records
                       (resolve-sxql (database-connection database)
                                     (sxql:select (:id :term :kind)
@@ -121,14 +115,14 @@
                                       (sxql:limit 1))))))
     (first tokens)))
 
-(defmethod resolve-tokens-by-ids ((database sqlite3-database) ids)
+(defmethod resolve-tokens-by-ids ((database database) ids)
   (make-tokens-from-records
    (resolve-sxql (database-connection database)
                  (sxql:select (:id :term :kind)
                    (sxql:from :token)
                    (sxql:where (:in :id ids))))))
 
-(defmethod resolve-whole-tokens ((database sqlite3-database))
+(defmethod resolve-whole-tokens ((database database))
   (make-tokens-from-records
    (resolve-sxql (database-connection database)
                  (sxql:select (:id :term :kind)
@@ -171,7 +165,7 @@
           (nreverse locations))
     inverted-index))
 
-(defmethod resolve-inverted-index-by-token-ids ((database sqlite3-database) token-ids)
+(defmethod resolve-inverted-index-by-token-ids ((database database) token-ids)
   (let ((records
           (resolve-sxql (database-connection database)
                         (sxql:select (:token_id :document_id :position)
@@ -180,7 +174,7 @@
                           (sxql:order-by :token_id :document_id :position)))))
     (decode-inverted-index-records records)))
 
-(defmethod insert-posting ((database sqlite3-database) token-id document-id position)
+(defmethod insert-posting ((database database) token-id document-id position)
   (execute-sxql (database-connection database)
                 (sxql:insert-into :inverted_index
                   (sxql:set= :token_id token-id

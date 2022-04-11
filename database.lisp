@@ -178,10 +178,7 @@
                           (sxql:from :inverted_index)
                           (sxql:where (:in :token_id token-ids))
                           (sxql:order-by :token_id :document_id :position)))))
-    (defparameter $records records)
-    (let ((result (decode-inverted-index-records records)))
-      (defparameter $ii result)
-      result)))
+    (decode-inverted-index-records records)))
 
 (defmethod insert-posting ((database sqlite3-database) token-id document-id position)
   (execute-sxql (database-connection database)

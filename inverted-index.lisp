@@ -56,14 +56,6 @@
             (insert-locations source-loc destination-locations))))
   destination-locations)
 
-(defun inverted-index-merge (destination source)
-  (maphash (lambda (token-id locations)
-             (setf (gethash token-id (inverted-index-table destination))
-                   (merge-locations (gethash token-id (inverted-index-table destination))
-                                    locations)))
-           (inverted-index-table source))
-  destination)
-
 (defun inverted-index-clear (inverted-index)
   (clrhash (inverted-index-table inverted-index)))
 

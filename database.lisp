@@ -1,7 +1,6 @@
 (in-package :searty)
 
-(defparameter *sqlite3-index-directory* (asdf:system-relative-pathname :searty "index/"))
-(defparameter *sqlite3-database-file* (namestring (merge-pathnames "searty.db" *sqlite3-index-directory*)))
+(defparameter *sqlite3-database-file* (namestring (asdf:system-relative-pathname :searty "index/searty.db")))
 (defparameter *sqlite3-schema-file* (namestring (asdf:system-relative-pathname :searty "schema.sql")))
 
 (defvar *database*)
@@ -26,21 +25,17 @@
                :reader database-connection)))
 
 (defclass sqlite3-database (database)
-  ((index-directory :initarg :index-directory
-                    :initform *sqlite3-index-directory*
-                    :reader sqlite3-database-index-directory))
+  ()
   (:default-initargs
    :connection (dbi:connect :sqlite3 :database-name *sqlite3-database-file*)))
 
 (defun sqlite3-init-database (&optional (database-file *sqlite3-database-file*))
   (uiop:run-program `("sqlite3" "-init" ,*sqlite3-schema-file* ,database-file)))
 
-(defun make-sqlite3-database (index-directory)
-  (let* ((database-file (merge-pathnames "searty.db" index-directory))
-         (connection (dbi:connect :sqlite3 :database-name database-file)))
+(defun make-sqlite3-database (database-file)
+  (let ((connection (dbi:connect :sqlite3 :database-name database-file)))
     (make-instance 'sqlite3-database
-                   :connection connection
-                   :index-directory index-directory)))
+                   :connection connection)))
 
 (defmethod insert-document ((database sqlite3-database) document)
   (execute-sxql (database-connection database)

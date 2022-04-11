@@ -6,7 +6,6 @@
 
 (defun test ()
   (let ((*sqlite3-database-file* (format nil "/tmp/searty.db")))
-    (ensure-directories-exist *sqlite3-index-directory*)
     (sqlite3-init-database)
     (!index-system "cl-ppcre" "/home/user/quicklisp-dist/2022-04-01/")
     (!index-system "1am" "/home/user/quicklisp-dist/2022-04-01/"))

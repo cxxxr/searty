@@ -16,9 +16,6 @@
 (defgeneric resolve-tokens-by-ids (database ids))
 (defgeneric resolve-whole-tokens (database))
 (defgeneric resolve-inverted-index-by-token-ids (database token-ids))
-(defgeneric resolve-whole-inverted-index (database))
-(defgeneric resolve-locations (database token-id))
-(defgeneric upsert-inverted-index (database token-id locations))
 
 (defclass database ()
   ((connection :initarg :connection
@@ -185,15 +182,6 @@
     (let ((result (decode-inverted-index-records records)))
       (defparameter $ii result)
       result)))
-
-(defmethod resolve-whole-inverted-index ((database sqlite3-database))
-  (error "unimplemented"))
-
-(defmethod resolve-locations ((database sqlite3-database) token-id)
-  (error "unimplemented"))
-
-(defmethod upsert-inverted-index ((database sqlite3-database) token-id locations)
-  (error "unimplemented"))
 
 (defmethod insert-posting ((database sqlite3-database) token-id document-id position)
   (execute-sxql (database-connection database)

@@ -1,12 +1,5 @@
 (in-package :searty)
 
-(defun flush-inverted-index (inverted-index)
-  (do-inverted-index (token-id locations inverted-index)
-    (when-let ((storage-locations (resolve-locations *database* token-id)))
-      (merge-locations locations storage-locations))
-    (upsert-inverted-index *database* token-id locations))
-  (inverted-index-clear inverted-index))
-
 (defun create-document (pathname body &optional (*database* *database*))
   (let ((document (make-document :pathname pathname :body body)))
     (insert-document *database* document)
@@ -32,11 +25,6 @@
   (format t "~&~A " file)
   (let ((ms (measure-time (add-file file))))
     (format t "[~D ms]~%" ms)))
-
-(defun flush-inverted-index-with-time (inverted-index)
-  (format t "~&index flush: ~A~%" (date))
-  (let ((time (measure-time (flush-inverted-index inverted-index))))
-    (format t "~&index flushed (~A ms): ~A~%" time (date))))
 
 (defun index-lisp-files (files)
   (dbi:with-transaction (database-connection *database*)

@@ -18,7 +18,7 @@
       (string-downcase token-kind)))
 
 (defun decode-token-kind (token-kind)
-  (ecase int
+  (ecase token-kind
     (0 t)
     (1 :string)
     (2 :symbol)

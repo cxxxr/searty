@@ -14,6 +14,6 @@ exec ros -Q -- $0 "$@"
 
 (defun main (&rest argv)
   (declare (ignorable argv))
-  (searty::connect-database)
-  (searty::delete-all-records))
+  (searty:with-database ()
+    (searty:delete-all-records)))
 ;;; vim: set ft=lisp lisp:

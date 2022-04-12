@@ -1,3 +1,7 @@
 (defpackage :searty
   (:use :cl :alexandria)
-  (:export :index-lisp-repository))
+  (:export :connect-database
+           :disconnect-database
+           :with-database
+           :delete-all-records
+           :index-system))

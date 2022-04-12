@@ -75,6 +75,6 @@
   `(call-with-asdf ,root-directory (lambda () ,@body)))
 
 (defun index-system (system-name dist-dir)
-  (let ((*database* (make-database)))
+  (with-database ()
     (with-asdf (dist-dir)
       (index-lisp-system system-name))))

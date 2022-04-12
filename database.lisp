@@ -26,6 +26,14 @@
 (defun connect-database ()
   (setq *database* (make-database)))
 
+(defun disconnect-database (&optional (database *database*))
+  (dbi:disconnect (database-connection database)))
+
+(defmacro with-database (() &body body)
+  `(let ((*database* (make-database)))
+     (unwind-protect (progn ,@body)
+       (disconnect-database *database*))))
+
 (defun delete-all-records (&optional (database *database*))
   (execute-sxql (database-connection database) (sxql:delete-from :document))
   (execute-sxql (database-connection database) (sxql:delete-from :token))

@@ -1,7 +1,5 @@
 (in-package :searty)
 
-(defparameter *sqlite3-index-directory* (asdf:system-relative-pathname :searty "index/"))
-(defparameter *sqlite3-database-file* (namestring (merge-pathnames "searty.db" *sqlite3-index-directory*)))
 (defparameter *sqlite3-schema-file* (namestring (asdf:system-relative-pathname :searty "schema.sql")))
 
 (defvar *database*)
@@ -26,21 +24,24 @@
                :reader database-connection)))
 
 (defclass sqlite3-database (database)
-  ((index-directory :initarg :index-directory
-                    :initform *sqlite3-index-directory*
-                    :reader sqlite3-database-index-directory))
-  (:default-initargs
-   :connection (dbi:connect :sqlite3 :database-name *sqlite3-database-file*)))
+  ())
 
-(defun sqlite3-init-database (&optional (database-file *sqlite3-database-file*))
+(defun sqlite3-init-database (database-file)
+  (ensure-directories-exist database-file)
   (uiop:run-program `("sqlite3" "-init" ,*sqlite3-schema-file* ,database-file)))
 
-(defun make-sqlite3-database (index-directory)
-  (let* ((database-file (merge-pathnames "searty.db" index-directory))
-         (connection (dbi:connect :sqlite3 :database-name database-file)))
-    (make-instance 'sqlite3-database
-                   :connection connection
-                   :index-directory index-directory)))
+(defun make-sqlite3-database (database-file)
+  (let* ((connection (dbi:connect :sqlite3 :database-name database-file)))
+    (make-instance 'sqlite3-database :connection connection)))
+
+(defun call-with-database (database-file initialize function)
+  (when initialize
+    (sqlite3-init-database database-file))
+  (let ((*database* (make-sqlite3-database database-file)))
+    (funcall function)))
+
+(defmacro with-database ((database-file &key initialize) &body body)
+  `(call-with-database ,database-file ,initialize (lambda () ,@body)))
 
 (defmethod insert-document ((database sqlite3-database) document)
   (execute-sxql (database-connection database)
@@ -146,36 +147,34 @@
   (let ((inverted-index (make-inverted-index)))
     (dolist (record records)
       (let ((token-id (getf record :|token_id|))
-            (locations-data-filepath (getf record :|locations_data_file|)))
+            (locations (getf record :|locations|)))
         (setf (inverted-index-get inverted-index token-id)
-              (decode-doc-locations-from-vector
-               (read-file-into-byte-vector locations-data-filepath)))))
+              (decode-doc-locations-from-vector locations))))
     inverted-index))
 
 (defmethod resolve-inverted-index-by-token-ids ((database sqlite3-database) token-ids)
   (decode-inverted-index-records
    (resolve-sxql (database-connection database)
-                 (sxql:select (:token_id :locations_data_file)
+                 (sxql:select (:token_id :locations)
                    (sxql:from :inverted_index)
                    (sxql:where (:in :token_id token-ids))))))
 
 (defmethod resolve-whole-inverted-index ((database sqlite3-database))
   (decode-inverted-index-records
    (resolve-sxql (database-connection database)
-                 (sxql:select (:token_id :locations_data_file)
+                 (sxql:select (:token_id :locations)
                    (sxql:from :inverted_index)))))
 
 (defmethod resolve-locations ((database sqlite3-database) token-id)
-  (let ((filepath (merge-pathnames token-id (sqlite3-database-index-directory database))))
-    (when (uiop:file-exists-p filepath)
-      (with-open-file (in filepath :element-type '(unsigned-byte 8))
-        (decode-locations in)))))
+  (when-let ((record (resolve-sxql (database-connection database)
+                                   (sxql:select (:locations)
+                                     (sxql:from :inverted_index)
+                                     (sxql:where (:= :token_id token-id))))))
+    (decode-doc-locations-from-vector (getf record :|locations|))))
 
 (defmethod upsert-inverted-index ((database sqlite3-database) token-id locations)
-  (let* ((encoded-locations (encode-locations-to-vector locations))
-         (filepath (merge-pathnames token-id (sqlite3-database-index-directory database))))
-    (write-byte-vector-into-file encoded-locations filepath :if-exists :supersede)
+  (let* ((encoded-locations (encode-locations-to-vector locations)))
     (execute-sql (database-connection database)
-                 "INSERT INTO inverted_index (token_id, locations_data_file) VALUES (?, ?)
+                 "INSERT INTO inverted_index (token_id, locations) VALUES (?, ?)
 ON CONFLICT(token_id) DO NOTHING"
-                 (list token-id (namestring filepath)))))
+                 (list token-id encoded-locations))))

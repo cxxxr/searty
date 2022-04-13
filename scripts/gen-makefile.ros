@@ -5,7 +5,7 @@ exec ros -Q -- $0 "$@"
 |#
 (progn ;;init forms
   (ros:ensure-asdf)
-  #+quicklisp(ql:quickload '(:alexandria) :silent t)
+  #+quicklisp(ql:quickload '(:alexandria :cl-ppcre) :silent t)
   )
 
 (defpackage :ros.script.gen-make.3858474593
@@ -34,37 +34,41 @@ exec ros -Q -- $0 "$@"
                                     :system-name system-name
                                     :dependencies dependencies)))))
 
+(defun escape-system-name (name)
+  (ppcre:regex-replace-all "/" name "_"))
+
 (defun system-to-target-name (system-name output-dir)
   (merge-pathnames "searty.db"
-                   (uiop:ensure-directory-pathname (merge-pathnames system-name output-dir))))
+                   (uiop:ensure-directory-pathname (merge-pathnames (escape-system-name system-name) output-dir))))
 
-(defun gen-makefile (systems.txt dist-dir output-dir stream)
+(defun gen-makefile (systems.txt dist-dir output-root-dir stream)
   (let ((system-specs (load-systems.txt systems.txt)))
     (format stream "all: ~{~A~^\\~%~5T~}~%"
-            (mapcar (alexandria:compose (alexandria:rcurry #'system-to-target-name output-dir)
+            (mapcar (alexandria:compose (alexandria:rcurry #'system-to-target-name output-root-dir)
                                         #'.system-name)
                     system-specs))
     (dolist (system-spec system-specs)
-      (format stream "~A:" (system-to-target-name (.system-name system-spec) output-dir))
-      (when (.dependencies system-spec)
+      (let ((target-name (system-to-target-name (.system-name system-spec) output-root-dir)))
+        (format stream "~A:" target-name)
+        (when (.dependencies system-spec)
+          (format stream
+                  " ~{~A~^ ~}"
+                  (mapcar (alexandria:rcurry #'system-to-target-name output-root-dir)
+                          (.dependencies system-spec))))
         (format stream
-                " ~{~A~^ ~}"
-                (mapcar (alexandria:rcurry #'system-to-target-name output-dir)
-                        (.dependencies system-spec))))
-      (format stream
-              "~%~C./searty-index.sh ~A ~A ~A~%"
-              #\tab
-              (.system-name system-spec)
-              dist-dir
-              output-dir))))
+                "~%~C./searty-index.sh ~A ~A ~A~%"
+                #\tab
+                (.system-name system-spec)
+                dist-dir
+                target-name)))))
 
 (defun main (&rest argv)
   (declare (ignorable argv))
-  (destructuring-bind (systems.txt dist-dir output-dir makefile) argv
+  (destructuring-bind (systems.txt dist-dir output-root-dir makefile) argv
     (with-open-file (out makefile :direction :output :if-exists :supersede)
       (gen-makefile systems.txt
                     (uiop:ensure-directory-pathname dist-dir)
-                    (uiop:ensure-directory-pathname output-dir)
+                    (uiop:ensure-directory-pathname output-root-dir)
                     out))))
 
 ;;; vim: set ft=lisp lisp:

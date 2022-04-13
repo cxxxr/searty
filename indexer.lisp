@@ -68,11 +68,6 @@
                        (equal system-name (asdf:component-name (asdf:component-parent c))))
             :collect (first (asdf::input-files o c))))))
 
-(defun index-lisp-system (system)
-  (let ((files (collect-cl-source-files system))
-        (*database* (make-instance 'sqlite3-database)))
-    (index-lisp-files files)))
-
 (defun call-with-asdf (root-directory function)
   (let (#+(or)
         (asdf:*system-definition-search-functions*
@@ -88,14 +83,11 @@
 (defmacro with-asdf ((root-directory) &body body)
   `(call-with-asdf ,root-directory (lambda () ,@body)))
 
-(defun index-system (system-name dist-dir output-dir)
-  (let ((dist-dir dist-dir)
-        (*sqlite3-index-directory* (format nil "~A/~A/" output-dir system-name))
-        (*sqlite3-database-file* (format nil "~A/~A/searty.db" output-dir system-name)))
-    (ensure-directories-exist *sqlite3-index-directory*)
-    (sqlite3-init-database)
+(defun index-system (system-name dist-dir database-file)
+  (with-database (database-file :initialize t)
     (with-asdf (dist-dir)
-      (index-lisp-system system-name))))
+      (let ((files (collect-cl-source-files system-name)))
+        (index-lisp-files files)))))
 
 ;;;
 (defun merge-documents (dst-database src-database)

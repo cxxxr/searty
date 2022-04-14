@@ -40,15 +40,14 @@
 
 (defun index-lisp-files (files)
   (let ((inverted-index (make-inverted-index)))
-    (dbi:with-transaction (database-connection *database*)
-      (dolist (file files)
-        ;; 重複を防ぐために既に登録されているファイルはインデックスしない
-        ;; 例:
-        ;; 3b-swf-20120107-gitは3b-swf-swc.asdと3b-swf.asdがあるが、
-        ;; 3b-swf-swcが3b-swfに依存してるため、3b-swfを二重に見る問題がある
-        (unless (resolve-document-id-by-pathname *database* file)
-          (add-file-with-time inverted-index file)))
-      (flush-inverted-index-with-time inverted-index))))
+    (dolist (file files)
+      ;; 重複を防ぐために既に登録されているファイルはインデックスしない
+      ;; 例:
+      ;; 3b-swf-20120107-gitは3b-swf-swc.asdと3b-swf.asdがあるが、
+      ;; 3b-swf-swcが3b-swfに依存してるため、3b-swfを二重に見る問題がある
+      (unless (resolve-document-id-by-pathname *database* file)
+        (add-file-with-time inverted-index file)))
+    (flush-inverted-index-with-time inverted-index)))
 
 (defclass nop-plan (asdf:sequential-plan) ())
 
@@ -84,7 +83,7 @@
   `(call-with-asdf ,root-directory (lambda () ,@body)))
 
 (defun index-system (system-name dist-dir database-file)
-  (with-database (database-file :initialize t)
+  (with-database (*database* (database-file :initialize t))
     (with-asdf (dist-dir)
       (let ((files (collect-cl-source-files system-name)))
         (index-lisp-files files)))))

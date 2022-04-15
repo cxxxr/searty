@@ -49,23 +49,21 @@
 (defmethod insert-document ((database sqlite3-database) document)
   (execute-sxql (database-connection database)
                 (sxql:insert-into :document
-                  (sxql:set= :pathname (namestring (document-pathname document))
-                             :body (document-body document))))
+                  (sxql:set= :pathname (namestring (document-pathname document)))))
   document)
 
 (defun make-documents-from-records (records)
   (mapcar (lambda (record)
             (let ((id (getf record :|id|))
-                  (pathname (getf record :|pathname|))
-                  (body (getf record :|body|)))
-              (make-document :id id :pathname pathname :body body)))
+                  (pathname (getf record :|pathname|)))
+              (make-document :id id :pathname pathname)))
           records))
 
 (defmethod resolve-document-by-id ((database sqlite3-database) id)
   (when-let (document
              (make-documents-from-records
               (resolve-sxql (database-connection database)
-                            (sxql:select (:id :pathname :body)
+                            (sxql:select (:id :pathname)
                               (sxql:from :document)
                               (sxql:where (:= :id id))
                               (sxql:limit 1)))))
@@ -74,14 +72,14 @@
 (defmethod resolve-documents-by-ids ((database sqlite3-database) ids)
   (make-documents-from-records
    (resolve-sxql (database-connection database)
-                 (sxql:select (:id :pathname :body)
+                 (sxql:select (:id :pathname)
                    (sxql:from :document)
                    (sxql:where (:in :id ids))))))
 
 (defmethod resolve-whole-documents ((database sqlite3-database))
   (make-documents-from-records
    (resolve-sxql (database-connection database)
-                 (sxql:select (:id :pathname :body)
+                 (sxql:select (:id :pathname)
                    (sxql:from :document)))))
 
 (defmethod resolve-document-id-by-pathname ((database sqlite3-database) pathname)

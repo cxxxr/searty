@@ -83,7 +83,7 @@
   `(call-with-asdf ,root-directory (lambda () ,@body)))
 
 (defun index-system (system-name dist-dir database-file)
-  (with-database (*database* (database-file :initialize t))
+  (with-database (*database* database-file :initialize t :without-disconnect t)
     (with-asdf (dist-dir)
       (let ((files (collect-cl-source-files system-name)))
         (index-lisp-files files)))))

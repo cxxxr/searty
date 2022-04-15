@@ -34,16 +34,17 @@
   (let* ((connection (dbi:connect :sqlite3 :database-name database-file)))
     (make-instance 'sqlite3-database :connection connection)))
 
-(defun call-with-database (database-file initialize function)
+(defun call-with-database (database-file initialize without-disconnect function)
   (when initialize
     (sqlite3-init-database database-file))
   (let ((database (make-sqlite3-database database-file)))
     (unwind-protect (dbi:with-transaction (database-connection database)
                       (funcall function database))
-      (dbi:disconnect (database-connection database)))))
+      (unless without-disconnect
+        (dbi:disconnect (database-connection database))))))
 
-(defmacro with-database ((var (database-file &key initialize)) &body body)
-  `(call-with-database ,database-file ,initialize (lambda (,var) ,@body)))
+(defmacro with-database ((var database-file &key initialize without-disconnect) &body body)
+  `(call-with-database ,database-file ,initialize ,without-disconnect (lambda (,var) ,@body)))
 
 (defmethod insert-document ((database sqlite3-database) document)
   (execute-sxql (database-connection database)

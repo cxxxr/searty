@@ -6,7 +6,8 @@
                "flexi-streams"
                "cl-dbi"
                "dbd-sqlite3"
-               "babel")
+               "babel"
+               "split-sequence")
   :serial t
   :components ((:file "package")
                (:file "utils")

@@ -1,3 +1,3 @@
 (defpackage :searty
-  (:use :cl :alexandria)
+  (:use :cl :alexandria :split-sequence)
   (:export :index-lisp-repository))

@@ -166,7 +166,8 @@
                   (inverted-index-merge dst-inverted-index
                                         (replace-id-from-inverted-index src-inverted-index
                                                                         token-id-map
-                                                                        (gethash database-name document-id-per-database-map))))))
+                                                                        (gethash database-name
+                                                                                 document-id-per-database-map))))))
     (flush-inverted-index dst-inverted-index dst-database)))
 
 (defun merge-index (index-directory output-database-file &optional limit)

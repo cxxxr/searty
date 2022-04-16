@@ -48,3 +48,9 @@
   (multiple-value-bind (second minute hour date month year)
       (decode-universal-time (get-universal-time))
     (format nil "[~A/~A/~A ~2,'0D:~2,'0D:~2,'0D]" year month date hour minute second)))
+
+(defun list-to-hash-table (list &key (value t) (test 'eql))
+  (let ((ht (make-hash-table :test test)))
+    (dolist (elt list)
+      (setf (gethash elt ht) value))
+    ht))

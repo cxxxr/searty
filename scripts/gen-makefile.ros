@@ -5,7 +5,7 @@ exec ros -Q -- $0 "$@"
 |#
 (progn ;;init forms
   (ros:ensure-asdf)
-  #+quicklisp(ql:quickload '(:alexandria :cl-ppcre) :silent t)
+  #+quicklisp(ql:quickload '(:alexandria) :silent t)
   )
 
 (defpackage :ros.script.gen-make.3858474593
@@ -35,9 +35,8 @@ exec ros -Q -- $0 "$@"
                                     :dependencies dependencies)))))
 
 (defun system-to-target-name (system-name output-dir)
-  (make-pathname :name (ppcre:regex-replace-all "/" system-name "_")
-                 :type "finish"
-                 :defaults output-dir))
+  (merge-pathnames "searty.db"
+                   (uiop:ensure-directory-pathname (merge-pathnames system-name output-dir))))
 
 (defun gen-makefile (systems.txt dist-dir output-dir stream)
   (let ((system-specs (load-systems.txt systems.txt)))
@@ -46,19 +45,18 @@ exec ros -Q -- $0 "$@"
                                         #'.system-name)
                     system-specs))
     (dolist (system-spec system-specs)
-      (let ((target-name (system-to-target-name (.system-name system-spec) output-dir)))
-        (format stream "~A:" target-name)
-        (when (.dependencies system-spec)
-          (format stream
-                  " ~{~A~^ ~}"
-                  (mapcar (alexandria:rcurry #'system-to-target-name output-dir)
-                          (.dependencies system-spec))))
+      (format stream "~A:" (system-to-target-name (.system-name system-spec) output-dir))
+      (when (.dependencies system-spec)
         (format stream
-                "~%~C./searty-index.sh ~A ~A ~A~%"
-                #\tab
-                (.system-name system-spec)
-                dist-dir
-                target-name)))))
+                " ~{~A~^ ~}"
+                (mapcar (alexandria:rcurry #'system-to-target-name output-dir)
+                        (.dependencies system-spec))))
+      (format stream
+              "~%~C./searty-index.sh ~A ~A ~A~%"
+              #\tab
+              (.system-name system-spec)
+              dist-dir
+              output-dir))))
 
 (defun main (&rest argv)
   (declare (ignorable argv))

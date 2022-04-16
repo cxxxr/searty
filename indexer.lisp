@@ -11,26 +11,30 @@
     (let ((time (measure-time (body))))
       (format t "~&index flushed (~A ms): ~A~%" time (date)))))
 
-(defun create-document (pathname body &optional (*database* *database*))
-  (let ((document (make-document :pathname pathname :body body)))
+(defun create-document (pathname external-format &optional (*database* *database*))
+  (let ((document (make-document :pathname pathname :external-format external-format)))
     (insert-document *database* document)
     (let ((id (resolve-document-id-by-pathname *database* pathname)))
       (setf (document-id document) id))
     document))
 
 (defun read-file-into-string* (file)
-  (or (ignore-errors (read-file-into-string file))
-      (read-file-into-string file :external-format :cp932)))
+  (flet ((try (external-format)
+           (ignore-errors
+             (list (read-file-into-string file :external-format external-format) external-format))))
+    (apply #'values
+           (or (try :utf-8)
+               (try :cp932)))))
 
 (defun add-file (inverted-index file)
-  (let* ((text (read-file-into-string* file))
-         (document (create-document file text))
-         (tokens (tokenize-file text)))
-    (dolist (token tokens)
-      ;; NOTE: このresolve-token, insert-token内でtoken-idがセットされる
-      (unless (resolve-token *database* token)
-        (insert-token *database* token))
-      (inverted-index-insert inverted-index (document-id document) token))))
+  (multiple-value-bind (text external-format) (read-file-into-string* file)
+    (let* ((document (create-document file external-format))
+           (tokens (tokenize-file text)))
+      (dolist (token tokens)
+        ;; NOTE: このresolve-token, insert-token内でtoken-idがセットされる
+        (unless (resolve-token *database* token)
+          (insert-token *database* token))
+        (inverted-index-insert inverted-index (document-id document) token)))))
 
 (defun add-file-with-time (inverted-index file)
   (format t "~&~A " file)

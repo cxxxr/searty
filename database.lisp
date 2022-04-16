@@ -50,7 +50,8 @@
 (defmethod insert-document ((database sqlite3-database) document)
   (execute-sxql (database-connection database)
                 (sxql:insert-into :document
-                  (sxql:set= :pathname (namestring (document-pathname document)))))
+                  (sxql:set= :pathname (namestring (document-pathname document))
+                             :external_format (string-downcase (document-external-format document)))))
   document)
 
 (defun make-documents-from-records (records)

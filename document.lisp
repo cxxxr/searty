@@ -11,7 +11,8 @@
 
 (defstruct document
   id
-  pathname)
+  pathname
+  external-format)
 
 (defmethod print-object ((document document) stream)
   (print-unreadable-object (document stream :type t)

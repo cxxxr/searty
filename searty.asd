@@ -19,4 +19,5 @@
                (:file "lisp-tokenizer")
                (:file "tokenizer")
                (:file "indexer")
-               (:file "searcher")))
+               (:file "searcher")
+               (:file "searty")))

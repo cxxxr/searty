@@ -11,8 +11,7 @@
 
 (defstruct document
   id
-  pathname
-  body)
+  pathname)
 
 (defmethod print-object ((document document) stream)
   (print-unreadable-object (document stream :type t)

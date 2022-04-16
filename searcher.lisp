@@ -160,8 +160,8 @@
                        :start-bounding start-bounding
                        :end-bounding end-bounding)))
 
-(defun read-file-range (file range)
-  (with-open-file (in file)
+(defun read-file-range (file external-format range)
+  (with-open-file (in file :external-format external-format)
     (loop :with pos := 0
           :for line := (read-line in)
           :for line-number :from 1
@@ -186,5 +186,7 @@
     (maphash (lambda (document-id ranges)
                (let ((document (find document-id documents :key #'document-id :test #'document-id=)))
                  (dolist (range ranges)
-                   (read-file-range (document-pathname document) range))))
+                   (read-file-range (document-pathname document)
+                                    (make-keyword (string-upcase (document-external-format document)))
+                                    range))))
              (matched-document-positions-map matched))))

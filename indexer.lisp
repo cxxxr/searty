@@ -1,11 +1,15 @@
 (in-package :searty)
 
-(defun flush-inverted-index (inverted-index)
-  (do-inverted-index (token-id locations inverted-index)
-    (when-let ((storage-locations (resolve-locations *database* token-id)))
-      (merge-locations locations storage-locations))
-    (upsert-inverted-index *database* token-id locations))
-  (inverted-index-clear inverted-index))
+(defun flush-inverted-index (inverted-index &optional (database *database*))
+  (flet ((body ()
+           (do-inverted-index (token-id locations inverted-index)
+             (when-let ((storage-locations (resolve-locations database token-id)))
+               (merge-locations locations storage-locations))
+             (upsert-inverted-index database token-id locations))
+           (inverted-index-clear inverted-index)))
+    (format t "~&index flush: ~A~%" (date))
+    (let ((time (measure-time (body))))
+      (format t "~&index flushed (~A ms): ~A~%" time (date)))))
 
 (defun create-document (pathname body &optional (*database* *database*))
   (let ((document (make-document :pathname pathname :body body)))
@@ -33,11 +37,6 @@
   (let ((ms (measure-time (add-file inverted-index file))))
     (format t "[~D ms]~%" ms)))
 
-(defun flush-inverted-index-with-time (inverted-index)
-  (format t "~&index flush: ~A~%" (date))
-  (let ((time (measure-time (flush-inverted-index inverted-index))))
-    (format t "~&index flushed (~A ms): ~A~%" time (date))))
-
 (defun index-lisp-files (files)
   (let ((inverted-index (make-inverted-index)))
     (dolist (file files)
@@ -47,7 +46,7 @@
       ;; 3b-swf-swcが3b-swfに依存してるため、3b-swfを二重に見る問題がある
       (unless (resolve-document-id-by-pathname *database* file)
         (add-file-with-time inverted-index file)))
-    (flush-inverted-index-with-time inverted-index)))
+    (flush-inverted-index inverted-index)))
 
 (defclass nop-plan (asdf:sequential-plan) ())
 

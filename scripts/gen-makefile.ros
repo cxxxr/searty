@@ -37,23 +37,22 @@ exec ros -Q -- $0 "$@"
 (defun escape-system-name (name)
   (ppcre:regex-replace-all "/" name "_"))
 
-(defun system-to-target-name (system-name output-dir)
-  (merge-pathnames "searty.db"
-                   (uiop:ensure-directory-pathname (merge-pathnames (escape-system-name system-name) output-dir))))
+(defun system-to-target-name (system-name directory)
+  (make-pathname :name (escape-system-name system-name) :type "db" :defaults directory))
 
-(defun gen-makefile (systems.txt dist-dir output-root-dir stream)
+(defun gen-makefile (systems.txt dist-dir index-directory stream)
   (let ((system-specs (load-systems.txt systems.txt)))
     (format stream "all: ~{~A~^\\~%~5T~}~%"
-            (mapcar (alexandria:compose (alexandria:rcurry #'system-to-target-name output-root-dir)
+            (mapcar (alexandria:compose (alexandria:rcurry #'system-to-target-name index-directory)
                                         #'.system-name)
                     system-specs))
     (dolist (system-spec system-specs)
-      (let ((target-name (system-to-target-name (.system-name system-spec) output-root-dir)))
+      (let ((target-name (system-to-target-name (.system-name system-spec) index-directory)))
         (format stream "~A:" target-name)
         (when (.dependencies system-spec)
           (format stream
                   " ~{~A~^ ~}"
-                  (mapcar (alexandria:rcurry #'system-to-target-name output-root-dir)
+                  (mapcar (alexandria:rcurry #'system-to-target-name index-directory)
                           (.dependencies system-spec))))
         (format stream
                 "~%~C./searty-index.sh ~A ~A ~A~%"
@@ -64,11 +63,11 @@ exec ros -Q -- $0 "$@"
 
 (defun main (&rest argv)
   (declare (ignorable argv))
-  (destructuring-bind (systems.txt dist-dir output-root-dir makefile) argv
+  (destructuring-bind (systems.txt dist-dir index-directory makefile) argv
     (with-open-file (out makefile :direction :output :if-exists :supersede)
       (gen-makefile systems.txt
                     (uiop:ensure-directory-pathname dist-dir)
-                    (uiop:ensure-directory-pathname output-root-dir)
+                    (uiop:ensure-directory-pathname index-directory)
                     out))))
 
 ;;; vim: set ft=lisp lisp:

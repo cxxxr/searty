@@ -117,8 +117,13 @@
           (let ((src-documents (resolve-whole-documents src-database)))
             (dolist (document src-documents)
               (insert-document dst-database document))
-            (dolist (dst-document (resolve-documents-by-pathnames dst-database (mapcar #'document-pathname src-documents)))
-              (let ((src-document (find (document-pathname dst-document) src-documents :key #'document-pathname :test #'equal)))
+            (dolist (dst-document (resolve-documents-by-pathnames
+                                   dst-database
+                                   (mapcar #'document-pathname src-documents)))
+              (let ((src-document (find (document-pathname dst-document)
+                                        src-documents
+                                        :key #'document-pathname
+                                        :test #'equal)))
                 (setf (gethash (document-id src-document) document-id-map)
                       (document-id dst-document))))))
         (setf (gethash (pathname-name database-file) document-id-per-database-map)
@@ -171,10 +176,11 @@
               (with-database (src-database database-file)
                 (let ((src-inverted-index (resolve-whole-inverted-index src-database)))
                   (inverted-index-merge dst-inverted-index
-                                        (replace-id-from-inverted-index src-inverted-index
-                                                                        token-id-map
-                                                                        (gethash database-name
-                                                                                 document-id-per-database-map))))))
+                                        (replace-id-from-inverted-index
+                                         src-inverted-index
+                                         token-id-map
+                                         (gethash database-name
+                                                  document-id-per-database-map))))))
     (flush-inverted-index dst-inverted-index dst-database)))
 
 (defun merge-index (index-directory output-database-file &optional limit)

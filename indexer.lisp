@@ -56,6 +56,14 @@
 
 (defmethod asdf:perform-plan ((plan nop-plan) &key))
 
+(defun match-component (system-name component)
+  (let ((parent (asdf:component-parent component)))
+    (cond ((null parent) nil)
+          ((equal system-name (asdf:component-name parent))
+           t)
+          (t
+           (match-component system-name parent)))))
+
 (defun collect-cl-source-files (system)
   (let ((system-name (asdf:component-name (asdf:find-system system))))
     (declare (ignorable system-name))
@@ -67,8 +75,7 @@
             :for c := (asdf/action:action-component action)
             :when (and (typep o 'asdf:compile-op)
                        (typep c 'asdf:cl-source-file)
-                       ;; BUG: 2d-arrayはcomponent-parentがsrcになりnilになる
-                       (equal system-name (asdf:component-name (asdf:component-parent c))))
+                       (match-component system-name c))
             :collect (truename (first (asdf::input-files o c)))))))
 
 (defun call-with-asdf (root-directory function)

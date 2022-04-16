@@ -15,5 +15,5 @@ exec ros dynamic-space-size=32gb -Q -- $0 "$@"
 (defun main (&rest argv)
   (declare (ignorable argv))
   (destructuring-bind (index-directory output-database-file) argv
-    (searty:merge-index index-directory output-database-file)))
+    (searty:merge-index (uiop:ensure-directory-pathname index-directory) output-database-file)))
 ;;; vim: set ft=lisp lisp:

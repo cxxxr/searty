@@ -160,8 +160,8 @@
                        :start-bounding start-bounding
                        :end-bounding end-bounding)))
 
-(defun read-file-range (file external-format range)
-  (with-open-file (in file :external-format external-format)
+(defun read-file-range (document range)
+  (with-input-from-string (in (document-body document))
     (loop :with pos := 0
           :for line := (read-line in)
           :for line-number :from 1
@@ -169,7 +169,7 @@
                 (let ((start (- (range-start range) pos))
                       (end (- (range-end range) pos)))
                   (format t "~&~A:~D:~D:~D:~A~A~A~%"
-                          file
+                          (document-pathname document)
                           line-number
                           start
                           end
@@ -188,9 +188,7 @@
                (let ((document (find document-id documents :key #'document-id :test #'document-id=)))
                  (dolist (range ranges)
                    (handler-case
-                       (read-file-range (document-pathname document)
-                                        (make-keyword (string-upcase (document-external-format document)))
-                                        range)
+                       (read-file-range document range)
                      (error (e)
                        (push e errors))))))
              (matched-document-positions-map matched))

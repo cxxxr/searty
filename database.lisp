@@ -9,6 +9,7 @@
 (defgeneric resolve-documents-by-ids (database ids))
 (defgeneric resolve-whole-documents (database))
 (defgeneric resolve-document-id-by-pathname (database pathname))
+(defgeneric resolve-documents-by-pathnames (database pathnames))
 (defgeneric insert-token (database token))
 (defgeneric resolve-token (database token))
 (defgeneric resolve-token-by-id (database id))
@@ -90,6 +91,13 @@
                               (sxql:where (:= :pathname (namestring pathname)))
                               (sxql:limit 1)))))
     (getf (first records) :|id|)))
+
+(defmethod resolve-documents-by-pathnames ((database sqlite3-database) pathnames)
+  (make-documents-from-records
+   (resolve-sxql (database-connection database)
+                 (sxql:select (:id :pathname)
+                   (sxql:from :document)
+                   (sxql:where (:in :pathname (mapcar #'namestring pathnames)))))))
 
 (defmethod insert-token ((database sqlite3-database) token)
   (unless (token-id token)

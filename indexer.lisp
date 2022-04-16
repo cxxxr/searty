@@ -11,8 +11,8 @@
     (let ((time (measure-time (body))))
       (format t "~&index flushed (~A ms): ~A~%" time (date)))))
 
-(defun create-document (pathname external-format &optional (*database* *database*))
-  (let ((document (make-document :pathname pathname :external-format external-format)))
+(defun create-document (pathname external-format text &optional (*database* *database*))
+  (let ((document (make-document :pathname pathname :external-format external-format :body text)))
     (insert-document *database* document)
     (let ((id (resolve-document-id-by-pathname *database* pathname)))
       (setf (document-id document) id))
@@ -28,7 +28,7 @@
 
 (defun add-file (inverted-index file)
   (multiple-value-bind (text external-format) (read-file-into-string* file)
-    (let* ((document (create-document file external-format))
+    (let* ((document (create-document file external-format text))
            (tokens (tokenize-file text)))
       (dolist (token tokens)
         ;; NOTE: このresolve-token, insert-token内でtoken-idがセットされる

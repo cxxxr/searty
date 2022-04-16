@@ -2,7 +2,8 @@ DROP TABLE IF EXISTS document;
 CREATE TABLE document (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   pathname TEXT,
-  external_format TEXT
+  external_format TEXT,
+  body text
 );
 
 CREATE INDEX document_pathname_index ON document(pathname);

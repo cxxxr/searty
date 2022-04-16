@@ -51,22 +51,24 @@
   (execute-sxql (database-connection database)
                 (sxql:insert-into :document
                   (sxql:set= :pathname (namestring (document-pathname document))
-                             :external_format (string-upcase (document-external-format document)))))
+                             :external_format (string-upcase (document-external-format document))
+                             :body (document-body document))))
   document)
 
 (defun make-documents-from-records (records)
   (mapcar (lambda (record)
             (let ((id (getf record :|id|))
                   (pathname (getf record :|pathname|))
-                  (external-format (getf record :|external_format|)))
-              (make-document :id id :pathname pathname :external-format external-format)))
+                  (external-format (getf record :|external_format|))
+                  (body (getf record :|body|)))
+              (make-document :id id :pathname pathname :external-format external-format :body body)))
           records))
 
 (defmethod resolve-document-by-id ((database sqlite3-database) id)
   (when-let (document
              (make-documents-from-records
               (resolve-sxql (database-connection database)
-                            (sxql:select (:id :pathname :external_format)
+                            (sxql:select (:id :pathname :external_format :body)
                               (sxql:from :document)
                               (sxql:where (:= :id id))
                               (sxql:limit 1)))))
@@ -75,14 +77,14 @@
 (defmethod resolve-documents-by-ids ((database sqlite3-database) ids)
   (make-documents-from-records
    (resolve-sxql (database-connection database)
-                 (sxql:select (:id :pathname :external_format)
+                 (sxql:select (:id :pathname :external_format :body)
                    (sxql:from :document)
                    (sxql:where (:in :id ids))))))
 
 (defmethod resolve-whole-documents ((database sqlite3-database))
   (make-documents-from-records
    (resolve-sxql (database-connection database)
-                 (sxql:select (:id :pathname :external_format)
+                 (sxql:select (:id :pathname :external_format :body)
                    (sxql:from :document)))))
 
 (defmethod resolve-document-id-by-pathname ((database sqlite3-database) pathname)

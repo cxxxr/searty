@@ -12,7 +12,8 @@
 (defstruct document
   id
   pathname
-  external-format)
+  external-format
+  body)
 
 (defmethod print-object ((document document) stream)
   (print-unreadable-object (document stream :type t)

@@ -1,5 +1,3 @@
-searty.sqlite3
+searty.db
 index
-scripts/failure.txt
-scripts/success.txt
 scripts/Makefile

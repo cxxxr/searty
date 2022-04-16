@@ -69,7 +69,7 @@
                        (typep c 'asdf:cl-source-file)
                        ;; BUG: 2d-arrayはcomponent-parentがsrcになりnilになる
                        (equal system-name (asdf:component-name (asdf:component-parent c))))
-            :collect (first (asdf::input-files o c))))))
+            :collect (truename (first (asdf::input-files o c)))))))
 
 (defun call-with-asdf (root-directory function)
   (let (#+(or)

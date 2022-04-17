@@ -26,7 +26,7 @@
            (or (try :utf-8)
                (try :cp932)))))
 
-(defun add-file (inverted-index file)
+(defun index-file (inverted-index file)
   (multiple-value-bind (text external-format) (read-file-into-string* file)
     (let* ((document (create-document file external-format text))
            (tokens (tokenize-lisp text))
@@ -37,9 +37,9 @@
           (insert-token *database* token))
         (inverted-index-insert inverted-index (document-id document) token)))))
 
-(defun add-file-with-time (inverted-index file)
+(defun index-file-with-time (inverted-index file)
   (format t "~&~A " file)
-  (let ((ms (measure-time (add-file inverted-index file))))
+  (let ((ms (measure-time (index-file inverted-index file))))
     (format t "[~D ms]~%" ms)))
 
 (defun index-lisp-files (files)
@@ -50,7 +50,7 @@
       ;; 3b-swf-20120107-gitは3b-swf-swc.asdと3b-swf.asdがあるが、
       ;; 3b-swf-swcが3b-swfに依存してるため、3b-swfを二重に見る問題がある
       (unless (resolve-document-id-by-pathname *database* file)
-        (add-file-with-time inverted-index file)))
+        (index-file-with-time inverted-index file)))
     (flush-inverted-index inverted-index)))
 
 (defclass nop-plan (asdf:sequential-plan) ())

@@ -226,7 +226,7 @@
         (funcall scanner lexer)
         (scan-symbol lexer))))
 
-(defun tokenize (text)
+(defun tokenize-lisp (text)
   (let ((lexer (make-lexer text)))
     (let ((tokens '()))
       (loop

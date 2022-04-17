@@ -36,4 +36,4 @@
 (defun tokenize-file (text)
   (mapcan (lambda (token)
             (tokenize-trigram token :start-boundary t :end-boundary t))
-          (tokenize text)))
+          (tokenize-lisp text)))

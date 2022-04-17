@@ -29,7 +29,8 @@
 (defun add-file (inverted-index file)
   (multiple-value-bind (text external-format) (read-file-into-string* file)
     (let* ((document (create-document file external-format text))
-           (tokens (tokenize-file text)))
+           (tokens (tokenize-lisp text))
+           (tokens (trigram-tokens tokens)))
       (dolist (token tokens)
         ;; NOTE: このresolve-token, insert-token内でtoken-idがセットされる
         (unless (resolve-token *database* token)

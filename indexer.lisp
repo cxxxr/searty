@@ -26,6 +26,63 @@
            (or (try :utf-8)
                (try :cp932)))))
 
+(defun collect-defpackage-forms (text)
+  (with-input-from-string (in text)
+    (loop :with eof-value := '#:eof
+          :for form := (ignore-errors
+                         (let ((*read-eval* nil))
+                           (read in nil eof-value)))
+          :until (eq form eof-value)
+          :when (and (consp form)
+                     (member (first form) '(cl:defpackage uiop:define-package)))
+          :collect form)))
+
+(defstruct (definition (:type list)) filename position)
+
+(defun parse-location (location)
+  (destructuring-case location
+    ((:location file position hints)
+     (declare (ignore hints))
+     (destructuring-case file
+       ((:file filename)
+        (destructuring-case position
+          ((:position pos)
+           (list filename pos))))))))
+
+(defun find-definitions (symbol)
+  (let ((definitions '()))
+    (loop :for (title location) :in (swank/backend:find-definitions symbol)
+          :do (let ((loc (parse-location location)))
+                (cond ((null loc)
+                       (warn "find-definitions: unexpected location ~S" location))
+                      (t
+                       (pushnew loc definitions :test 'equal)))))
+    definitions))
+
+(defun collect-symbol-definitions (package-name)
+  (let ((symbol-definitions-table (make-hash-table)))
+    (let ((package (find-package package-name)))
+      (do-symbols (symbol package-name)
+        (when (eq package (symbol-package symbol))
+          (setf (gethash symbol symbol-definitions-table)
+                (find-definitions symbol)))))
+    symbol-definitions-table))
+
+(defun defpackage-name (form)
+  (second form))
+
+(defun index-package (defpackage-forms)
+  (dolist (defpackage-form defpackage-forms)
+    (let ((package-name (defpackage-name defpackage-form)))
+      (do-hash-table (symbol definitions (collect-symbol-definitions package-name))
+        (let ((symbol-id (or (resolve-symbol-id *database* symbol)
+                             (insert-symbol *database* symbol))))
+          (dolist (definition definitions)
+            (insert-symbol-definition *database*
+                                      symbol-id
+                                      (definition-filename definition)
+                                      (definition-position definition))))))))
+
 (defun index-file (inverted-index file)
   (multiple-value-bind (text external-format) (read-file-into-string* file)
     (let* ((document (create-document file external-format text))
@@ -35,7 +92,8 @@
         ;; NOTE: このresolve-token, insert-token内でtoken-idがセットされる
         (unless (resolve-token *database* token)
           (insert-token *database* token))
-        (inverted-index-insert inverted-index (document-id document) token)))))
+        (inverted-index-insert inverted-index (document-id document) token))
+      (index-package (collect-defpackage-forms text)))))
 
 (defun index-file-with-time (inverted-index file)
   (format t "~&~A " file)
@@ -69,7 +127,7 @@
   (let ((system-name (asdf:component-name (asdf:find-system system))))
     (declare (ignorable system-name))
     (multiple-value-bind (operation plan)
-        (asdf:operate 'asdf:compile-op system :plan-class 'nop-plan :force t)
+        (asdf:operate 'asdf:compile-op system #|:plan-class 'nop-plan|# :force t)
       (declare (ignore operation))
       (loop :for action :in (asdf/plan:plan-actions plan)
             :for o := (asdf/action:action-operation action)
@@ -184,14 +242,24 @@
                                                   document-id-per-database-map))))))
     (flush-inverted-index dst-inverted-index dst-database)))
 
+(defun merge-symbol-and-definitions (dst-database database-files)
+  (dolist (database-file database-files)
+    (with-database (src-database database-file)
+      (copy-symbol-table dst-database src-database)
+      (copy-symbol-definition-table dst-database src-database))))
+
+(defun merge-index-1 (output-database-file database-files)
+  (with-database (dst-database output-database-file :initialize t :without-disconnect t)
+    (let ((document-id-per-database-map (merge-document dst-database database-files))
+          (token-id-map (merge-token dst-database database-files)))
+      (merge-inverted-index dst-database
+                            database-files
+                            token-id-map
+                            document-id-per-database-map)
+      (merge-symbol-and-definitions dst-database database-files))))
+
 (defun merge-index (index-directory output-database-file &optional limit)
   (let ((database-files (collect-index-files index-directory)))
     (when limit
       (setq database-files (subseq database-files 0 limit)))
-    (with-database (dst-database output-database-file :initialize t :without-disconnect t)
-      (let ((document-id-per-database-map (merge-document dst-database database-files))
-            (token-id-map (merge-token dst-database database-files)))
-        (merge-inverted-index dst-database
-                               database-files
-                               token-id-map
-                               document-id-per-database-map)))))
+    (merge-index-1 output-database-file database-files)))

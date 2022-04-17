@@ -22,3 +22,22 @@ CREATE TABLE inverted_index (
   token_id TEXT PRIMARY KEY,
   locations blob
 );
+
+DROP TABLE IF EXISTS symbol;
+CREATE TABLE symbol (
+  id TEXT PRIMARY KEY,
+  name TEXT,
+  package TEXT
+);
+
+CREATE INDEX symbol_name_package_index ON symbol(name, package);
+
+DROP TABLE IF EXISTS symbol_definition;
+CREATE TABLE symbol_definition (
+  symbol_id TEXT,
+  filename TEXT,
+  position INT
+);
+
+CREATE INDEX symbol_definition_symbol_id_index ON symbol_definition(symbol_id);
+CREATE INDEX symbol_definition_symbol_filename_index ON symbol_definition(filename);

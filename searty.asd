@@ -7,7 +7,8 @@
                "cl-dbi"
                "dbd-sqlite3"
                "babel"
-               "split-sequence")
+               "split-sequence"
+               "swank")
   :serial t
   :components ((:file "package")
                (:file "utils")

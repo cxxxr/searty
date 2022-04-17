@@ -19,6 +19,11 @@
 (defgeneric resolve-whole-inverted-index (database))
 (defgeneric resolve-locations (database token-id))
 (defgeneric upsert-inverted-index (database token-id locations))
+(defgeneric resolve-symbol-id (database symbol))
+(defgeneric insert-symbol (database symbol))
+(defgeneric copy-symbol-table (dst-database src-database))
+(defgeneric insert-symbol-definition (database symbol-id filename position))
+(defgeneric copy-symbol-definition-table (dst-database src-database))
 
 (defclass database ()
   ((connection :initarg :connection
@@ -191,3 +196,48 @@
                  "INSERT INTO inverted_index (token_id, locations) VALUES (?, ?)
 ON CONFLICT(token_id) DO NOTHING"
                  (list token-id encoded-locations))))
+
+(defmethod resolve-symbol-id ((database sqlite3-database) symbol)
+  (when-let ((records (resolve-sxql (database-connection database)
+                                    (sxql:select :id
+                                      (sxql:from :symbol)
+                                      (sxql:where (:and (:= :package (symbol-package symbol))
+                                                   (:= :name (symbol-name symbol))))))))
+    (when records
+      (getf (first records) :|id|))))
+
+(defmethod insert-symbol ((database sqlite3-database) symbol)
+  (let ((id (random-uuid)))
+    (execute-sxql (database-connection database)
+                  (sxql:insert-into :symbol
+                    (sxql:set= :id id
+                               :name (symbol-name symbol)
+                               :package (package-name (symbol-package symbol)))))
+    id))
+
+(defmethod copy-symbol-table ((dst-database sqlite3-database) (src-database sqlite3-database))
+  (dolist (record (resolve-sxql (database-connection src-database)
+                                (sxql:select (:id :name :package)
+                                  (sxql:from :symbol))))
+    (execute-sxql (database-connection dst-database)
+                  (sxql:insert-into :symbol
+                    (sxql:set= :id (getf record :|id|)
+                               :name (getf record :|name|)
+                               :package (getf record :|package|))))))
+
+(defmethod insert-symbol-definition ((database sqlite3-database) symbol-id filename position)
+  (execute-sxql (database-connection database)
+                (sxql:insert-into :symbol_definition
+                  (sxql:set= :symbol_id symbol-id
+                             :filename filename
+                             :position position))))
+
+(defmethod copy-symbol-definition-table ((dst-database sqlite3-database) (src-database sqlite3-database))
+  (dolist (record (resolve-sxql (database-connection src-database)
+                                (sxql:select (:symbol_id :filename :position)
+                                  (sxql:from :symbol_definition))))
+    (execute-sxql (database-connection dst-database)
+                  (sxql:insert-into :symbol_definition
+                    (sxql:set= :symbol_id (getf record :|symbol_id|)
+                               :filename (getf record :|filename|)
+                               :position (getf record :|position|))))))

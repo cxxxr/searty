@@ -54,3 +54,8 @@
     (dolist (elt list)
       (setf (gethash elt ht) value))
     ht))
+
+(defmacro do-hash-table ((key value hash-table) &body body)
+  `(maphash (lambda (,key ,value)
+              ,@body)
+            ,hash-table))

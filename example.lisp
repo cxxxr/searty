@@ -4,8 +4,8 @@
   (format t "index: ~D ms~%"
           (measure-time (index-system system-name "/home/user/quicklisp-dist/2022-04-01/" "/tmp/searty.db"))))
 
-(defun test-search (query &rest args &key start-bounding end-bounding)
-  (declare (ignore start-bounding end-bounding))
+(defun test-search (query &rest args &key start-boundary end-boundary)
+  (declare (ignore start-boundary end-boundary))
   (with-database (*database* "/tmp/searty.db")
     (format t "search: ~D ms~%"
             (measure-time (pretty-print-matched (apply #'search-phrase query args))))))

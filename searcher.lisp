@@ -26,7 +26,7 @@
                (setf ranges (rest ranges))))))
     head-ranges))
 
-(defun normalize-matched (matched &key start-bounding end-bounding)
+(defun normalize-matched (matched &key start-boundary end-boundary)
   (let ((ht (matched-document-positions-map matched)))
     (maphash (lambda (document ranges)
                (setf ranges (sort ranges #'< :key #'range-start))
@@ -34,13 +34,13 @@
                      (normalize-ranges ranges)))
              ht)
     (maphash (lambda (document ranges)
-               (when (or start-bounding end-bounding)
+               (when (or start-boundary end-boundary)
                  (setf (gethash document ht)
                        (mapcar (lambda (range)
-                                 (make-range (if start-bounding
+                                 (make-range (if start-boundary
                                                  (1+ (range-start range))
                                                  (range-start range))
-                                             (if end-bounding
+                                             (if end-boundary
                                                  (1- (range-end range))
                                                  (range-end range))))
                                ranges))))
@@ -130,13 +130,13 @@
   (let ((relative-positions-list (compute-relative-positions-list postings)))
     (intersection-positions relative-positions-list)))
 
-(defun search-phrase (query &key start-bounding end-bounding)
+(defun search-phrase (query &key start-boundary end-boundary)
   (let ((matched (make-matched))
         (tokens (mapcar (curry #'resolve-token *database*)
                         (mapcan (lambda (token)
                                   (tokenize-trigram token
-                                                    :start-bounding start-bounding
-                                                    :end-bounding end-bounding))
+                                                    :start-boundary start-boundary
+                                                    :end-boundary end-boundary))
                                 (tokenize query)))))
     (unless (some #'null tokens)
       (let* ((inverted-index (resolve-inverted-index-by-token-ids
@@ -157,8 +157,8 @@
                         (t
                          (next-minimum-posting postings))))))
     (normalize-matched matched
-                       :start-bounding start-bounding
-                       :end-bounding end-bounding)))
+                       :start-boundary start-boundary
+                       :end-boundary end-boundary)))
 
 (defun read-file-range (document range)
   (with-input-from-string (in (document-body document))

@@ -2,19 +2,19 @@
 
 (defconstant +null-char+ (code-char 0))
 
-(defun make-bounding-string (string start-bounding end-bounding)
-  (cond ((and start-bounding end-bounding)
+(defun make-boundary-string (string start-boundary end-boundary)
+  (cond ((and start-boundary end-boundary)
          (format nil
                  "~C~A~C"
                  +null-char+
                  string
                  +null-char+))
-        (start-bounding
+        (start-boundary
          (format nil
                  "~C~A"
                  +null-char+
                  string))
-        (end-bounding
+        (end-boundary
          (format nil
                  "~A~C"
                  string
@@ -22,18 +22,18 @@
         (t
          string)))
 
-(defun tokenize-trigram (token &key start-bounding end-bounding)
+(defun tokenize-trigram (token &key start-boundary end-boundary)
   (let ((kind (token-kind token)))
-    (loop :for term :in (ngram (make-bounding-string (token-term token)
-                                                     start-bounding
-                                                     end-bounding)
+    (loop :for term :in (ngram (make-boundary-string (token-term token)
+                                                     start-boundary
+                                                     end-boundary)
                                3)
-          :for pos :from (if start-bounding
+          :for pos :from (if start-boundary
                              (1- (token-position token))
                              (token-position token))
           :collect (make-token :term term :kind kind :position pos))))
 
 (defun tokenize-file (text)
   (mapcan (lambda (token)
-            (tokenize-trigram token :start-bounding t :end-bounding t))
+            (tokenize-trigram token :start-boundary t :end-boundary t))
           (tokenize text)))

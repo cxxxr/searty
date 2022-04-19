@@ -75,7 +75,9 @@
   (dolist (defpackage-form defpackage-forms)
     (let ((package-name (defpackage-name defpackage-form)))
       (do-hash-table (symbol definitions (collect-symbol-definitions package-name))
-        (let ((symbol-id (or (resolve-symbol-id *database* symbol)
+        (let ((symbol-id (or (resolve-symbol-id *database*
+                                                (symbol-name symbol)
+                                                (package-name (symbol-package symbol)))
                              (insert-symbol *database* symbol))))
           (dolist (definition definitions)
             (insert-symbol-definition *database*

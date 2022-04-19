@@ -19,7 +19,7 @@
 (defgeneric resolve-whole-inverted-index (database))
 (defgeneric resolve-locations (database token-id))
 (defgeneric upsert-inverted-index (database token-id locations))
-(defgeneric resolve-symbol-id (database symbol))
+(defgeneric resolve-symbol-id (database symbol-name package-name))
 (defgeneric insert-symbol (database symbol))
 (defgeneric copy-symbol-table (dst-database src-database))
 (defgeneric insert-symbol-definition (database symbol-id filename position))
@@ -197,12 +197,12 @@
 ON CONFLICT(token_id) DO NOTHING"
                  (list token-id encoded-locations))))
 
-(defmethod resolve-symbol-id ((database sqlite3-database) symbol)
+(defmethod resolve-symbol-id ((database sqlite3-database) symbol-name package-name)
   (when-let ((records (resolve-sxql (database-connection database)
                                     (sxql:select :id
                                       (sxql:from :symbol)
-                                      (sxql:where (:and (:= :package (symbol-package symbol))
-                                                   (:= :name (symbol-name symbol))))))))
+                                      (sxql:where (:and (:= :package package-name)
+                                                   (:= :name symbol-name)))))))
     (when records
       (getf (first records) :|id|))))
 

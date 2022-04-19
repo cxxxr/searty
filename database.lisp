@@ -104,7 +104,7 @@
 (defmethod resolve-documents-by-pathnames ((database sqlite3-database) pathnames)
   (make-documents-from-records
    (resolve-sxql (database-connection database)
-                 (sxql:select (:id :pathname :external_format)
+                 (sxql:select (:id :pathname :external_format :body)
                    (sxql:from :document)
                    (sxql:where (:in :pathname (mapcar #'namestring pathnames)))))))
 

@@ -160,7 +160,24 @@
                        :start-boundary start-boundary
                        :end-boundary end-boundary)))
 
-(defun read-file-range (document range)
+(defun print-highlgiht-line (document line-number start end line)
+  (format t "~&~A:~D:~D:~D:~A~A~A~%"
+          (document-pathname document)
+          line-number
+          start
+          end
+          (subseq line 0 start)
+          (cl-ansi-text:red (subseq line start end))
+          (subseq line end)))
+
+(defun print-matched-line (document line-number start end line)
+  (declare (ignore start end))
+  (format t "~&~A:~D:~D"
+          (document-pathname document)
+          line-number
+          line))
+
+(defun read-file-range (document range &key (printer #'print-highlgiht-line))
   (with-input-from-string (in (document-body document))
     (loop :with pos := 0
           :for line := (read-line in)
@@ -168,14 +185,7 @@
           :do (when (<= pos (range-start range) (+ pos (length line)))
                 (let ((start (- (range-start range) pos))
                       (end (- (range-end range) pos)))
-                  (format t "~&~A:~D:~D:~D:~A~A~A~%"
-                          (document-pathname document)
-                          line-number
-                          start
-                          end
-                          (subseq line 0 start)
-                          (cl-ansi-text:red (subseq line start end))
-                          (subseq line end))
+                  (funcall printer document line-number start end line)
                   (return)))
               (incf pos (1+ (length line))))))
 
@@ -193,3 +203,17 @@
                        (push e errors))))))
              (matched-document-positions-map matched))
     errors))
+
+(defun search-definitions (symbol-name &optional package-name)
+  (loop :for symbol-id :in (if package-name
+                               (list (resolve-symbol-id *database* symbol-name package-name))
+                               (resolve-symbol-ids-by-symbol-name *database* symbol-name))
+        :do (loop :for (filename position) :in (resolve-symbol-definitions *database* symbol-id)
+                  :for document := (first (resolve-documents-by-pathnames *database* (list filename)))
+                  :do (cond ((null document)
+                             (warn "~A is not exist" filename))
+                            (t
+                             (read-file-range
+                              document
+                              (make-range position (1+ position))
+                              :printer #'print-matched-line))))))

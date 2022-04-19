@@ -59,3 +59,11 @@
   `(maphash (lambda (,key ,value)
               ,@body)
             ,hash-table))
+
+(defun parse-symbol (string)
+  (ppcre:register-groups-bind (package-name symbol-name) ("(.*)::(.*)" string)
+    (when (and package-name symbol-name)
+      (return-from parse-symbol
+        (values (string-upcase symbol-name)
+                (string-upcase package-name)))))
+  (values (string-upcase string) nil))

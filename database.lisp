@@ -20,6 +20,7 @@
 (defgeneric resolve-locations (database token-id))
 (defgeneric upsert-inverted-index (database token-id locations))
 (defgeneric resolve-symbol-id (database symbol-name package-name))
+(defgeneric resolve-symbol-ids-by-symbol-name (database symbol-name))
 (defgeneric insert-symbol (database symbol))
 (defgeneric copy-symbol-table (dst-database src-database))
 (defgeneric insert-symbol-definition (database symbol-id filename position))
@@ -206,6 +207,13 @@ ON CONFLICT(token_id) DO NOTHING"
     (when records
       (getf (first records) :|id|))))
 
+(defmethod resolve-symbol-ids-by-symbol-name ((database sqlite3-database) symbol-name)
+  (loop :for record :in (resolve-sxql (database-connection database)
+                                      (sxql:select :id
+                                        (sxql:from :symbol)
+                                        (sxql:where (:= :name symbol-name))))
+        :collect (getf record :|id|)))
+
 (defmethod insert-symbol ((database sqlite3-database) symbol)
   (let ((id (random-uuid)))
     (execute-sxql (database-connection database)
@@ -241,3 +249,12 @@ ON CONFLICT(token_id) DO NOTHING"
                     (sxql:set= :symbol_id (getf record :|symbol_id|)
                                :filename (getf record :|filename|)
                                :position (getf record :|position|))))))
+
+(defmethod resolve-symbol-definitions ((database sqlite3-database) symbol-id)
+  (mapcar (lambda (record)
+            (make-definition :filename (getf record :|filename|)
+                             :position (getf record :|position|)))
+          (resolve-sxql (database-connection database)
+                        (sxql:select (:filename :position)
+                          (sxql:from :symbol_definition)
+                          (sxql:where (:= :symbol_id symbol-id))))))

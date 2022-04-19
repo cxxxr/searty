@@ -37,7 +37,13 @@
                      (member (first form) '(cl:defpackage uiop:define-package)))
           :collect form)))
 
-(defstruct (definition (:type list)) filename position)
+(defstruct definition filename position)
+
+(defun definition-equal (definition1 definition2)
+  (and (equal (definition-filename definition1)
+              (definition-filename definition2))
+       (equal (definition-position definition1)
+              (definition-position definition2))))
 
 (defun parse-location (location)
   (destructuring-case location
@@ -47,7 +53,7 @@
        ((:file filename)
         (destructuring-case position
           ((:position pos)
-           (list filename pos))))))))
+           (make-definition :filename filename :position pos))))))))
 
 (defun find-definitions (symbol)
   (let ((definitions '()))
@@ -56,7 +62,7 @@
                 (cond ((null loc)
                        (warn "find-definitions: unexpected location ~S" location))
                       (t
-                       (pushnew loc definitions :test 'equal)))))
+                       (pushnew loc definitions :test #'definition-equal)))))
     definitions))
 
 (defun collect-symbol-definitions (package-name)

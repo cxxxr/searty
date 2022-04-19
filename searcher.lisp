@@ -208,7 +208,9 @@
   (loop :for symbol-id :in (if package-name
                                (list (resolve-symbol-id *database* symbol-name package-name))
                                (resolve-symbol-ids-by-symbol-name *database* symbol-name))
-        :do (loop :for (filename position) :in (resolve-symbol-definitions *database* symbol-id)
+        :do (loop :for definition :in (resolve-symbol-definitions *database* symbol-id)
+                  :for filename := (definition-filename definition)
+                  :for position := (definition-position definition)
                   :for document := (first (resolve-documents-by-pathnames *database* (list filename)))
                   :do (cond ((null document)
                              (warn "~A is not exist" filename))

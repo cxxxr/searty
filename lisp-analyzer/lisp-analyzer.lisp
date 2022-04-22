@@ -67,8 +67,13 @@
       (when (and file position)
         (list file position)))))
 
+(defun coerce-to-symbol (x)
+  (etypecase x
+    (string (make-symbol x))
+    (symbol x)))
+
 (defun find-definitions (symbol)
-  (loop :for ((specifier name) location) :in (swank/backend:find-definitions symbol)
+  (loop :for ((specifier name) location) :in (swank/backend:find-definitions (coerce-to-symbol symbol))
         :for loc := (parse-location location)
         :when loc
         :collect (list (string specifier) loc)))

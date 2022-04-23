@@ -98,20 +98,25 @@
                 :collect (cons (encode-symbol symbol) definitions)))))
 
 (defun main (system-name root-directory output-file)
-  (with-asdf (root-directory)
-    (let ((files (collect-cl-source-files system-name))
-          (definitions '()))
-      (load-files files)
-      (dolist (file files)
-        (dolist (defpackage-form (collect-defpackage-forms file))
-          (let ((package-name (defpackage-name defpackage-form)))
-            (setf definitions (nconc (collect-definitions package-name) definitions)))))
-      (with-open-file (out output-file
-                           :direction :output
-                           :if-exists :supersede
-                           :if-does-not-exist :create)
-        (pprint `(:files ,files :definitions ,definitions) out)
-        (terpri out)))))
+  (let ((start-time (get-internal-real-time)))
+    (with-asdf (root-directory)
+      (let ((files (collect-cl-source-files system-name))
+            (definitions '()))
+        (load-files files)
+        (dolist (file files)
+          (dolist (defpackage-form (collect-defpackage-forms file))
+            (let ((package-name (defpackage-name defpackage-form)))
+              (setf definitions (nconc (collect-definitions package-name) definitions)))))
+        (with-open-file (out output-file
+                             :direction :output
+                             :if-exists :supersede
+                             :if-does-not-exist :create)
+          (pprint `(:files ,files
+                    :definitions ,definitions
+                    :time ,(float (/ (- (get-internal-real-time) start-time)
+                                     internal-time-units-per-second)))
+                  out)
+          (terpri out))))))
 
 ;; TODO:
 ;; - find-references

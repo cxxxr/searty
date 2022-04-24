@@ -26,70 +26,27 @@
            (or (try :utf-8)
                (try :cp932)))))
 
-(defun collect-defpackage-forms (text)
-  (with-input-from-string (in text)
-    (loop :with eof-value := '#:eof
-          :for form := (ignore-errors
-                         (let ((*read-eval* nil))
-                           (read in nil eof-value)))
-          :until (eq form eof-value)
-          :when (and (consp form)
-                     (member (first form) '(cl:defpackage uiop:define-package)))
-          :collect form)))
+(defun resolve-or-insert-symbol-id (database symbol-name package-name)
+  (or (resolve-symbol-id database symbol-name package-name)
+      (insert-symbol database symbol-name package-name)))
 
-(defstruct definition filename position)
-
-(defun definition-equal (definition1 definition2)
-  (and (equal (definition-filename definition1)
-              (definition-filename definition2))
-       (equal (definition-position definition1)
-              (definition-position definition2))))
-
-(defun parse-location (location)
-  (destructuring-case location
-    ((:location file position hints)
-     (declare (ignore hints))
-     (destructuring-case file
-       ((:file filename)
-        (destructuring-case position
-          ((:position pos)
-           (make-definition :filename filename :position pos))))))))
-
-(defun find-definitions (symbol)
-  (let ((definitions '()))
-    (loop :for (title location) :in (swank/backend:find-definitions symbol)
-          :do (let ((loc (parse-location location)))
-                (cond ((null loc)
-                       (warn "find-definitions: unexpected location ~S" location))
-                      (t
-                       (pushnew loc definitions :test #'definition-equal)))))
-    definitions))
-
-(defun collect-symbol-definitions (package-name)
-  (let ((symbol-definitions-table (make-hash-table)))
-    (let ((package (find-package package-name)))
-      (do-symbols (symbol package-name)
-        (when (eq package (symbol-package symbol))
-          (setf (gethash symbol symbol-definitions-table)
-                (find-definitions symbol)))))
-    symbol-definitions-table))
-
-(defun defpackage-name (form)
-  (second form))
-
-(defun index-package (defpackage-forms)
-  (dolist (defpackage-form defpackage-forms)
-    (let ((package-name (defpackage-name defpackage-form)))
-      (do-hash-table (symbol definitions (collect-symbol-definitions package-name))
-        (let ((symbol-id (or (resolve-symbol-id *database*
-                                                (symbol-name symbol)
-                                                (package-name (symbol-package symbol)))
-                             (insert-symbol *database* symbol))))
-          (dolist (definition definitions)
-            (insert-symbol-definition *database*
-                                      symbol-id
-                                      (definition-filename definition)
-                                      (definition-position definition))))))))
+(defun index-definitions (spec-definitions)
+  (loop :for (object . specifier-and-locations-list) :in spec-definitions
+        :do (destructuring-bind (&key type name package) object
+              (ecase type
+                (:symbol
+                 (let ((symbol-id (resolve-or-insert-symbol-id *database* name package)))
+                   (dolist (specifier-and-locations specifier-and-locations-list)
+                     (destructuring-bind (specifier &rest locations) specifier-and-locations
+                       (declare (ignore specifier)) ; TODO
+                       (loop :for (filename position) :in locations
+                             :do (insert-symbol-definition *database*
+                                                           symbol-id
+                                                           filename
+                                                           position))))))
+                (:package
+                 ;; TODO
+                 )))))
 
 (defun index-file (inverted-index file)
   (multiple-value-bind (text external-format) (read-file-into-string* file)
@@ -100,8 +57,7 @@
         ;; NOTE: このresolve-token, insert-token内でtoken-idがセットされる
         (unless (resolve-token *database* token)
           (insert-token *database* token))
-        (inverted-index-insert inverted-index (document-id document) token))
-      (index-package (collect-defpackage-forms text)))))
+        (inverted-index-insert inverted-index (document-id document) token)))))
 
 (defun index-file-with-time (inverted-index file)
   (format t "~&~A " file)
@@ -119,55 +75,25 @@
         (index-file-with-time inverted-index file)))
     (flush-inverted-index inverted-index)))
 
-(defclass nop-plan (asdf:sequential-plan) ())
+(defun load-spec (filename)
+  (uiop:read-file-form filename))
 
-(defmethod asdf:perform-plan ((plan nop-plan) &key))
+(defun spec-files (spec)
+  (getf spec :files))
 
-(defun match-component (system-name component)
-  (let ((parent (asdf:component-parent component)))
-    (cond ((null parent) nil)
-          ((equal system-name (asdf:component-name parent))
-           t)
-          (t
-           (match-component system-name parent)))))
+(defun spec-definitions (spec)
+  (getf spec :definitions))
 
-(defun collect-cl-source-files (system)
-  (let ((system-name (asdf:component-name (asdf:find-system system))))
-    (declare (ignorable system-name))
-    (multiple-value-bind (operation plan)
-        (asdf:operate 'asdf:compile-op system #|:plan-class 'nop-plan|# :force t)
-      (declare (ignore operation))
-      (loop :for action :in (asdf/plan:plan-actions plan)
-            :for o := (asdf/action:action-operation action)
-            :for c := (asdf/action:action-component action)
-            :when (and (typep o 'asdf:compile-op)
-                       (typep c 'asdf:cl-source-file)
-                       (match-component system-name c))
-            :collect (truename (first (asdf::input-files o c)))))))
-
-(defun call-with-asdf (root-directory function)
-  (let (#+(or)
-        (asdf:*system-definition-search-functions*
-          '(asdf/system-registry:sysdef-source-registry-search))
-        (asdf/source-registry:*source-registry* nil))
-    (asdf::initialize-source-registry
-     `(:source-registry
-       (:tree ,root-directory)
-       #+sbcl (:directory (:home ".sbcl/systems/"))
-       :ignore-inherited-configuration))
-    (funcall function)))
-
-(defmacro with-asdf ((root-directory) &body body)
-  `(call-with-asdf ,root-directory (lambda () ,@body)))
-
-(defun index-system (system-name dist-dir database-file)
+(defun index-system (filename database-file)
   (with-database (*database* database-file :initialize t :without-disconnect t)
-    (with-asdf (dist-dir)
-      (let ((files (collect-cl-source-files system-name)))
-        (index-lisp-files files)))))
+    (let ((spec (load-spec filename)))
+      (index-lisp-files (spec-files spec))
+      (index-definitions (spec-definitions spec)))))
 
 ;;;
 (defun collect-index-files (index-directory)
+  (uiop:directory-files index-directory "*.db")
+  #+(or)
   (let* ((success.txt (merge-pathnames "success.txt" index-directory))
          (system-names (list-to-hash-table (split-sequence #\newline (read-file-into-string success.txt))
                                            :test 'equal)))

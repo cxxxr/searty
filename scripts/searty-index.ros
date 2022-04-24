@@ -14,7 +14,7 @@ exec ros -Q -- $0 "$@"
 
 (defun main (&rest argv)
   (declare (ignorable argv))
-  (destructuring-bind (system-name dist-dir database-file) argv
-    (searty::index-system system-name dist-dir database-file)))
+  (destructuring-bind (filename database-file) argv
+    (searty::index-system filename database-file)))
 
 ;;; vim: set ft=lisp lisp:

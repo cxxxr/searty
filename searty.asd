@@ -13,6 +13,7 @@
   :components ((:file "package")
                (:file "utils")
                (:file "sql")
+               (:file "definition")
                (:file "token")
                (:file "document")
                (:file "inverted-index")

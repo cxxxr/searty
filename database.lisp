@@ -21,7 +21,7 @@
 (defgeneric upsert-inverted-index (database token-id locations))
 (defgeneric resolve-symbol-id (database symbol-name package-name))
 (defgeneric resolve-symbol-ids-by-symbol-name (database symbol-name))
-(defgeneric insert-symbol (database symbol))
+(defgeneric insert-symbol (database symbol-name package-name))
 (defgeneric copy-symbol-table (dst-database src-database))
 (defgeneric insert-symbol-definition (database symbol-id filename position))
 (defgeneric copy-symbol-definition-table (dst-database src-database))
@@ -214,13 +214,13 @@ ON CONFLICT(token_id) DO NOTHING"
                                         (sxql:where (:= :name symbol-name))))
         :collect (getf record :|id|)))
 
-(defmethod insert-symbol ((database sqlite3-database) symbol)
+(defmethod insert-symbol ((database sqlite3-database) symbol-name package-name)
   (let ((id (random-uuid)))
     (execute-sxql (database-connection database)
                   (sxql:insert-into :symbol
                     (sxql:set= :id id
-                               :name (symbol-name symbol)
-                               :package (package-name (symbol-package symbol)))))
+                               :name symbol-name
+                               :package package-name)))
     id))
 
 (defmethod copy-symbol-table ((dst-database sqlite3-database) (src-database sqlite3-database))

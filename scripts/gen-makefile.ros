@@ -12,6 +12,8 @@ exec ros -Q -- $0 "$@"
   (:use :cl))
 (in-package :ros.script.gen-make.3858474593)
 
+(defvar *dist-dir*)
+
 (defstruct (system-spec (:conc-name ".")) project system-file system-name dependencies)
 
 (defun parse-line (line)
@@ -37,36 +39,78 @@ exec ros -Q -- $0 "$@"
 (defun escape-system-name (name)
   (ppcre:regex-replace-all "/" name "_"))
 
-(defun system-to-target-name (system-name directory)
+(defun system-to-out-name (system-name directory)
+  (make-pathname :name (escape-system-name system-name) :type "out" :defaults directory))
+
+(defun system-to-db-name (system-name directory)
   (make-pathname :name (escape-system-name system-name) :type "db" :defaults directory))
 
-(defun gen-makefile (systems.txt dist-dir index-directory stream)
-  (let ((system-specs (load-systems.txt systems.txt)))
-    (format stream "all: ~{~A~^\\~%~5T~}~%"
-            (mapcar (alexandria:compose (alexandria:rcurry #'system-to-target-name index-directory)
-                                        #'.system-name)
-                    system-specs))
-    (dolist (system-spec system-specs)
-      (let ((target-name (system-to-target-name (.system-name system-spec) index-directory)))
-        (format stream "~A:" target-name)
-        (when (.dependencies system-spec)
-          (format stream
-                  " ~{~A~^ ~}"
-                  (mapcar (alexandria:rcurry #'system-to-target-name index-directory)
-                          (.dependencies system-spec))))
+(defun out-names (directory system-specs)
+  (mapcar (alexandria:compose (alexandria:rcurry #'system-to-out-name directory)
+                              #'.system-name)
+          system-specs))
+
+(defun db-names (directory system-specs)
+  (mapcar (alexandria:compose (alexandria:rcurry #'system-to-db-name directory)
+                              #'.system-name)
+          system-specs))
+
+(defun gen-build-command (stream system-name out-name)
+  (format stream
+          "~C./lisp-analyzer.sh ~A ~A ~A~%"
+          #\tab
+          system-name
+          *dist-dir*
+          out-name))
+
+(defun gen-build-targets (stream system-specs build-directory)
+  (dolist (system-spec system-specs)
+    (let ((target-name (system-to-out-name (.system-name system-spec) build-directory)))
+      (format stream "~A:" target-name)
+      (when (.dependencies system-spec)
         (format stream
-                "~%~C./searty-index.sh ~A ~A ~A~%"
-                #\tab
-                (.system-name system-spec)
-                dist-dir
-                target-name)))))
+                " ~{~A~^ ~}"
+                (mapcar (alexandria:rcurry #'system-to-out-name build-directory)
+                        (.dependencies system-spec))))
+      (terpri stream)
+      (gen-build-command stream (.system-name system-spec) target-name))))
+
+(defun gen-index-command (stream out-name db-name)
+  (format stream
+          "~C./searty-index.sh ~A ~A~%"
+          #\tab
+          out-name
+          db-name))
+
+(defun gen-index-targets (stream system-specs index-directory build-directory)
+  (dolist (system-spec system-specs)
+    (let ((target-name (system-to-db-name (.system-name system-spec) index-directory)))
+      (format stream "~A: ~A~%" target-name (system-to-out-name (.system-name system-spec) build-directory))
+      (gen-index-command stream
+                         (system-to-out-name (.system-name system-spec) build-directory)
+                         (system-to-db-name (.system-name system-spec) index-directory)))))
+
+(defun gen-makefile (systems.txt *dist-dir* build-directory index-directory stream)
+  (let* ((system-specs (load-systems.txt systems.txt))
+         (out-names (out-names build-directory system-specs))
+         (db-names (db-names index-directory system-specs)))
+    (format stream "all: ~{~A~^\\~%~5T~}~%" (append out-names db-names))
+    (terpri stream)
+    (format stream "build: ~{~A~^\\~%~7T~}~%" out-names)
+    (terpri stream)
+    (format stream "index: ~{~A~^\\~%~7T~}~%" db-names)
+    (terpri stream)
+    (gen-build-targets stream system-specs build-directory)
+    (terpri stream)
+    (gen-index-targets stream system-specs index-directory build-directory)))
 
 (defun main (&rest argv)
   (declare (ignorable argv))
-  (destructuring-bind (systems.txt dist-dir index-directory makefile) argv
+  (destructuring-bind (systems.txt dist-dir build-directory index-directory makefile) argv
     (with-open-file (out makefile :direction :output :if-exists :supersede)
       (gen-makefile systems.txt
                     (uiop:ensure-directory-pathname dist-dir)
+                    (uiop:ensure-directory-pathname build-directory)
                     (uiop:ensure-directory-pathname index-directory)
                     out))))
 

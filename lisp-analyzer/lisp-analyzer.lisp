@@ -4,6 +4,53 @@
   (:use :cl))
 (in-package :searty/lisp-analyzer)
 
+;;;
+(defstruct (system (:type list)) project system-file system-name)
+(defstruct (release (:type list)) project url size file-md5 content-sha1 prefix system-files)
+
+(defun load-systems (system-file)
+  (with-open-file (in system-file)
+    (read-line in nil)
+    (let ((system-map (make-hash-table :test 'equal)))
+      (loop :for line := (read-line in nil)
+            :while line
+            :do (let ((system (uiop:split-string line)))
+                  (push system (gethash (system-project system) system-map))))
+      system-map)))
+
+(defun load-releases (releases-file)
+  (with-open-file (in releases-file)
+    (read-line in nil)
+    (let ((releases-map (make-hash-table :test 'equal)))
+      (loop :for line := (read-line in nil)
+            :while line
+            :do (destructuring-bind (project url size file-md5 content-sha1 prefix &rest system-files)
+                    (uiop:split-string line)
+                  (let ((release (list project url size file-md5 content-sha1 prefix system-files)))
+                    (setf (gethash project releases-map) release))))
+      releases-map)))
+
+(defun make-system-map (dist-directory)
+  (let* ((quicklisp-directory (uiop:pathname-parent-directory-pathname dist-directory))
+         (systems-map (load-systems (merge-pathnames "systems.txt" quicklisp-directory)))
+         (releases-map (load-releases (merge-pathnames "releases.txt" quicklisp-directory)))
+         (system-name-file-map (make-hash-table :test 'equal)))
+    (maphash (lambda (project release)
+               (let ((systems (gethash project systems-map))
+                     (project-directory
+                       (uiop:ensure-directory-pathname
+                        (merge-pathnames (release-prefix release) dist-directory))))
+                 (loop :for system :in systems
+                       :for asd-file := (find (system-system-file system) (release-system-files release) :key #'pathname-name :test #'equal)
+                       :do (setf (gethash (system-system-name system) system-name-file-map)
+                                 (merge-pathnames asd-file project-directory)))))
+             releases-map)
+    system-name-file-map))
+
+(defun find-asd-file (dist-directory system-name)
+  (gethash system-name (make-system-map dist-directory)))
+
+;;;
 (defun call-with-asdf (root-directory function)
   (let ((asdf/source-registry:*source-registry* nil))
     (asdf::initialize-source-registry
@@ -100,6 +147,7 @@
 (defun main (system-name root-directory output-file)
   (let ((start-time (get-internal-real-time)))
     (with-asdf (root-directory)
+      (asdf:load-asd (find-asd-file root-directory system-name))
       (let ((files (collect-cl-source-files system-name))
             (definitions '()))
         (unless (equal system-name "lime-test")

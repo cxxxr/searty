@@ -168,7 +168,8 @@
                       :time ,(float (/ (- (get-internal-real-time) start-time)
                                        internal-time-units-per-second)))
                     out)
-            (terpri out)))))))
+            (terpri out))))))
+  0)
 
 ;; TODO:
 ;; - find-references

@@ -147,25 +147,28 @@
 (defun main (system-name root-directory output-file)
   (let ((start-time (get-internal-real-time)))
     (with-asdf (root-directory)
-      (asdf:load-asd (find-asd-file root-directory system-name))
-      (let ((files (collect-cl-source-files system-name))
-            (definitions '()))
-        (unless (equal system-name "lime-test")
-          (load-files files))
-        (dolist (file files)
-          (dolist (defpackage-form (collect-defpackage-forms file))
-            (let ((package-name (defpackage-name defpackage-form)))
-              (setf definitions (nconc (collect-definitions package-name) definitions)))))
-        (with-open-file (out output-file
-                             :direction :output
-                             :if-exists :supersede
-                             :if-does-not-exist :create)
-          (pprint `(:files ,files
-                    :definitions ,definitions
-                    :time ,(float (/ (- (get-internal-real-time) start-time)
-                                     internal-time-units-per-second)))
-                  out)
-          (terpri out))))))
+      (let ((asd-file (find-asd-file root-directory system-name)))
+        (asdf:load-asd asd-file)
+        (let ((files (collect-cl-source-files system-name))
+              (definitions '()))
+          (unless (equal system-name "lime-test")
+            (load-files files))
+          (dolist (file files)
+            (dolist (defpackage-form (collect-defpackage-forms file))
+              (let ((package-name (defpackage-name defpackage-form)))
+                (setf definitions (nconc (collect-definitions package-name) definitions)))))
+          (with-open-file (out output-file
+                               :direction :output
+                               :if-exists :supersede
+                               :if-does-not-exist :create)
+            (pprint `(:system-name ,system-name
+                      :asd-file ,asd-file
+                      :files ,files
+                      :definitions ,definitions
+                      :time ,(float (/ (- (get-internal-real-time) start-time)
+                                       internal-time-units-per-second)))
+                    out)
+            (terpri out)))))))
 
 ;; TODO:
 ;; - find-references

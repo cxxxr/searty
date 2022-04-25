@@ -25,6 +25,8 @@
 (defgeneric copy-symbol-table (dst-database src-database))
 (defgeneric insert-symbol-definition (database symbol-id filename position))
 (defgeneric copy-symbol-definition-table (dst-database src-database))
+(defgeneric insert-asd-system (database spec))
+(defgeneric copy-asd-systems (dst-database src-database))
 
 (defclass database ()
   ((connection :initarg :connection
@@ -258,3 +260,22 @@ ON CONFLICT(token_id) DO NOTHING"
                         (sxql:select (:filename :position)
                           (sxql:from :symbol_definition)
                           (sxql:where (:= :symbol_id symbol-id))))))
+
+(defmethod insert-asd-system ((database sqlite3-database) spec)
+  (execute-sxql (database-connection database)
+                (sxql:insert-into :asd_system
+                  (sxql:set= :id (random-uuid)
+                             :name (spec-system-name spec)
+                             :filename (princ-to-string (spec-asd-file spec))
+                             :analyzed_time (spec-time spec)))))
+
+(defmethod copy-asd-systems ((dst-database sqlite3-database) (src-database sqlite3-database))
+  (dolist (record (resolve-sxql (database-connection src-database)
+                                (sxql:select (:id :name :filename :analyzed_time)
+                                  (sxql:from :asd_system))))
+    (execute-sxql (database-connection dst-database)
+                  (sxql:insert-into :asd_system
+                    (sxql:set= :id (getf record :|id|)
+                               :name (getf record :|name|)
+                               :filename (getf record :|filename|)
+                               :analyzed_time (getf record :|analyzed_time|))))))

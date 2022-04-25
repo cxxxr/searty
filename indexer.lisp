@@ -48,6 +48,10 @@
                  ;; TODO
                  )))))
 
+(defun index-from-spec (spec)
+  (insert-asd-system *database* spec)
+  (index-definitions (spec-definitions spec)))
+
 (defun index-file (inverted-index file)
   (multiple-value-bind (text external-format) (read-file-into-string* file)
     (let* ((document (create-document file external-format text))
@@ -165,6 +169,11 @@
       (copy-symbol-table dst-database src-database)
       (copy-symbol-definition-table dst-database src-database))))
 
+(defun merge-asd-systems (dst-database database-files)
+  (dolist (database-file database-files)
+    (with-database (src-database database-file)
+      (copy-asd-systems dst-database src-database))))
+
 (defun merge-index-1 (output-database-file database-files)
   (with-database (dst-database output-database-file :initialize t :without-disconnect t)
     (let ((document-id-per-database-map (merge-document dst-database database-files))
@@ -173,7 +182,8 @@
                             database-files
                             token-id-map
                             document-id-per-database-map)
-      (merge-symbol-and-definitions dst-database database-files))))
+      (merge-symbol-and-definitions dst-database database-files)
+      (merge-asd-systems dst-database database-files))))
 
 (defun merge-index (index-directory output-database-file &optional limit)
   (let ((database-files (collect-index-files index-directory)))

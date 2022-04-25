@@ -41,3 +41,11 @@ CREATE TABLE symbol_definition (
 
 CREATE INDEX symbol_definition_symbol_id_index ON symbol_definition(symbol_id);
 CREATE INDEX symbol_definition_symbol_filename_index ON symbol_definition(filename);
+
+DROP TABLE IF EXISTS asd_system;
+CREATE TABLE asd_system (
+  id text PRIMARY KEY,
+  name TEXT,
+  filename TEXT,
+  analyzed_time REAL
+);

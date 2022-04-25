@@ -20,6 +20,7 @@
                (:file "database")
                (:file "lisp-tokenizer")
                (:file "tokenizer")
+               (:file "spec")
                (:file "indexer")
                (:file "searcher")
                (:file "searty")))

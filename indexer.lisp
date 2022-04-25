@@ -75,20 +75,11 @@
         (index-file-with-time inverted-index file)))
     (flush-inverted-index inverted-index)))
 
-(defun load-spec (filename)
-  (uiop:read-file-form filename))
-
-(defun spec-files (spec)
-  (getf spec :files))
-
-(defun spec-definitions (spec)
-  (getf spec :definitions))
-
 (defun index-system (filename database-file)
   (with-database (*database* database-file :initialize t :without-disconnect t)
     (let ((spec (load-spec filename)))
       (index-lisp-files (spec-files spec))
-      (index-definitions (spec-definitions spec)))))
+      (index-from-spec spec))))
 
 ;;;
 (defun collect-index-files (index-directory)

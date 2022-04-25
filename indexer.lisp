@@ -92,15 +92,7 @@
 
 ;;;
 (defun collect-index-files (index-directory)
-  (uiop:directory-files index-directory "*.db")
-  #+(or)
-  (let* ((success.txt (merge-pathnames "success.txt" index-directory))
-         (system-names (list-to-hash-table (split-sequence #\newline (read-file-into-string success.txt))
-                                           :test 'equal)))
-    (loop :for file :in (uiop:directory-files index-directory)
-          :when (and (equal (pathname-type file) "db")
-                     (gethash (pathname-name file) system-names))
-          :collect file)))
+  (uiop:directory-files index-directory "*.db"))
 
 (defun merge-document (dst-database database-files)
   (let ((document-id-per-database-map (make-hash-table :test 'equal)))

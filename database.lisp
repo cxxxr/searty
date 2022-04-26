@@ -23,7 +23,7 @@
 (defgeneric resolve-symbol-ids-by-symbol-name (database symbol-name))
 (defgeneric insert-symbol (database symbol-name package-name))
 (defgeneric copy-symbol-table (dst-database src-database))
-(defgeneric insert-symbol-definition (database symbol-id filename position))
+(defgeneric insert-symbol-definition (database symbol-id specifier filename position))
 (defgeneric copy-symbol-definition-table (dst-database src-database))
 (defgeneric insert-asd-system (database spec))
 (defgeneric copy-asd-systems (dst-database src-database))
@@ -235,22 +235,23 @@ ON CONFLICT(token_id) DO NOTHING"
                                :name (getf record :|name|)
                                :package (getf record :|package|))))))
 
-(defmethod insert-symbol-definition ((database sqlite3-database) symbol-id filename position)
+(defmethod insert-symbol-definition ((database sqlite3-database) symbol-id specifier filename position)
   (execute-sxql (database-connection database)
                 (sxql:insert-into :symbol_definition
                   (sxql:set= :symbol_id symbol-id
+                             :specifier specifier
                              :filename filename
                              :position position))))
 
 (defmethod copy-symbol-definition-table ((dst-database sqlite3-database) (src-database sqlite3-database))
   (dolist (record (resolve-sxql (database-connection src-database)
-                                (sxql:select (:symbol_id :filename :position)
+                                (sxql:select (:symbol_id :specifier :filename :position)
                                   (sxql:from :symbol_definition))))
-    (execute-sxql (database-connection dst-database)
-                  (sxql:insert-into :symbol_definition
-                    (sxql:set= :symbol_id (getf record :|symbol_id|)
-                               :filename (getf record :|filename|)
-                               :position (getf record :|position|))))))
+    (insert-symbol-definition dst-database
+                              (getf record :|symbol_id|)
+                              (getf record :|specifier|)
+                              (getf record :|filename|)
+                              (getf record :|position|))))
 
 (defmethod resolve-symbol-definitions ((database sqlite3-database) symbol-id)
   (mapcar (lambda (record)

@@ -35,6 +35,7 @@ CREATE INDEX symbol_name_package_index ON symbol(name, package);
 DROP TABLE IF EXISTS symbol_definition;
 CREATE TABLE symbol_definition (
   symbol_id TEXT,
+  specifier TEXT,
   filename TEXT,
   position INT
 );

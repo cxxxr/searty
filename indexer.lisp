@@ -38,10 +38,10 @@
                  (let ((symbol-id (resolve-or-insert-symbol-id *database* name package)))
                    (dolist (specifier-and-locations specifier-and-locations-list)
                      (destructuring-bind (specifier &rest locations) specifier-and-locations
-                       (declare (ignore specifier)) ; TODO
                        (loop :for (filename position) :in locations
                              :do (insert-symbol-definition *database*
                                                            symbol-id
+                                                           specifier
                                                            filename
                                                            position))))))
                 (:package

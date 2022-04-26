@@ -34,18 +34,31 @@
   (or (resolve-package-id database package-name)
       (insert-package database package-name system-id)))
 
+(defun flatten-definitions (specifier-and-locations-list)
+  (let ((acc '()))
+    (dolist (specifier-and-locations specifier-and-locations-list)
+      (destructuring-bind (specifier &rest locations) specifier-and-locations
+        (loop :for (filename position) :in locations
+              :do (push (list specifier filename position) acc))))
+    acc))
+
 (defun index-definitions (spec-definitions system-id)
   (loop :for (object . specifier-and-locations-list) :in spec-definitions
         :do (destructuring-bind (&key type name package) object
-              (let ((symbol-or-package-id
-                      (ecase type
-                        (:symbol (resolve-or-insert-symbol-id *database* name package))
-                        (:package (resolve-or-insert-package-id *database* name system-id)))))
-                (dolist (specifier-and-locations specifier-and-locations-list)
-                  (destructuring-bind (specifier &rest locations) specifier-and-locations
-                    (loop :for (filename position) :in locations
-                          :do (insert-symbol-definition *database*
-                                                        symbol-or-package-id
+              (ecase type
+                (:symbol
+                 (let ((symbol-id (resolve-or-insert-symbol-id *database* name package)))
+                   (loop :for (specifier filename position) :in (flatten-definitions specifier-and-locations-list)
+                         :do (insert-symbol-definition *database*
+                                                       symbol-id
+                                                       specifier
+                                                       filename
+                                                       position))))
+                (:package
+                 (let ((package-id (resolve-or-insert-package-id *database* name system-id)))
+                   (loop :for (specifier filename position) :in (flatten-definitions specifier-and-locations-list)
+                         :do (insert-package-definition *database*
+                                                        package-id
                                                         specifier
                                                         filename
                                                         position))))))))

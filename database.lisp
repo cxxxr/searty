@@ -25,6 +25,9 @@
 (defgeneric copy-symbol-table (dst-database src-database))
 (defgeneric insert-symbol-definition (database symbol-id specifier filename position))
 (defgeneric copy-symbol-definition-table (dst-database src-database))
+(defgeneric insert-package-definition (database package-id specifier filename position))
+(defgeneric copy-package-definition-table (dst-database src-database))
+(defgeneric resolve-package-definitions (database package-id))
 (defgeneric insert-asd-system (database spec))
 (defgeneric copy-asd-systems (dst-database src-database))
 (defgeneric resolve-package-id (database package-name))
@@ -263,6 +266,33 @@ ON CONFLICT(token_id) DO NOTHING"
                         (sxql:select (:filename :position)
                           (sxql:from :symbol_definition)
                           (sxql:where (:= :symbol_id symbol-id))))))
+
+(defmethod insert-package-definition ((database sqlite3-database) package-id specifier filename position)
+  (execute-sxql (database-connection database)
+                (sxql:insert-into :package_definition
+                  (sxql:set= :package_id package-id
+                             :specifier specifier
+                             :filename filename
+                             :position position))))
+
+(defmethod copy-package-definition-table ((dst-database sqlite3-database) (src-database sqlite3-database))
+  (dolist (record (resolve-sxql (database-connection src-database)
+                                (sxql:select (:package_id :specifier :filename :position)
+                                  (sxql:from :package_definition))))
+    (insert-package-definition dst-database
+                              (getf record :|package_id|)
+                              (getf record :|specifier|)
+                              (getf record :|filename|)
+                              (getf record :|position|))))
+
+(defmethod resolve-package-definitions ((database sqlite3-database) package-id)
+  (mapcar (lambda (record)
+            (make-definition :filename (getf record :|filename|)
+                             :position (getf record :|position|)))
+          (resolve-sxql (database-connection database)
+                        (sxql:select (:filename :position)
+                          (sxql:from :package_definition)
+                          (sxql:where (:= :package_id package-id))))))
 
 (defmethod insert-asd-system ((database sqlite3-database) spec)
   (let ((id (random-uuid)))

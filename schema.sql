@@ -53,6 +53,17 @@ CREATE TABLE symbol_definition (
 CREATE INDEX symbol_definition_symbol_id_index ON symbol_definition(symbol_id);
 CREATE INDEX symbol_definition_symbol_filename_index ON symbol_definition(filename);
 
+DROP TABLE IF EXISTS package_definition;
+CREATE TABLE package_definition (
+  package_id TEXT,
+  specifier TEXT,
+  filename TEXT,
+  position INT
+);
+
+CREATE INDEX package_definition_symbol_id_index ON package_definition(symbol_id);
+CREATE INDEX package_definition_symbol_filename_index ON package_definition(filename);
+
 DROP TABLE IF EXISTS asd_system;
 CREATE TABLE asd_system (
   id text PRIMARY KEY,

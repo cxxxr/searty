@@ -30,6 +30,16 @@ CREATE TABLE symbol (
   package TEXT
 );
 
+DROP TABLE IF EXISTS package;
+CREATE TABLE package (
+  id TEXT PRIMARY KEY,
+  name TEXT,
+  system_id TEXT
+);
+
+CREATE INDEX package_name_index ON package(name);
+CREATE INDEX package_system_id_index ON package(system_id);
+
 CREATE INDEX symbol_name_package_index ON symbol(name, package);
 
 DROP TABLE IF EXISTS symbol_definition;

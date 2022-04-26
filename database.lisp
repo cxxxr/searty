@@ -27,6 +27,8 @@
 (defgeneric copy-symbol-definition-table (dst-database src-database))
 (defgeneric insert-asd-system (database spec))
 (defgeneric copy-asd-systems (dst-database src-database))
+(defgeneric resolve-package-id (database package-name))
+(defgeneric insert-package (database package-name system-id))
 
 (defclass database ()
   ((connection :initarg :connection
@@ -263,12 +265,14 @@ ON CONFLICT(token_id) DO NOTHING"
                           (sxql:where (:= :symbol_id symbol-id))))))
 
 (defmethod insert-asd-system ((database sqlite3-database) spec)
-  (execute-sxql (database-connection database)
-                (sxql:insert-into :asd_system
-                  (sxql:set= :id (random-uuid)
-                             :name (spec-system-name spec)
-                             :filename (princ-to-string (spec-asd-file spec))
-                             :analyzed_time (spec-time spec)))))
+  (let ((id (random-uuid)))
+    (execute-sxql (database-connection database)
+                  (sxql:insert-into :asd_system
+                    (sxql:set= :id id
+                               :name (spec-system-name spec)
+                               :filename (princ-to-string (spec-asd-file spec))
+                               :analyzed_time (spec-time spec))))
+    id))
 
 (defmethod copy-asd-systems ((dst-database sqlite3-database) (src-database sqlite3-database))
   (dolist (record (resolve-sxql (database-connection src-database)
@@ -280,3 +284,30 @@ ON CONFLICT(token_id) DO NOTHING"
                                :name (getf record :|name|)
                                :filename (getf record :|filename|)
                                :analyzed_time (getf record :|analyzed_time|))))))
+
+(defmethod resolve-package-id ((database sqlite3-database) package-name)
+  (when-let ((records (resolve-sxql (database-connection database)
+                                    (sxql:select :id
+                                      (sxql:from :package)
+                                      (sxql:where (:= :name package-name))
+                                      (sxql:limit 1)))))
+    (getf (first records) :|id|)))
+
+(defmethod insert-package ((database sqlite3-database) package-name system-id)
+  (let ((id (random-uuid)))
+    (execute-sxql (database-connection database)
+                  (sxql:insert-into :package
+                    (sxql:set= :id id
+                               :name package-name
+                               :system_id system-id)))
+    id))
+
+(defmethod copy-packages ((dst-database sqlite3-database) (src-database sqlite3-database))
+  (dolist (record (resolve-sxql (database-connection src-database)
+                                (sxql:select (:id :name :system_id)
+                                  (sxql:from :package))))
+    (execute-sxql (database-connection dst-database)
+                  (sxql:insert-into :package
+                    (sxql:set= :id (getf record :|id|)
+                               :name (getf record :|name|)
+                               :system_id (getf record :|system_id|))))))

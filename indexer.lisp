@@ -30,27 +30,29 @@
   (or (resolve-symbol-id database symbol-name package-name)
       (insert-symbol database symbol-name package-name)))
 
-(defun index-definitions (spec-definitions)
+(defun resolve-or-insert-package-id (database package-name system-id)
+  (or (resolve-package-id database package-name)
+      (insert-package database package-name system-id)))
+
+(defun index-definitions (spec-definitions system-id)
   (loop :for (object . specifier-and-locations-list) :in spec-definitions
         :do (destructuring-bind (&key type name package) object
-              (ecase type
-                (:symbol
-                 (let ((symbol-id (resolve-or-insert-symbol-id *database* name package)))
-                   (dolist (specifier-and-locations specifier-and-locations-list)
-                     (destructuring-bind (specifier &rest locations) specifier-and-locations
-                       (loop :for (filename position) :in locations
-                             :do (insert-symbol-definition *database*
-                                                           symbol-id
-                                                           specifier
-                                                           filename
-                                                           position))))))
-                (:package
-                 ;; TODO
-                 )))))
+              (let ((symbol-or-package-id
+                      (ecase type
+                        (:symbol (resolve-or-insert-symbol-id *database* name package))
+                        (:package (resolve-or-insert-package-id *database* name system-id)))))
+                (dolist (specifier-and-locations specifier-and-locations-list)
+                  (destructuring-bind (specifier &rest locations) specifier-and-locations
+                    (loop :for (filename position) :in locations
+                          :do (insert-symbol-definition *database*
+                                                        symbol-or-package-id
+                                                        specifier
+                                                        filename
+                                                        position))))))))
 
 (defun index-from-spec (spec)
-  (insert-asd-system *database* spec)
-  (index-definitions (spec-definitions spec)))
+  (let ((system-id (insert-asd-system *database* spec)))
+    (index-definitions (spec-definitions spec) system-id)))
 
 (defun index-file (inverted-index file)
   (multiple-value-bind (text external-format) (read-file-into-string* file)
@@ -163,17 +165,6 @@
                                                   document-id-per-database-map))))))
     (flush-inverted-index dst-inverted-index dst-database)))
 
-(defun merge-symbol-and-definitions (dst-database database-files)
-  (dolist (database-file database-files)
-    (with-database (src-database database-file)
-      (copy-symbol-table dst-database src-database)
-      (copy-symbol-definition-table dst-database src-database))))
-
-(defun merge-asd-systems (dst-database database-files)
-  (dolist (database-file database-files)
-    (with-database (src-database database-file)
-      (copy-asd-systems dst-database src-database))))
-
 (defun merge-index-1 (output-database-file database-files)
   (with-database (dst-database output-database-file :initialize t :without-disconnect t)
     (let ((document-id-per-database-map (merge-document dst-database database-files))
@@ -182,8 +173,11 @@
                             database-files
                             token-id-map
                             document-id-per-database-map)
-      (merge-symbol-and-definitions dst-database database-files)
-      (merge-asd-systems dst-database database-files))))
+      (dolist (database-file database-files)
+        (with-database (src-database database-file)
+          (copy-symbol-table dst-database src-database)
+          (copy-symbol-definition-table dst-database src-database)
+          (copy-packages dst-database src-database))))))
 
 (defun merge-index (index-directory output-database-file &optional limit)
   (let ((database-files (collect-index-files index-directory)))

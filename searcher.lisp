@@ -181,13 +181,14 @@
   (with-input-from-string (in (document-body document))
     (loop :with pos := 0
           :for line := (read-line in)
+          :for length := (babel:string-size-in-octets line)
           :for line-number :from 1
-          :do (when (<= pos (range-start range) (+ pos (length line)))
+          :do (when (<= pos (range-start range) (+ pos length))
                 (let ((start (- (range-start range) pos))
                       (end (- (range-end range) pos)))
                   (funcall printer document line-number start end line)
                   (return)))
-              (incf pos (1+ (length line))))))
+              (incf pos (1+ length)))))
 
 (defun pretty-print-matched (matched)
   (let ((documents

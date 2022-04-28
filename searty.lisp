@@ -11,4 +11,4 @@
 (defun search-function (query)
   (with-database (*database* *quicklisp-database*)
     (multiple-value-bind (symbol-name package-name) (parse-symbol query)
-      (search-definitions symbol-name package-name))))
+      (search-symbol-definitions symbol-name package-name))))

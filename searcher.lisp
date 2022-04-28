@@ -205,18 +205,25 @@
              (matched-document-positions-map matched))
     errors))
 
-(defun search-definitions (symbol-name &optional package-name)
-  (loop :for symbol-id :in (if package-name
-                               (list (resolve-symbol-id *database* symbol-name package-name))
-                               (resolve-symbol-ids-by-symbol-name *database* symbol-name))
-        :do (loop :for definition :in (resolve-symbol-definitions *database* symbol-id)
-                  :for filename := (definition-filename definition)
-                  :for position := (definition-position definition)
-                  :for document := (first (resolve-documents-by-pathnames *database* (list filename)))
-                  :do (cond ((null document)
-                             (warn "~A is not exist" filename))
-                            (t
-                             (read-file-range
-                              document
-                              (make-range position (1+ position))
-                              :printer #'print-matched-line))))))
+(defun print-definitions (definitions)
+  (loop :for definition :in definitions
+        :for filename := (definition-filename definition)
+        :for position := (definition-position definition)
+        :for document := (first (resolve-documents-by-pathnames *database* (list filename)))
+        :do (cond ((null document)
+                   (warn "~A is not exist" filename))
+                  (t
+                   (read-file-range
+                    document
+                    (make-range position (1+ position))
+                    :printer #'print-matched-line)))))
+
+(defun search-symbol-definitions (symbol-name &optional package-name)
+  (dolist (symbol-id (if package-name
+                         (list (resolve-symbol-id *database* symbol-name package-name))
+                         (resolve-symbol-ids-by-symbol-name *database* symbol-name)))
+    (print-definitions (resolve-symbol-definitions *database* symbol-id))))
+
+(defun search-package-definitions (package-name)
+  (when-let ((package-id (resolve-package-id *database* package-name)))
+    (print-definitions (resolve-package-definitions *database* package-id))))

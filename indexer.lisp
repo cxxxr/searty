@@ -190,7 +190,8 @@
         (with-database (src-database database-file)
           (copy-symbol-table dst-database src-database)
           (copy-symbol-definition-table dst-database src-database)
-          (copy-packages dst-database src-database))))))
+          (copy-packages dst-database src-database)
+          (copy-package-definition-table dst-database src-database))))))
 
 (defun merge-index (index-directory output-database-file &optional limit)
   (let ((database-files (collect-index-files index-directory)))

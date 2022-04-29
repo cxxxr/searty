@@ -11,5 +11,5 @@ make build -j24 -k 2>&1 | tee make.log
 
 ls ../build/*.out | parallel ./searty-index.sh
 
-rm ../quicklisp.db
-./searty-merge.sh $(realpath ../index) ../quicklisp.db
+rm ../db/quicklisp.db
+./searty-merge.ros $(realpath ../index) ../db/quicklisp.db

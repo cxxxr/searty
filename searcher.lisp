@@ -219,11 +219,11 @@
                     :printer #'print-matched-line)))))
 
 (defun search-symbol-definitions (symbol-name &optional package-name)
-  (dolist (symbol-id (if package-name
-                         (list (resolve-symbol-id *database* symbol-name package-name))
-                         (resolve-symbol-ids-by-symbol-name *database* symbol-name)))
-    (print-definitions (resolve-symbol-definitions *database* symbol-id))))
+  (loop :for symbol-id :in (if package-name
+                               (list (resolve-symbol-id *database* symbol-name package-name))
+                               (resolve-symbol-ids-by-symbol-name *database* symbol-name))
+        :append (resolve-symbol-definitions *database* symbol-id)))
 
 (defun search-package-definitions (package-name)
   (when-let ((package-id (resolve-package-id *database* package-name)))
-    (print-definitions (resolve-package-definitions *database* package-id))))
+    (resolve-package-definitions *database* package-id)))

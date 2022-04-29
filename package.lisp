@@ -1,5 +1,6 @@
 (defpackage :searty
   (:use :cl :alexandria :split-sequence)
-  (:export :index-lisp-repository
+  (:export :index-system
            :merge-index
-           :search-quicklisp))
+           :search-string
+           :search-definitions))

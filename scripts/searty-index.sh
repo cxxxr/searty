@@ -14,7 +14,7 @@ fi
 log_file="$(dirname $output_file)/$(basename $output_file .db).log"
 log_dir=$(dirname $output_file)
 
-./searty-index.ros $input_file $output_file 2>&1 | tee $log_file
+./searty-index $input_file $output_file 2>&1 | tee $log_file
 
 if [ ${PIPESTATUS[0]} -eq 0 ]; then
     echo $1 >> "${log_dir}/success.txt"

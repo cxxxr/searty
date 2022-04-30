@@ -1,6 +1,6 @@
-(defpackage :searty/web
+(defpackage :searty-api
   (:use :cl))
-(in-package :searty/web)
+(in-package :searty-api)
 
 (defvar *app* (make-instance 'ningle:app))
 (defvar *handler*)

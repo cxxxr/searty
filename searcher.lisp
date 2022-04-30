@@ -205,6 +205,23 @@
              (matched-document-positions-map matched))
     errors))
 
+(defun find-line-start-position (text pos)
+  (loop :for i :downfrom (1- pos) :to 0
+        :for c := (char text i)
+        :until (char= c #\newline)
+        :finally (return (if (minusp i) 0 (1+ i)))))
+
+(defun get-matched-line (text position)
+  (let* ((position (babel:string-size-in-octets text :end position))
+         (start-line-pos (find-line-start-position text position))
+         (end-line-pos (position #\newline text :start position)))
+    (let ((start
+            (babel:string-size-in-octets text :end start-line-pos))
+          (end
+            (when end-line-pos
+              (babel:string-size-in-octets text :end end-line-pos))))
+      (subseq text start end))))
+
 (defun print-definitions (definitions)
   (loop :for definition :in definitions
         :for filename := (definition-filename definition)
@@ -213,10 +230,9 @@
         :do (cond ((null document)
                    (warn "~A is not exist" filename))
                   (t
-                   (read-file-range
-                    document
-                    (make-range position (1+ position))
-                    :printer #'print-matched-line)))))
+                   (format t "~A:~A~%"
+                           filename
+                           (get-matched-line (document-body document) position))))))
 
 (defun search-symbol-definitions (symbol-name &optional package-name)
   (loop :for symbol-id :in (if package-name

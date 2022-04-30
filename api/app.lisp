@@ -16,6 +16,9 @@
     (unless query
       (setf (lack.response:response-status ningle:*response*) 400)
       (return-from search-query))
+    (setf (lack.response:response-headers ningle:*response*)
+          (append (lack.response:response-headers ningle:*response*)
+                  (list :access-control-allow-origin "*")))
     (render-json (searty:search-definitions query))))
 
 (defun start ()

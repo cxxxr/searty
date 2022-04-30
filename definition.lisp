@@ -1,3 +1,3 @@
 (in-package :searty)
 
-(defstruct definition filename position)
+(defstruct definition specifier filename position)

@@ -9,7 +9,8 @@
   (st-json:write-json-to-string
    (loop :for definition :in definitions
          :collect (st-json:jso "filename" (searty::definition-filename definition)
-                               "position" (searty::definition-position definition)))))
+                               "position" (searty::definition-position definition)
+                               "specifier" (searty::definition-specifier definition)))))
 
 (defun search-query (params)
   (let ((query (cdr (assoc "query" params :test #'string=))))

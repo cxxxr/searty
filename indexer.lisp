@@ -78,15 +78,12 @@
           (insert-token *database* token))
         (inverted-index-insert inverted-index (document-id document) token)))))
 
-(defun index-file-with-time (inverted-index file)
-  (format t "~&~A " file)
-  (let ((ms (measure-time (index-file inverted-index file))))
-    (format t "[~D ms]~%" ms)))
-
 (defun index-lisp-files (files)
   (let ((inverted-index (make-inverted-index)))
     (dolist (file files)
-      (index-file-with-time inverted-index file))
+      (format t "~&~A " file)
+      (let ((ms (measure-time (index-file inverted-index file))))
+        (format t "[~D ms]~%" ms)))
     (flush-inverted-index inverted-index)))
 
 (defun index-system (filename database-file)

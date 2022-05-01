@@ -72,7 +72,8 @@
       (format t "~&~A " file)
       (let ((ms (measure-time (index-file inverted-index
                                           file
-                                          (uiop:pathname-directory-pathname (spec-asd-file spec))))))
+                                          (uiop:pathname-parent-directory-pathname
+                                           (uiop:pathname-directory-pathname (spec-asd-file spec)))))))
         (format t "[~D ms]~%" ms)))
     (flush-inverted-index inverted-index)))
 

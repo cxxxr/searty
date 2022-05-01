@@ -26,14 +26,6 @@
            (or (try :utf-8)
                (try :cp932)))))
 
-(defun resolve-or-insert-symbol-id (database symbol-name package-name)
-  (or (resolve-symbol-id database symbol-name package-name)
-      (insert-symbol database symbol-name package-name)))
-
-(defun resolve-or-insert-package-id (database package-name system-id)
-  (or (resolve-package-id database package-name)
-      (insert-package database package-name system-id)))
-
 (defun flatten-definitions (specifier-and-locations-list)
   (let ((acc '()))
     (dolist (specifier-and-locations specifier-and-locations-list)

@@ -63,13 +63,9 @@
                                                         filename
                                                         position))))))))
 
-(defun index-from-spec (spec)
-  (let ((system-id (insert-asd-system *database* spec)))
-    (index-definitions (spec-definitions spec) system-id)))
-
-(defun index-file (inverted-index file)
+(defun index-file (inverted-index file base-directory)
   (multiple-value-bind (text external-format) (read-file-into-string* file)
-    (let* ((document (create-document file external-format text))
+    (let* ((document (create-document (enough-namestring file base-directory) external-format text))
            (tokens (tokenize-lisp text))
            (tokens (trigram-tokens tokens)))
       (dolist (token tokens)
@@ -78,18 +74,24 @@
           (insert-token *database* token))
         (inverted-index-insert inverted-index (document-id document) token)))))
 
-(defun index-lisp-files (files)
+(defun index-lisp-files (spec)
   (let ((inverted-index (make-inverted-index)))
-    (dolist (file files)
+    (dolist (file (spec-files spec))
       (format t "~&~A " file)
-      (let ((ms (measure-time (index-file inverted-index file))))
+      (let ((ms (measure-time (index-file inverted-index
+                                          file
+                                          (uiop:pathname-directory-pathname (spec-asd-file spec))))))
         (format t "[~D ms]~%" ms)))
     (flush-inverted-index inverted-index)))
+
+(defun index-from-spec (spec)
+  (index-lisp-files spec)
+  (let ((system-id (insert-asd-system *database* spec)))
+    (index-definitions (spec-definitions spec) system-id)))
 
 (defun index-system (filename database-file)
   (with-database (*database* database-file :initialize t :without-disconnect t)
     (let ((spec (load-spec filename)))
-      (index-lisp-files (spec-files spec))
       (index-from-spec spec))))
 
 ;;;

@@ -33,10 +33,11 @@
               :initial-contents (coerce bytes 'list)))
 
 (defmacro measure-time (form)
-  (with-unique-names (start)
-    `(let ((,start (get-internal-real-time)))
-       ,form
-       (floor (- (get-internal-real-time) ,start) 1000))))
+  (with-unique-names (start result)
+    `(let ((,start (get-internal-real-time))
+           (,result ,form))
+       (values (floor (- (get-internal-real-time) ,start) 1000)
+               ,result))))
 
 (defun basename (filename)
   (string-right-trim "/"

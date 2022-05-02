@@ -72,23 +72,33 @@
         ;; NOTE: このresolve-token, insert-token内でtoken-idがセットされる
         (unless (resolve-token *database* token)
           (insert-token *database* token))
-        (inverted-index-insert inverted-index (document-id document) token)))))
+        (inverted-index-insert inverted-index (document-id document) token))
+      document)))
 
-(defun index-lisp-files (spec)
-  (let ((inverted-index (make-inverted-index)))
-    (dolist (file (spec-files spec))
-      (format t "~&~A " file)
-      (let ((ms (measure-time (index-file inverted-index file))))
-        (format t "[~D ms]~%" ms)))
-    (flush-inverted-index inverted-index)))
+(defun index-file-with-time (inverted-index file)
+  (format t "~&~A " file)
+  (multiple-value-bind (time document)
+      (measure-time (index-file inverted-index file))
+    (format t "[~D ms]~%" time)
+    document))
+
+(defun index-files (inverted-index files)
+  (dolist (file files)
+    (index-file-with-time inverted-index file)))
 
 (defun index-from-spec (spec)
-  (let ((*root-directory*
-          (uiop:pathname-parent-directory-pathname
-           (uiop:pathname-directory-pathname (spec-asd-file spec))))
-        (*document-table* (make-hash-table :test 'equal)))
-    (index-lisp-files spec)
-    (let ((system-id (insert-asd-system *database* spec)))
+  (let* ((*root-directory*
+           (uiop:pathname-parent-directory-pathname
+            (uiop:pathname-directory-pathname (spec-asd-file spec))))
+         (*document-table* (make-hash-table :test 'equal))
+         (inverted-index (make-inverted-index))
+         (asd-document (index-file-with-time inverted-index (spec-asd-file spec))))
+    (index-files inverted-index (spec-files spec))
+    (flush-inverted-index inverted-index)
+    (let ((system-id (insert-asd-system *database*
+                                        (spec-system-name spec)
+                                        (document-id asd-document)
+                                        (spec-time spec))))
       (index-definitions (spec-definitions spec) system-id))))
 
 (defun index-system (filename database-file)

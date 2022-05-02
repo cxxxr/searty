@@ -68,6 +68,6 @@ DROP TABLE IF EXISTS asd_system;
 CREATE TABLE asd_system (
   id text PRIMARY KEY,
   name TEXT,
-  filename TEXT,
+  document_id INT,
   analyzed_time REAL
 );

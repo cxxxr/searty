@@ -28,7 +28,7 @@
 (defgeneric insert-package-definition (database package-id specifier document-id position))
 (defgeneric copy-package-definition-table (dst-database src-database document-id-map))
 (defgeneric resolve-package-definitions (database package-id))
-(defgeneric insert-asd-system (database spec))
+(defgeneric insert-asd-system (database name document-id analyzed-time))
 (defgeneric copy-asd-systems (dst-database src-database))
 (defgeneric resolve-package-id (database package-name))
 (defgeneric insert-package (database package-name system-id))
@@ -298,14 +298,14 @@ ON CONFLICT(token_id) DO NOTHING"
                           (sxql:from :package_definition)
                           (sxql:where (:= :package_id package-id))))))
 
-(defmethod insert-asd-system ((database sqlite3-database) spec)
+(defmethod insert-asd-system ((database sqlite3-database) name document-id analyzed-time)
   (let ((id (random-uuid)))
     (execute-sxql (database-connection database)
                   (sxql:insert-into :asd_system
                     (sxql:set= :id id
-                               :name (spec-system-name spec)
-                               :filename (princ-to-string (spec-asd-file spec))
-                               :analyzed_time (spec-time spec))))
+                               :name name
+                               :document_id document-id
+                               :analyzed_time analyzed-time)))
     id))
 
 (defmethod copy-asd-systems ((dst-database sqlite3-database) (src-database sqlite3-database))

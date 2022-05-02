@@ -1,5 +1,8 @@
 (in-package :searty)
 
+(defvar *root-directory*)
+(defvar *document-table*)
+
 (defun flush-inverted-index (inverted-index &optional (database *database*))
   (flet ((body ()
            (do-inverted-index (token-id locations inverted-index)
@@ -15,7 +18,8 @@
   (let ((document (make-document :pathname pathname :external-format external-format :body text)))
     (insert-document *database* document)
     (let ((id (resolve-document-id-by-pathname *database* pathname)))
-      (setf (document-id document) id))
+      (setf (document-id document) id)
+      (setf (gethash pathname *document-table*) id))
     document))
 
 (defun read-file-into-string* (file)
@@ -26,12 +30,16 @@
            (or (try :utf-8)
                (try :cp932)))))
 
-(defun flatten-definitions (specifier-and-locations-list)
+(defun normalize-definitions (specifier-and-locations-list)
   (let ((acc '()))
     (dolist (specifier-and-locations specifier-and-locations-list)
       (destructuring-bind (specifier &rest locations) specifier-and-locations
         (loop :for (filename position) :in locations
-              :do (push (list specifier filename position) acc))))
+              :do (push (list specifier
+                              (gethash (enough-namestring filename *root-directory*)
+                                       *document-table*)
+                              position)
+                        acc))))
     acc))
 
 (defun index-definitions (spec-definitions system-id)
@@ -40,24 +48,24 @@
               (ecase type
                 (:symbol
                  (let ((symbol-id (resolve-or-insert-symbol-id *database* name package)))
-                   (loop :for (specifier filename position) :in (flatten-definitions specifier-and-locations-list)
+                   (loop :for (specifier document-id position) :in (normalize-definitions specifier-and-locations-list)
                          :do (insert-symbol-definition *database*
                                                        symbol-id
                                                        specifier
-                                                       filename
+                                                       document-id
                                                        position))))
                 (:package
                  (let ((package-id (resolve-or-insert-package-id *database* name system-id)))
-                   (loop :for (specifier filename position) :in (flatten-definitions specifier-and-locations-list)
+                   (loop :for (specifier document-id position) :in (normalize-definitions specifier-and-locations-list)
                          :do (insert-package-definition *database*
                                                         package-id
                                                         specifier
-                                                        filename
+                                                        document-id
                                                         position))))))))
 
-(defun index-file (inverted-index file base-directory)
+(defun index-file (inverted-index file)
   (multiple-value-bind (text external-format) (read-file-into-string* file)
-    (let* ((document (create-document (enough-namestring file base-directory) external-format text))
+    (let* ((document (create-document (enough-namestring file *root-directory*) external-format text))
            (tokens (tokenize-lisp text))
            (tokens (trigram-tokens tokens)))
       (dolist (token tokens)
@@ -70,17 +78,18 @@
   (let ((inverted-index (make-inverted-index)))
     (dolist (file (spec-files spec))
       (format t "~&~A " file)
-      (let ((ms (measure-time (index-file inverted-index
-                                          file
-                                          (uiop:pathname-parent-directory-pathname
-                                           (uiop:pathname-directory-pathname (spec-asd-file spec)))))))
+      (let ((ms (measure-time (index-file inverted-index file))))
         (format t "[~D ms]~%" ms)))
     (flush-inverted-index inverted-index)))
 
 (defun index-from-spec (spec)
-  (index-lisp-files spec)
-  (let ((system-id (insert-asd-system *database* spec)))
-    (index-definitions (spec-definitions spec) system-id)))
+  (let ((*root-directory*
+          (uiop:pathname-parent-directory-pathname
+           (uiop:pathname-directory-pathname (spec-asd-file spec))))
+        (*document-table* (make-hash-table :test 'equal)))
+    (index-lisp-files spec)
+    (let ((system-id (insert-asd-system *database* spec)))
+      (index-definitions (spec-definitions spec) system-id))))
 
 (defun index-system (filename database-file)
   (with-database (*database* database-file :initialize t :without-disconnect t)
@@ -161,8 +170,7 @@
                                         (replace-id-from-inverted-index
                                          src-inverted-index
                                          token-id-map
-                                         (gethash database-name
-                                                  document-id-per-database-map))))))
+                                         (gethash database-name document-id-per-database-map))))))
     (flush-inverted-index dst-inverted-index dst-database)))
 
 (defun merge-index-1 (output-database-file database-files)
@@ -173,12 +181,13 @@
                             database-files
                             token-id-map
                             document-id-per-database-map)
-      (dolist (database-file database-files)
-        (with-database (src-database database-file)
-          (copy-symbol-table dst-database src-database)
-          (copy-symbol-definition-table dst-database src-database)
-          (copy-packages dst-database src-database)
-          (copy-package-definition-table dst-database src-database))))))
+      (loop :for database-file :in database-files
+            :for document-id-map := (gethash (pathname-name database-file) document-id-per-database-map)
+            :do (with-database (src-database database-file)
+                  (copy-symbol-table dst-database src-database)
+                  (copy-symbol-definition-table dst-database src-database document-id-map)
+                  (copy-packages dst-database src-database)
+                  (copy-package-definition-table dst-database src-database document-id-map))))))
 
 (defun merge-index (index-directory output-database-file &optional limit)
   (let ((database-files (collect-index-files index-directory)))

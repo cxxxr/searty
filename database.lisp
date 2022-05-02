@@ -23,10 +23,10 @@
 (defgeneric resolve-symbol-ids-by-symbol-name (database symbol-name))
 (defgeneric insert-symbol (database symbol-name package-name))
 (defgeneric copy-symbol-table (dst-database src-database))
-(defgeneric insert-symbol-definition (database symbol-id specifier filename position))
-(defgeneric copy-symbol-definition-table (dst-database src-database))
-(defgeneric insert-package-definition (database package-id specifier filename position))
-(defgeneric copy-package-definition-table (dst-database src-database))
+(defgeneric insert-symbol-definition (database symbol-id specifier document-id position))
+(defgeneric copy-symbol-definition-table (dst-database src-database document-id-map))
+(defgeneric insert-package-definition (database package-id specifier document-id position))
+(defgeneric copy-package-definition-table (dst-database src-database document-id-map))
 (defgeneric resolve-package-definitions (database package-id))
 (defgeneric insert-asd-system (database spec))
 (defgeneric copy-asd-systems (dst-database src-database))
@@ -240,25 +240,26 @@ ON CONFLICT(token_id) DO NOTHING"
                                :name (getf record :|name|)
                                :package (getf record :|package|))))))
 
-(defmethod insert-symbol-definition ((database sqlite3-database) symbol-id specifier filename position)
+(defmethod insert-symbol-definition ((database sqlite3-database) symbol-id specifier document-id position)
   (execute-sxql (database-connection database)
                 (sxql:insert-into :symbol_definition
                   (sxql:set= :symbol_id symbol-id
                              :specifier specifier
-                             :filename filename
+                             :document_id document-id
                              :position position))))
 
-(defmethod copy-symbol-definition-table ((dst-database sqlite3-database) (src-database sqlite3-database))
+(defmethod copy-symbol-definition-table ((dst-database sqlite3-database) (src-database sqlite3-database) document-id-map)
   (dolist (record (resolve-sxql (database-connection src-database)
-                                (sxql:select (:symbol_id :specifier :filename :position)
+                                (sxql:select (:symbol_id :specifier :document_id :position)
                                   (sxql:from :symbol_definition))))
     (insert-symbol-definition dst-database
                               (getf record :|symbol_id|)
                               (getf record :|specifier|)
-                              (getf record :|filename|)
+                              (gethash (getf record :|document_id|) document-id-map)
                               (getf record :|position|))))
 
 (defmethod resolve-symbol-definitions ((database sqlite3-database) symbol-id)
+  #+TODO
   (mapcar (lambda (record)
             (make-definition :filename (getf record :|filename|)
                              :position (getf record :|position|)
@@ -268,25 +269,26 @@ ON CONFLICT(token_id) DO NOTHING"
                           (sxql:from :symbol_definition)
                           (sxql:where (:= :symbol_id symbol-id))))))
 
-(defmethod insert-package-definition ((database sqlite3-database) package-id specifier filename position)
+(defmethod insert-package-definition ((database sqlite3-database) package-id specifier document-id position)
   (execute-sxql (database-connection database)
                 (sxql:insert-into :package_definition
                   (sxql:set= :package_id package-id
                              :specifier specifier
-                             :filename filename
+                             :document_id document-id
                              :position position))))
 
-(defmethod copy-package-definition-table ((dst-database sqlite3-database) (src-database sqlite3-database))
+(defmethod copy-package-definition-table ((dst-database sqlite3-database) (src-database sqlite3-database) document-id-map)
   (dolist (record (resolve-sxql (database-connection src-database)
-                                (sxql:select (:package_id :specifier :filename :position)
+                                (sxql:select (:package_id :specifier :document_id :position)
                                   (sxql:from :package_definition))))
     (insert-package-definition dst-database
-                              (getf record :|package_id|)
-                              (getf record :|specifier|)
-                              (getf record :|filename|)
-                              (getf record :|position|))))
+                               (getf record :|package_id|)
+                               (getf record :|specifier|)
+                               (gethash (getf record :|document_id|) document-id-map)
+                               (getf record :|position|))))
 
 (defmethod resolve-package-definitions ((database sqlite3-database) package-id)
+  #+TODO
   (mapcar (lambda (record)
             (make-definition :filename (getf record :|filename|)
                              :position (getf record :|position|)

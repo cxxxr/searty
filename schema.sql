@@ -66,7 +66,7 @@ CREATE INDEX package_definition_symbol_document_id_index ON package_definition(d
 
 DROP TABLE IF EXISTS asd_system;
 CREATE TABLE asd_system (
-  id text PRIMARY KEY,
+  id TEXT PRIMARY KEY,
   name TEXT,
   document_id INT,
   analyzed_time REAL

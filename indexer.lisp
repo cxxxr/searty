@@ -197,7 +197,8 @@
                   (copy-symbol-table dst-database src-database)
                   (copy-symbol-definition-table dst-database src-database document-id-map)
                   (copy-packages dst-database src-database)
-                  (copy-package-definition-table dst-database src-database document-id-map))))))
+                  (copy-package-definition-table dst-database src-database document-id-map)
+                  (copy-asd-systems dst-database src-database document-id-map))))))
 
 (defun merge-index (index-directory output-database-file &optional limit)
   (let ((database-files (collect-index-files index-directory)))

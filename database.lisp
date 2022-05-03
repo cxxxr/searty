@@ -29,7 +29,7 @@
 (defgeneric copy-package-definition-table (dst-database src-database document-id-map))
 (defgeneric resolve-package-definitions (database package-id))
 (defgeneric insert-asd-system (database name document-id analyzed-time))
-(defgeneric copy-asd-systems (dst-database src-database))
+(defgeneric copy-asd-systems (dst-database src-database document-id-map))
 (defgeneric resolve-package-id (database package-name))
 (defgeneric insert-package (database package-name system-id))
 
@@ -308,15 +308,15 @@ ON CONFLICT(token_id) DO NOTHING"
                                :analyzed_time analyzed-time)))
     id))
 
-(defmethod copy-asd-systems ((dst-database sqlite3-database) (src-database sqlite3-database))
+(defmethod copy-asd-systems ((dst-database sqlite3-database) (src-database sqlite3-database) document-id-map)
   (dolist (record (resolve-sxql (database-connection src-database)
-                                (sxql:select (:id :name :filename :analyzed_time)
+                                (sxql:select (:id :name :document_id :analyzed_time)
                                   (sxql:from :asd_system))))
     (execute-sxql (database-connection dst-database)
                   (sxql:insert-into :asd_system
                     (sxql:set= :id (getf record :|id|)
                                :name (getf record :|name|)
-                               :filename (getf record :|filename|)
+                               :document_id (gethash (getf record :|document_id|) document-id-map)
                                :analyzed_time (getf record :|analyzed_time|))))))
 
 (defmethod resolve-package-id ((database sqlite3-database) package-name)

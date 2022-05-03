@@ -100,7 +100,7 @@
 
 (defun search-and (query)
   (let ((tokens (mapcar (curry #'resolve-token *database*)
-                        (mapcan #'tokenize-trigram (tokenize-lisp query)))))
+                        (tokenize query :start-boundary nil :end-boundary nil))))
     (unless (some #'null tokens)
       (let* ((inverted-index (resolve-inverted-index-by-token-ids *database*
                                                                   (mapcar #'token-id tokens)))
@@ -133,11 +133,9 @@
 (defun search-phrase (query &key start-boundary end-boundary)
   (let ((matched (make-matched))
         (tokens (mapcar (curry #'resolve-token *database*)
-                        (mapcan (lambda (token)
-                                  (tokenize-trigram token
-                                                    :start-boundary start-boundary
-                                                    :end-boundary end-boundary))
-                                (tokenize-lisp query)))))
+                        (tokenize query
+                                  :start-boundary start-boundary
+                                  :end-boundary end-boundary))))
     (unless (some #'null tokens)
       (let* ((inverted-index (resolve-inverted-index-by-token-ids
                               *database*

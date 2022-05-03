@@ -33,7 +33,14 @@
                              (token-position token))
           :collect (make-token :term term :kind kind :position pos))))
 
-(defun trigram-tokens (tokens)
+(defun trigram-tokens (tokens &key start-boundary end-boundary)
   (mapcan (lambda (token)
-            (tokenize-trigram token :start-boundary t :end-boundary t))
+            (tokenize-trigram token
+                              :start-boundary start-boundary
+                              :end-boundary end-boundary))
           tokens))
+
+(defun tokenize (text &key (start-boundary t) (end-boundary t))
+  (trigram-tokens (tokenize-lisp text)
+                  :start-boundary start-boundary
+                  :end-boundary end-boundary))

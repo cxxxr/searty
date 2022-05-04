@@ -10,7 +10,7 @@ root_directory=$2
 output_file=$3
 
 log_dir=$(dirname $output_file)
-log_file="${log_dir}/$(basename $output_file .out).log"
+log_file="${log_dir}/$(basename $output_file .json).log"
 
 ros dynamic-space-size=4gb ../lisp-analyzer/lisp-analyzer.lisp $@ 2>&1 | tee $log_file
 

@@ -41,7 +41,10 @@
                        (uiop:ensure-directory-pathname
                         (merge-pathnames (release-prefix release) dist-directory))))
                  (loop :for system :in systems
-                       :for asd-file := (find (system-system-file system) (release-system-files release) :key #'pathname-name :test #'equal)
+                       :for asd-file := (find (system-system-file system)
+                                              (release-system-files release)
+                                              :key #'pathname-name
+                                              :test #'equal)
                        :do (setf (gethash (system-system-name system) system-name-file-map)
                                  (merge-pathnames asd-file project-directory)))))
              releases-map)
@@ -49,6 +52,84 @@
 
 (defun find-asd-file (dist-directory system-name)
   (gethash system-name (make-system-map dist-directory)))
+
+;;;
+(defstruct symbol-identifier (type "symbol") name package)
+(defstruct package-identifier (type "package") name)
+(defstruct location specifier file position)
+(defstruct definition identifier locations)
+(defstruct json
+  system-name
+  asd-file
+  files
+  definitions
+  time)
+
+(defun class-instance-to-alist (instance)
+  (loop :for slot-definition :in (sb-mop:class-direct-slots (class-of instance))
+        :for slot-name := (sb-mop:slot-definition-name slot-definition)
+        :for slot-value := (slot-value instance slot-name)
+        :collect (cons slot-name slot-value)))
+
+(defun snake-case (symbol)
+  (substitute #\_ #\- (string-downcase symbol)))
+
+(defmethod encode-json ((instance structure-object) stream)
+  (write-char #\{ stream)
+  (loop :for (slot-name . slot-value) :in (class-instance-to-alist instance)
+        :for firstp := t :then nil
+        :do (unless firstp (write-string ", " stream))
+            (format stream "\"~A\": " (snake-case slot-name))
+            (encode-json slot-value stream))
+  (write-char #\} stream))
+
+(defmethod encode-json ((list list) stream)
+  (write-char #\[ stream)
+  (loop :for item :in list
+        :for firstp := t :then nil
+        :do (unless firstp (write-string ", " stream))
+            (encode-json item stream))
+  (write-char #\] stream))
+
+(defparameter *char-replacements*
+  '(#\\ "\\\\"
+    #\" "\\\""
+    #\Backspace "\\b"
+    #\Page "\\f"
+    #\Newline "\\n"
+    #\Return "\\r"
+    #\Tab "\\t"))
+
+(defun write-surrogate-pair-escape (code stream)
+  (let ((upper (+ (ldb (byte 10 10) (- code #x10000))
+                  #xD800))
+        (lower (+ (ldb (byte 10 0) (- code #x10000))
+                  #xDC00)))
+    (format stream "\\u~4,'0X\\u~4,'0X" upper lower)))
+
+(defmethod encode-json ((string string) stream)
+  (write-char #\" stream)
+  (loop :for char :across string
+        :for replacement := (getf *char-replacements* char)
+        :do (cond (replacement (write-string replacement stream))
+                  ((<= #x0000 (char-code char) #x001F)
+                   (format stream "\\u~4,'0X" (char-code char)))
+                  ;; Non-BMP characters must be escaped as a UTF-16 surrogate pair.
+                  ((<= #x010000 (char-code char) #x10FFFF)
+                   (write-surrogate-pair-escape (char-code char) stream))
+                  (t (write-char char stream))))
+  (write-char #\" stream)
+  (values))
+
+(defmethod encode-json ((pathname pathname) stream)
+  (encode-json (namestring pathname) stream))
+
+(defmethod encode-json ((value float) stream)
+  (let ((*read-default-float-format* 'double-float))
+    (format stream "~F" (coerce value 'double-float))))
+
+(defmethod encode-json ((value integer) stream)
+  (princ value stream))
 
 ;;;
 (defun call-with-asdf (root-directory function)
@@ -106,43 +187,41 @@
 (defun defpackage-name (form)
   (second form))
 
-(defun parse-location (location)
+(defun parse-location (specifier location)
   (when (and (consp location)
              (eq :location (first location)))
     (let ((file (getf (second location) :file))
           (position (getf (third location) :position)))
       (when (and file position)
-        (list file position)))))
+        (make-location :specifier specifier :file file :position position)))))
 
 (defun coerce-to-symbol (x)
   (etypecase x
     (string (make-symbol x))
     (symbol x)))
 
-(defun find-definitions (symbol)
+(defun find-locations (symbol)
   (loop :for ((specifier name) location) :in (swank/backend:find-definitions (coerce-to-symbol symbol))
-        :for loc := (parse-location location)
+        :for loc := (parse-location (string specifier) location)
         :when loc
-        :collect (list (string specifier) loc)))
+        :collect :it))
 
 (defun encode-symbol (symbol)
-  (list :type :symbol :name (symbol-name symbol) :package (package-name (symbol-package symbol))))
+  (make-symbol-identifier :name (symbol-name symbol) :package (package-name (symbol-package symbol))))
 
 (defun encode-package (package)
-  (list :type :package :name (package-name package)))
+  (make-package-identifier :name (package-name package)))
 
-(defun collect-definitions (package-name)
-  (let ((symbol-definitions-table (make-hash-table :test 'equal))
-        (package (find-package package-name)))
+(defun collect-definitions (package-name definitions)
+  (let ((package (find-package package-name)))
     (do-symbols (symbol package-name)
       (when (eq package (symbol-package symbol))
-        (setf (gethash symbol symbol-definitions-table)
-              (find-definitions symbol))))
-    (cons (cons (encode-package package)
-                (find-definitions package-name))
-          (loop :for symbol :being :each :hash-key :of symbol-definitions-table
-                :using (:hash-value definitions)
-                :collect (cons (encode-symbol symbol) definitions)))))
+        (push (make-definition :identifier (encode-symbol symbol)
+                               :locations (find-locations symbol))
+              definitions)))
+    (push (make-definition :identifier (encode-package package)
+                           :locations (find-locations package-name))
+          definitions)))
 
 (defun main (system-name root-directory output-file)
   (let ((start-time (get-internal-real-time)))
@@ -156,19 +235,19 @@
           (dolist (file files)
             (dolist (defpackage-form (collect-defpackage-forms file))
               (let ((package-name (defpackage-name defpackage-form)))
-                (setf definitions (nconc (collect-definitions package-name) definitions)))))
+                (setf definitions (collect-definitions package-name definitions)))))
           (with-open-file (out output-file
                                :direction :output
                                :if-exists :supersede
                                :if-does-not-exist :create)
-            (pprint `(:system-name ,system-name
-                      :asd-file ,asd-file
-                      :files ,files
-                      :definitions ,definitions
-                      :time ,(float (/ (- (get-internal-real-time) start-time)
-                                       internal-time-units-per-second)))
-                    out)
-            (terpri out))))))
+            (encode-json (make-json
+                          :system-name system-name
+                          :asd-file asd-file
+                          :files files
+                          :definitions definitions
+                          :time (float (/ (- (get-internal-real-time) start-time)
+                                          internal-time-units-per-second)))
+                         out))))))
   0)
 
 ;; TODO:

@@ -40,7 +40,7 @@ exec ros -Q -- $0 "$@"
   (ppcre:regex-replace-all "/" name "_"))
 
 (defun system-to-out-name (system-name directory)
-  (make-pathname :name (escape-system-name system-name) :type "out" :defaults directory))
+  (make-pathname :name (escape-system-name system-name) :type "json" :defaults directory))
 
 (defun system-to-db-name (system-name directory)
   (make-pathname :name (escape-system-name system-name) :type "db" :defaults directory))

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/cxxxr/searty/lib/database"
+	"github.com/cxxxr/searty/lib/invertedindex"
 	"github.com/cxxxr/searty/lib/primitive"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -18,31 +19,11 @@ func isExists(filename string) bool {
 	return err == nil
 }
 
-func Test_index(t *testing.T) {
-	writer := bytes.NewBuffer(nil)
-
-	databaseFile, err := os.CreateTemp("", "searty.sqlite3.*")
-	defer databaseFile.Close()
-	require.Nil(t, err)
-	indexer := New()
-	err = indexer.Index("testdata/cl-ppcre.json", databaseFile.Name())
-	require.Nil(t, err)
-
-	database := database.New(databaseFile.Name())
-	require.Nil(t, database.Connect())
-
-	docs, err := database.ResolveAllDocuments()
-	require.Nil(t, err)
-
-	assert.Equal(t, len(docs), 17)
-
-	for _, doc := range docs {
-		fmt.Fprintln(writer, doc.Filename)
-	}
-
-	tokens, err := database.ResolveAllTokens()
-	assert.Nil(t, err)
-
+func resolveInvertedIndex(
+	t *testing.T,
+	database *database.Database,
+	tokens []database.Token,
+) *invertedindex.InvertedIndex {
 	tokenIds := make([]primitive.TokenId, len(tokens))
 	for i, token := range tokens {
 		tokenIds[i] = token.Id
@@ -50,10 +31,50 @@ func Test_index(t *testing.T) {
 
 	invertedIndex, err := database.ResolveInvertedIndex(tokenIds)
 	assert.Nil(t, err)
+	return invertedIndex
+}
+
+func resolveAllTokens(t *testing.T, database *database.Database) []database.Token {
+	tokens, err := database.ResolveAllTokens()
+	assert.Nil(t, err)
 
 	sort.Slice(tokens, func(i, j int) bool {
 		return tokens[i].Term < tokens[j].Term
 	})
+
+	return tokens
+}
+
+func createTestingDatabaseFile(t *testing.T) string {
+	databaseFile, err := os.CreateTemp("", "searty.sqlite3.*")
+	require.Nil(t, err)
+	defer databaseFile.Close()
+	return databaseFile.Name()
+}
+
+func Test_index(t *testing.T) {
+	databaseFile := createTestingDatabaseFile(t)
+
+	// Do
+	err := New().Index("testdata/cl-ppcre.json", databaseFile)
+	require.Nil(t, err)
+
+	// prepare database connection
+	database := database.New(databaseFile)
+	require.Nil(t, database.Connect())
+
+	writer := bytes.NewBuffer(nil)
+
+	// snapshot documents
+	docs, err := database.ResolveAllDocuments()
+	require.Nil(t, err)
+	for _, doc := range docs {
+		fmt.Fprintln(writer, doc.Filename)
+	}
+
+	// snapshot inverted index
+	tokens := resolveAllTokens(t, database)
+	invertedIndex := resolveInvertedIndex(t, database, tokens)
 	for _, token := range tokens {
 		postingList, _ := invertedIndex.Get(token.Id)
 		fmt.Fprintf(writer, "%#v: count = %d\n", token.Term, postingList.Count())
@@ -67,6 +88,7 @@ func Test_index(t *testing.T) {
 		})
 	}
 
+	// snapshot test
 	if isExists(".snapshot") {
 		data, err := os.ReadFile(".snapshot")
 		assert.Nil(t, err)

@@ -1,12 +1,12 @@
 DROP TABLE IF EXISTS document;
 CREATE TABLE document (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  pathname TEXT,
+  filename TEXT,
   external_format TEXT,
   body text
 );
 
-CREATE INDEX document_pathname_index ON document(pathname);
+CREATE INDEX document_filename_index ON document(filename);
 
 DROP TABLE IF EXISTS token;
 CREATE TABLE token (

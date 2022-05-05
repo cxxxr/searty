@@ -61,7 +61,7 @@ func (i *Indexer) indexFile(file string, database *database.Database) error {
 			id := primitive.TokenId(uuid.NewString())
 			database.InsertToken(id, term)
 		}
-		i.index.Insert(id, doc, pos)
+		i.index.Insert(id, doc.Id, pos)
 	}
 
 	return nil

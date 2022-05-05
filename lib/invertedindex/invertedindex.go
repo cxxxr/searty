@@ -16,13 +16,13 @@ func New() *InvertedIndex {
 	}
 }
 
-func (index *InvertedIndex) Insert(tokenId primitive.TokenId, document *primitive.Document, pos int) {
+func (index *InvertedIndex) Insert(tokenId primitive.TokenId, docId primitive.DocumentId, pos int) {
 	postinglist, ok := index.table[tokenId]
 	if !ok {
 		postinglist = newPostingList()
 		index.table[tokenId] = postinglist
 	}
-	postinglist.insert(pos, document.Id)
+	postinglist.insert(pos, docId)
 }
 
 func (index *InvertedIndex) TokenIds() []primitive.TokenId {

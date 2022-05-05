@@ -3,20 +3,20 @@ package invertedindex
 import (
 	"fmt"
 
-	"github.com/cxxxr/searty/lib/entity"
+	"github.com/cxxxr/searty/lib/primitive"
 )
 
 type InvertedIndex struct {
-	table map[entity.TokenId]*PostingList
+	table map[primitive.TokenId]*PostingList
 }
 
 func New() *InvertedIndex {
 	return &InvertedIndex{
-		table: make(map[entity.TokenId]*PostingList),
+		table: make(map[primitive.TokenId]*PostingList),
 	}
 }
 
-func (index *InvertedIndex) Insert(tokenId entity.TokenId, document *entity.Document, pos int) {
+func (index *InvertedIndex) Insert(tokenId primitive.TokenId, document *primitive.Document, pos int) {
 	postinglist, ok := index.table[tokenId]
 	if !ok {
 		postinglist = newPostingList()
@@ -25,15 +25,15 @@ func (index *InvertedIndex) Insert(tokenId entity.TokenId, document *entity.Docu
 	postinglist.insert(pos, document.Id)
 }
 
-func (index *InvertedIndex) TokenIds() []entity.TokenId {
-	ids := make([]entity.TokenId, 0)
+func (index *InvertedIndex) TokenIds() []primitive.TokenId {
+	ids := make([]primitive.TokenId, 0)
 	for tokenId := range index.table {
 		ids = append(ids, tokenId)
 	}
 	return ids
 }
 
-func (index *InvertedIndex) EncodePostingList(tokenId entity.TokenId) ([]byte, error) {
+func (index *InvertedIndex) EncodePostingList(tokenId primitive.TokenId) ([]byte, error) {
 	postinglist, ok := index.table[tokenId]
 	if !ok {
 		return nil, fmt.Errorf("%v not found", tokenId)

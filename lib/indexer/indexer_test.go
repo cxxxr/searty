@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/cxxxr/searty/lib/database"
-	"github.com/cxxxr/searty/lib/entity"
+	"github.com/cxxxr/searty/lib/primitive"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -36,7 +36,7 @@ func Test_index(t *testing.T) {
 		postinglist, err := database.ResolvePostingList(tokenId)
 		assert.Nil(t, err)
 		fmt.Println(tokenId)
-		postinglist.Map(func(docId entity.DocumentId, positions []int) error {
+		postinglist.Map(func(docId primitive.DocumentId, positions []int) error {
 			fmt.Println(docId, positions)
 			return nil
 		})

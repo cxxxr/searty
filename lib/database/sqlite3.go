@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"os/exec"
 
-	"github.com/cxxxr/searty/lib/entity"
+	"github.com/cxxxr/searty/lib/primitive"
 	"github.com/cxxxr/searty/lib/invertedindex"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
@@ -156,7 +156,7 @@ func (d *Database) InsertDocument(filename, externalFormat, body string) error {
 	return nil
 }
 
-func (d *Database) ResolveDocument(filename string) (*entity.Document, error) {
+func (d *Database) ResolveDocument(filename string) (*primitive.Document, error) {
 	rows, err := d.resolveDocument.Query(filename)
 	if err != nil {
 		return nil, err
@@ -167,72 +167,72 @@ func (d *Database) ResolveDocument(filename string) (*entity.Document, error) {
 		return nil, nil
 	}
 
-	var id entity.DocumentId
+	var id primitive.DocumentId
 	if err := rows.Scan(&id); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	return entity.NewDocument(id, filename), nil
+	return primitive.NewDocument(id, filename), nil
 }
 
-func (d *Database) ResolveAllDocuments() ([]*entity.Document, error) {
+func (d *Database) ResolveAllDocuments() ([]*primitive.Document, error) {
 	rows, err := d.resolveAllDocuments.Query()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	defer rows.Close()
 
-	documents := make([]*entity.Document, 0)
+	documents := make([]*primitive.Document, 0)
 	for rows.Next() {
-		var id entity.DocumentId
+		var id primitive.DocumentId
 		var filename string
 		if err := rows.Scan(&id, &filename); err != nil {
 			return nil, errors.WithStack(err)
 		}
-		doc := entity.NewDocument(id, filename)
+		doc := primitive.NewDocument(id, filename)
 		documents = append(documents, doc)
 	}
 	return documents, nil
 }
 
-func (d *Database) ResolveTokenId(term string) (entity.TokenId, error) {
+func (d *Database) ResolveTokenId(term string) (primitive.TokenId, error) {
 	rows, err := d.resolveToken.Query(term)
 	if err != nil {
-		return entity.EmptyTokenId, errors.WithStack(err)
+		return primitive.EmptyTokenId, errors.WithStack(err)
 	}
 	defer rows.Close()
 
 	if !rows.Next() {
-		return entity.EmptyTokenId, nil
+		return primitive.EmptyTokenId, nil
 	}
 
 	var id string
 	if err := rows.Scan(&id); err != nil {
-		return entity.EmptyTokenId, errors.WithStack(err)
+		return primitive.EmptyTokenId, errors.WithStack(err)
 	}
 
-	return entity.TokenId(id), nil
+	return primitive.TokenId(id), nil
 }
 
-func (d *Database) ResolveAllTokenIds() ([]entity.TokenId, error) {
+func (d *Database) ResolveAllTokenIds() ([]primitive.TokenId, error) {
 	rows, err := d.resolveAllTokenIds.Query()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	defer rows.Close()
 
-	tokenIds := make([]entity.TokenId, 0)
+	tokenIds := make([]primitive.TokenId, 0)
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
 			return nil, errors.WithStack(err)
 		}
-		tokenIds = append(tokenIds, entity.TokenId(id))
+		tokenIds = append(tokenIds, primitive.TokenId(id))
 	}
 	return tokenIds, nil
 }
 
-func (d *Database) InsertToken(tokenId entity.TokenId, term string) error {
+func (d *Database) InsertToken(tokenId primitive.TokenId, term string) error {
 	_, err := d.insertToken.Exec(tokenId, term)
 	if err != nil {
 		return errors.WithStack(err)
@@ -240,7 +240,7 @@ func (d *Database) InsertToken(tokenId entity.TokenId, term string) error {
 	return nil
 }
 
-func (d *Database) UpsertInvertedIndex(tokenId entity.TokenId, blob []byte) error {
+func (d *Database) UpsertInvertedIndex(tokenId primitive.TokenId, blob []byte) error {
 	_, err := d.upsertInvertedIndex.Exec(tokenId, blob)
 	if err != nil {
 		return errors.WithStack(err)
@@ -248,7 +248,7 @@ func (d *Database) UpsertInvertedIndex(tokenId entity.TokenId, blob []byte) erro
 	return nil
 }
 
-func (d *Database) ResolvePostingList(tokenId entity.TokenId) (*invertedindex.PostingList, error) {
+func (d *Database) ResolvePostingList(tokenId primitive.TokenId) (*invertedindex.PostingList, error) {
 	rows, err := d.resolvePostingList.Query(tokenId)
 	if err != nil {
 		return nil, errors.WithStack(err)

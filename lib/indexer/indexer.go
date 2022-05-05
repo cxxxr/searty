@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/cxxxr/searty/lib/database"
-	"github.com/cxxxr/searty/lib/entity"
+	"github.com/cxxxr/searty/lib/primitive"
 	"github.com/cxxxr/searty/lib/invertedindex"
 	"github.com/cxxxr/searty/lib/spec"
 	"github.com/cxxxr/searty/lib/tokenizer"
@@ -57,8 +57,8 @@ func (i *Indexer) indexFile(file string, database *database.Database) error {
 		if err != nil {
 			return err
 		}
-		if id == entity.EmptyTokenId {
-			id := entity.TokenId(uuid.NewString())
+		if id == primitive.EmptyTokenId {
+			id := primitive.TokenId(uuid.NewString())
 			database.InsertToken(id, term)
 		}
 		i.index.Insert(id, doc, pos)

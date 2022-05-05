@@ -4,17 +4,17 @@ import (
 	"bytes"
 	"encoding/gob"
 
-	"github.com/cxxxr/searty/lib/entity"
+	"github.com/cxxxr/searty/lib/primitive"
 	"github.com/pkg/errors"
 )
 
 type posting struct {
-	DocumentId entity.DocumentId
+	DocumentId primitive.DocumentId
 	Positions  []int
 	Next       *posting // TODO: exportしたくない
 }
 
-func newPosting(docId entity.DocumentId, pos int, next *posting) *posting {
+func newPosting(docId primitive.DocumentId, pos int, next *posting) *posting {
 	return &posting{
 		DocumentId: docId,
 		Positions:  []int{pos},
@@ -31,7 +31,7 @@ func newPostingList() *PostingList {
 	return &PostingList{Head: nil}
 }
 
-func (p *PostingList) insert(pos int, docId entity.DocumentId) {
+func (p *PostingList) insert(pos int, docId primitive.DocumentId) {
 	node := &p.Head
 
 	for *node != nil {
@@ -55,7 +55,7 @@ func (p *PostingList) insert(pos int, docId entity.DocumentId) {
 	(*node) = newPosting(docId, pos, nil)
 }
 
-func (p *PostingList) Map(fn func(entity.DocumentId, []int) error) error {
+func (p *PostingList) Map(fn func(primitive.DocumentId, []int) error) error {
 	if p == nil {
 		return nil
 	}

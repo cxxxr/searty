@@ -26,7 +26,6 @@ type prepareStatements struct {
 	resolveAllTokenIds   *sqlx.Stmt
 	insertToken          *sqlx.Stmt
 	upsertInvertedIndex  *sqlx.Stmt
-	resolveInvertedIndex *sqlx.Stmt
 }
 
 func New(databaseFile string) *Database {
@@ -135,15 +134,6 @@ ON CONFLICT(token_id) DO NOTHING`,
 		return errors.WithStack(err)
 	}
 	d.upsertInvertedIndex = stmt
-
-	stmt, err = d.tx.PreparexContext(
-		ctx,
-		`SELECT token_id, posting_list FROM inverted_index WHERE token_id in (?)`,
-	)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	d.resolveInvertedIndex = stmt
 
 	return nil
 }

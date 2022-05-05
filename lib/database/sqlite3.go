@@ -19,14 +19,15 @@ type Database struct {
 }
 
 type prepareStatements struct {
-	insertDocument      *sqlx.Stmt
-	resolveDocument     *sqlx.Stmt
-	resolveAllDocuments *sqlx.Stmt
-	resolveTokenByTerm  *sqlx.Stmt
-	resolveTokenById    *sqlx.Stmt
-	resolveAllTokenIds  *sqlx.Stmt
-	insertToken         *sqlx.Stmt
-	upsertInvertedIndex *sqlx.Stmt
+	insertDocument            *sqlx.Stmt
+	resolveDocumentByFilename *sqlx.Stmt
+	resolveDocumentById       *sqlx.Stmt
+	resolveAllDocuments       *sqlx.Stmt
+	resolveTokenByTerm        *sqlx.Stmt
+	resolveTokenById          *sqlx.Stmt
+	resolveAllTokenIds        *sqlx.Stmt
+	insertToken               *sqlx.Stmt
+	upsertInvertedIndex       *sqlx.Stmt
 }
 
 func New(databaseFile string) *Database {
@@ -83,12 +84,21 @@ func (d *Database) initializePrepareStatements() error {
 
 	stmt, err = d.tx.PreparexContext(
 		ctx,
-		`SELECT id FROM document WHERE filename = ? LIMIT 1`,
+		`SELECT id, filename FROM document WHERE filename = ? LIMIT 1`,
 	)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	d.resolveDocument = stmt
+	d.resolveDocumentByFilename = stmt
+
+	stmt, err = d.tx.PreparexContext(
+		ctx,
+		`SELECT id, filename FROM document WHERE id = ? LIMIT 1`,
+	)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	d.resolveDocumentById = stmt
 
 	stmt, err = d.tx.PreparexContext(
 		ctx,
@@ -119,7 +129,7 @@ func (d *Database) initializePrepareStatements() error {
 
 	stmt, err = d.tx.PreparexContext(
 		ctx,
-		`SELECT id FROM token`,
+		`SELECT id, term FROM token`,
 	)
 	if err != nil {
 		return errors.WithStack(err)
@@ -156,9 +166,18 @@ func (d *Database) InsertDocument(filename, body string) error {
 	return nil
 }
 
-func (d *Database) ResolveDocument(filename string) (*Document, error) {
+func (d *Database) ResolveDocumentByFilename(filename string) (*Document, error) {
 	var doc Document
-	err := d.resolveDocument.Get(&doc, filename)
+	err := d.resolveDocumentByFilename.Get(&doc, filename)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return &doc, nil
+}
+
+func (d *Database) ResolveDocumentById(id primitive.DocumentId) (*Document, error) {
+	var doc Document
+	err := d.resolveDocumentById.Get(&doc, id)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -211,13 +230,13 @@ func (d *Database) ResolveTokensByTerms(terms []string) ([]Token, error) {
 	return records, nil
 }
 
-func (d *Database) ResolveAllTokenIds() ([]primitive.TokenId, error) {
-	var ids []primitive.TokenId
-	err := d.resolveAllTokenIds.Select(&ids)
+func (d *Database) ResolveAllTokens() ([]Token, error) {
+	var tokens []Token
+	err := d.resolveAllTokenIds.Select(&tokens)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return ids, nil
+	return tokens, nil
 }
 
 func (d *Database) InsertToken(tokenId primitive.TokenId, term string) error {

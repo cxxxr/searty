@@ -8,8 +8,8 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/cxxxr/searty/lib/database"
-	"github.com/cxxxr/searty/lib/primitive"
 	"github.com/cxxxr/searty/lib/invertedindex"
+	"github.com/cxxxr/searty/lib/primitive"
 	"github.com/cxxxr/searty/lib/spec"
 	"github.com/cxxxr/searty/lib/tokenizer"
 )
@@ -44,7 +44,7 @@ func (i *Indexer) indexFile(file string, database *database.Database) error {
 		return err
 	}
 
-	doc, err := database.ResolveDocument(file)
+	doc, err := database.ResolveDocumentByFilename(file)
 	if err != nil {
 		return err
 	}

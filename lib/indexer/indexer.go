@@ -58,7 +58,7 @@ func (i *Indexer) indexFile(file string, database *database.Database) error {
 	// システム単位でデータベースが分割されている前提ならオンメモリでトークンテーブルを管理し,
 	// 最後にbulk insertすれば良いかもしれない.
 	for pos, term := range terms {
-		token, err := database.ResolveTokenId(term)
+		token, err := database.ResolveTokenByTerm(term)
 		if err != nil {
 			return err
 		}

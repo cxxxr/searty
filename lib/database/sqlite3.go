@@ -19,13 +19,14 @@ type Database struct {
 }
 
 type prepareStatements struct {
-	insertDocument       *sqlx.Stmt
-	resolveDocument      *sqlx.Stmt
-	resolveAllDocuments  *sqlx.Stmt
-	resolveToken         *sqlx.Stmt
-	resolveAllTokenIds   *sqlx.Stmt
-	insertToken          *sqlx.Stmt
-	upsertInvertedIndex  *sqlx.Stmt
+	insertDocument      *sqlx.Stmt
+	resolveDocument     *sqlx.Stmt
+	resolveAllDocuments *sqlx.Stmt
+	resolveTokenByTerm  *sqlx.Stmt
+	resolveTokenById    *sqlx.Stmt
+	resolveAllTokenIds  *sqlx.Stmt
+	insertToken         *sqlx.Stmt
+	upsertInvertedIndex *sqlx.Stmt
 }
 
 func New(databaseFile string) *Database {
@@ -100,12 +101,21 @@ func (d *Database) initializePrepareStatements() error {
 
 	stmt, err = d.tx.PreparexContext(
 		ctx,
-		`SELECT id FROM token WHERE term = ? LIMIT 1`,
+		`SELECT id, term FROM token WHERE term = ? LIMIT 1`,
 	)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	d.resolveToken = stmt
+	d.resolveTokenByTerm = stmt
+
+	stmt, err = d.tx.PreparexContext(
+		ctx,
+		`SELECT id, term FROM token WHERE id = ? LIMIT 1`,
+	)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	d.resolveTokenById = stmt
 
 	stmt, err = d.tx.PreparexContext(
 		ctx,
@@ -164,9 +174,9 @@ func (d *Database) ResolveAllDocuments() ([]*Document, error) {
 	return docs, nil
 }
 
-func (d *Database) ResolveTokenId(term string) (*Token, error) {
+func (d *Database) resolveToken(s *sqlx.Stmt, arg interface{}) (*Token, error) {
 	var tokens []Token
-	err := d.resolveToken.Select(&tokens, term)
+	err := s.Select(&tokens, arg)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -174,6 +184,14 @@ func (d *Database) ResolveTokenId(term string) (*Token, error) {
 		return nil, nil
 	}
 	return &tokens[0], nil
+}
+
+func (d *Database) ResolveTokenByTerm(term string) (*Token, error) {
+	return d.resolveToken(d.resolveTokenByTerm, term)
+}
+
+func (d *Database) ResolveTokenById(id primitive.TokenId) (*Token, error) {
+	return d.resolveToken(d.resolveTokenById, id)
 }
 
 func (d *Database) ResolveTokensByTerms(terms []string) ([]Token, error) {
@@ -241,7 +259,7 @@ func (d *Database) ResolveInvertedIndex(tokenIds []primitive.TokenId) (
 		if err != nil {
 			return nil, err
 		}
-		invertedIndex.Set(record.TokenId, postingList,)
+		invertedIndex.Set(record.TokenId, postingList)
 	}
 	return invertedIndex, nil
 }

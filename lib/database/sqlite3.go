@@ -205,14 +205,9 @@ func (d *Database) ResolveInvertedIndex(tokenIds []primitive.TokenId) (
 	*invertedindex.InvertedIndex,
 	error,
 ) {
-	ids := make([]string, len(tokenIds))
-	for i, id := range tokenIds {
-		ids[i] = string(id)
-	}
-
 	query, params, err := sqlx.In(
 		`SELECT token_id, posting_list FROM inverted_index WHERE token_id in (?)`,
-		ids,
+		tokenIds,
 	)
 	if err != nil {
 		return nil, errors.WithStack(err)

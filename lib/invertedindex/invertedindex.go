@@ -25,6 +25,10 @@ func (index *InvertedIndex) Get(tokenId primitive.TokenId) (*PostingList, bool) 
 	return postingList, ok
 }
 
+func (index *InvertedIndex) Length() int {
+	return len(index.table)
+}
+
 func (index *InvertedIndex) Insert(tokenId primitive.TokenId, docId primitive.DocumentId, pos int) {
 	postinglist, ok := index.table[tokenId]
 	if !ok {
@@ -48,11 +52,4 @@ func (index *InvertedIndex) EncodePostingList(tokenId primitive.TokenId) ([]byte
 		return nil, fmt.Errorf("%v not found", tokenId)
 	}
 	return encode(postinglist)
-}
-
-func (index *InvertedIndex) MapPostingList(
-	tokenId primitive.TokenId,
-	fn func(primitive.DocumentId, []int) error,
-) error {
-	return index.table[tokenId].Map(fn)
 }

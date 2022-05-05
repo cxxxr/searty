@@ -2,6 +2,7 @@ package searcher
 
 import (
 	"github.com/cxxxr/searty/lib/database"
+	"github.com/cxxxr/searty/lib/invertedindex"
 	"github.com/cxxxr/searty/lib/primitive"
 	"github.com/cxxxr/searty/lib/tokenizer"
 )
@@ -23,18 +24,32 @@ func makeTokenIds(tokens []database.Token) []primitive.TokenId {
 	return tokenIds
 }
 
-func (s *Searcher) Search(query string) error {
+type postingSlice []*invertedindex.Posting
+
+func makePostingSlice(invertedIndex invertedindex.InvertedIndex) postingSlice {
+	make([]*invertedindex.Posting, invertedIndex.Length())
+}
+
+func (s *Searcher) Search(query string) ([]Result, error) {
 	terms := s.tokenizer.Tokenize(query)
 	tokens, err := s.database.ResolveTokensByTerms(terms)
 	if err != nil {
-		return err
+		return nil, err
+	}
+
+	if len(terms) != len(tokens) {
+		return nil, nil
 	}
 
 	invertedIndex, err := s.database.ResolveInvertedIndex(makeTokenIds(tokens))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	var _ = invertedIndex
-	return nil
+	postings := make([]*invertedindex.Posting, invertedIndex.Length())
+	for findFinishPostingList(postings) {
+	}
+}
+
+func findFinishPostingList(postingLists postingLists) bool {
 }

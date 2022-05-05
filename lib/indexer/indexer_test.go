@@ -40,12 +40,9 @@ func Test_index(t *testing.T) {
 	for _, tokenId := range tokenIds {
 		postingList, _ := invertedIndex.Get(tokenId)
 		fmt.Printf("%s: count = %d\n", tokenId, postingList.Count())
-		invertedIndex.MapPostingList(
-			tokenId,
-			func(docId primitive.DocumentId, positions []int) error {
-				fmt.Println(docId, positions)
-				return nil
-			},
-		)
+		postingList.Map(func(docId primitive.DocumentId, positions []int) error {
+			fmt.Println(docId, positions)
+			return nil
+		})
 	}
 }

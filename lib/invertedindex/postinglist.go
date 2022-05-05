@@ -8,27 +8,27 @@ import (
 	"github.com/pkg/errors"
 )
 
-type posting struct {
+type Posting struct {
 	documentId primitive.DocumentId
 	positions  []int
-	next       *posting
+	next       *Posting
 }
 
-func newPosting(docId primitive.DocumentId, pos int, next *posting) *posting {
-	return &posting{
+func newPosting(docId primitive.DocumentId, pos int, next *Posting) *Posting {
+	return &Posting{
 		documentId: docId,
 		positions:  []int{pos},
 		next:       next,
 	}
 }
 
-func (p *posting) GobEncode() ([]byte, error) {
+func (p *Posting) GobEncode() ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
-	type Alias posting
+	type Alias Posting
 	_ = gob.NewEncoder(buf).Encode(struct {
 		DocumentId primitive.DocumentId
 		Positions  []int
-		Next       *posting
+		Next       *Posting
 	}{
 		DocumentId: p.documentId,
 		Positions:  p.positions,
@@ -37,13 +37,13 @@ func (p *posting) GobEncode() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (p *posting) GobDecode(data []byte) error {
+func (p *Posting) GobDecode(data []byte) error {
 	buf := bytes.NewBuffer(data)
-	type Alias posting
+	type Alias Posting
 	aux := struct {
 		DocumentId primitive.DocumentId
 		Positions  []int
-		Next       *posting
+		Next       *Posting
 	}{}
 	_ = gob.NewDecoder(buf).Decode(&aux)
 	p.documentId = aux.DocumentId
@@ -53,7 +53,7 @@ func (p *posting) GobDecode(data []byte) error {
 }
 
 type PostingList struct {
-	head  *posting
+	head  *Posting
 	count int
 }
 
@@ -69,7 +69,7 @@ func (p *PostingList) GobEncode() ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
 	type Alias PostingList
 	_ = gob.NewEncoder(buf).Encode(struct {
-		Head  *posting
+		Head  *Posting
 		Count int
 	}{
 		Head:  p.head,
@@ -82,7 +82,7 @@ func (p *PostingList) GobDecode(data []byte) error {
 	buf := bytes.NewBuffer(data)
 	type Alias PostingList
 	aux := struct {
-		Head  *posting
+		Head  *Posting
 		Count int
 	}{}
 	_ = gob.NewDecoder(buf).Decode(&aux)

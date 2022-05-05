@@ -2,7 +2,6 @@ DROP TABLE IF EXISTS document;
 CREATE TABLE document (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   filename TEXT,
-  external_format TEXT,
   body text
 );
 
@@ -20,14 +19,14 @@ CREATE INDEX token_term_index ON token(term, kind);
 DROP TABLE IF EXISTS inverted_index;
 CREATE TABLE inverted_index (
   token_id TEXT PRIMARY KEY,
-  postinglist blob
+  posting_list blob
 );
 
 DROP TABLE IF EXISTS symbol;
 CREATE TABLE symbol (
   id TEXT PRIMARY KEY,
   name TEXT,
-  package TEXT
+  package_name TEXT
 );
 
 DROP TABLE IF EXISTS package;

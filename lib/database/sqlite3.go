@@ -2,31 +2,31 @@ package database
 
 import (
 	"context"
-	"database/sql"
 	"os/exec"
 
-	"github.com/cxxxr/searty/lib/primitive"
 	"github.com/cxxxr/searty/lib/invertedindex"
+	"github.com/cxxxr/searty/lib/primitive"
+	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
 )
 
 type Database struct {
 	databaseFile string
-	conn         *sql.DB
-	transaction  *sql.Tx
+	db           *sqlx.DB
+	tx           *sqlx.Tx
 	prepareStatements
 }
 
 type prepareStatements struct {
-	insertDocument      *sql.Stmt
-	resolveDocument     *sql.Stmt
-	resolveAllDocuments *sql.Stmt
-	resolveToken        *sql.Stmt
-	resolveAllTokenIds  *sql.Stmt
-	insertToken         *sql.Stmt
-	upsertInvertedIndex *sql.Stmt
-	resolvePostingList  *sql.Stmt
+	insertDocument       *sqlx.Stmt
+	resolveDocument      *sqlx.Stmt
+	resolveAllDocuments  *sqlx.Stmt
+	resolveToken         *sqlx.Stmt
+	resolveAllTokenIds   *sqlx.Stmt
+	insertToken          *sqlx.Stmt
+	upsertInvertedIndex  *sqlx.Stmt
+	resolveInvertedIndex *sqlx.Stmt
 }
 
 func New(databaseFile string) *Database {
@@ -42,17 +42,17 @@ func (d *Database) Clear() error {
 }
 
 func (d *Database) Connect() error {
-	conn, err := sql.Open("sqlite3", d.databaseFile)
+	db, err := sqlx.Connect("sqlite3", d.databaseFile)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	d.conn = conn
+	d.db = db
 
-	tx, err := conn.Begin()
+	tx, err := db.Beginx()
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	d.transaction = tx
+	d.tx = tx
 
 	if err := d.initializePrepareStatements(); err != nil {
 		return err
@@ -62,26 +62,26 @@ func (d *Database) Connect() error {
 }
 
 func (d *Database) Close() error {
-	err := d.transaction.Commit()
+	err := d.tx.Commit()
 	if err != nil {
 		return err
 	}
-	return d.conn.Close()
+	return d.db.Close()
 }
 
 func (d *Database) initializePrepareStatements() error {
 	ctx := context.Background()
 
-	stmt, err := d.transaction.PrepareContext(
+	stmt, err := d.tx.PreparexContext(
 		ctx,
-		`INSERT INTO document (filename, external_format, body) VALUES (?, ?, ?)`,
+		`INSERT INTO document (filename, body) VALUES (?, ?)`,
 	)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	d.insertDocument = stmt
 
-	stmt, err = d.transaction.PrepareContext(
+	stmt, err = d.tx.PreparexContext(
 		ctx,
 		`SELECT id FROM document WHERE filename = ? LIMIT 1`,
 	)
@@ -90,7 +90,7 @@ func (d *Database) initializePrepareStatements() error {
 	}
 	d.resolveDocument = stmt
 
-	stmt, err = d.transaction.PrepareContext(
+	stmt, err = d.tx.PreparexContext(
 		ctx,
 		`SELECT id, filename FROM document`,
 	)
@@ -99,7 +99,7 @@ func (d *Database) initializePrepareStatements() error {
 	}
 	d.resolveAllDocuments = stmt
 
-	stmt, err = d.transaction.PrepareContext(
+	stmt, err = d.tx.PreparexContext(
 		ctx,
 		`SELECT id FROM token WHERE term = ? LIMIT 1`,
 	)
@@ -108,7 +108,7 @@ func (d *Database) initializePrepareStatements() error {
 	}
 	d.resolveToken = stmt
 
-	stmt, err = d.transaction.PrepareContext(
+	stmt, err = d.tx.PreparexContext(
 		ctx,
 		`SELECT id FROM token`,
 	)
@@ -117,7 +117,7 @@ func (d *Database) initializePrepareStatements() error {
 	}
 	d.resolveAllTokenIds = stmt
 
-	stmt, err = d.transaction.PrepareContext(
+	stmt, err = d.tx.PreparexContext(
 		ctx,
 		`INSERT INTO token (id, term) VALUES (?, ?)`,
 	)
@@ -126,9 +126,9 @@ func (d *Database) initializePrepareStatements() error {
 	}
 	d.insertToken = stmt
 
-	stmt, err = d.transaction.PrepareContext(
+	stmt, err = d.tx.PreparexContext(
 		ctx,
-		`INSERT INTO inverted_index (token_id, postinglist) VALUES (?, ?)
+		`INSERT INTO inverted_index (token_id, posting_list) VALUES (?, ?)
 ON CONFLICT(token_id) DO NOTHING`,
 	)
 	if err != nil {
@@ -136,100 +136,63 @@ ON CONFLICT(token_id) DO NOTHING`,
 	}
 	d.upsertInvertedIndex = stmt
 
-	stmt, err = d.transaction.PrepareContext(
+	stmt, err = d.tx.PreparexContext(
 		ctx,
-		`SELECT postinglist FROM inverted_index WHERE token_id = ? LIMIT 1`,
+		`SELECT token_id, posting_list FROM inverted_index WHERE token_id in (?)`,
 	)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	d.resolvePostingList = stmt
+	d.resolveInvertedIndex = stmt
 
 	return nil
 }
 
-func (d *Database) InsertDocument(filename, externalFormat, body string) error {
-	_, err := d.insertDocument.Exec(filename, externalFormat, body)
+func (d *Database) InsertDocument(filename, body string) error {
+	_, err := d.insertDocument.Exec(filename, body)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	return nil
 }
 
-func (d *Database) ResolveDocument(filename string) (*primitive.Document, error) {
-	rows, err := d.resolveDocument.Query(filename)
+func (d *Database) ResolveDocument(filename string) (*Document, error) {
+	var doc Document
+	err := d.resolveDocument.Get(&doc, filename)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
-	defer rows.Close()
+	return &doc, nil
+}
 
-	if !rows.Next() {
+func (d *Database) ResolveAllDocuments() ([]*Document, error) {
+	var docs []*Document
+	err := d.resolveAllDocuments.Select(&docs)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return docs, nil
+}
+
+func (d *Database) ResolveTokenId(term string) (*Token, error) {
+	var tokens []Token
+	err := d.resolveToken.Select(&tokens, term)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if len(tokens) == 0 {
 		return nil, nil
 	}
-
-	var id primitive.DocumentId
-	if err := rows.Scan(&id); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return primitive.NewDocument(id, filename), nil
-}
-
-func (d *Database) ResolveAllDocuments() ([]*primitive.Document, error) {
-	rows, err := d.resolveAllDocuments.Query()
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	defer rows.Close()
-
-	documents := make([]*primitive.Document, 0)
-	for rows.Next() {
-		var id primitive.DocumentId
-		var filename string
-		if err := rows.Scan(&id, &filename); err != nil {
-			return nil, errors.WithStack(err)
-		}
-		doc := primitive.NewDocument(id, filename)
-		documents = append(documents, doc)
-	}
-	return documents, nil
-}
-
-func (d *Database) ResolveTokenId(term string) (primitive.TokenId, error) {
-	rows, err := d.resolveToken.Query(term)
-	if err != nil {
-		return primitive.EmptyTokenId, errors.WithStack(err)
-	}
-	defer rows.Close()
-
-	if !rows.Next() {
-		return primitive.EmptyTokenId, nil
-	}
-
-	var id string
-	if err := rows.Scan(&id); err != nil {
-		return primitive.EmptyTokenId, errors.WithStack(err)
-	}
-
-	return primitive.TokenId(id), nil
+	return &tokens[0], nil
 }
 
 func (d *Database) ResolveAllTokenIds() ([]primitive.TokenId, error) {
-	rows, err := d.resolveAllTokenIds.Query()
+	var ids []primitive.TokenId
+	err := d.resolveAllTokenIds.Select(&ids)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	defer rows.Close()
-
-	tokenIds := make([]primitive.TokenId, 0)
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			return nil, errors.WithStack(err)
-		}
-		tokenIds = append(tokenIds, primitive.TokenId(id))
-	}
-	return tokenIds, nil
+	return ids, nil
 }
 
 func (d *Database) InsertToken(tokenId primitive.TokenId, term string) error {
@@ -248,21 +211,35 @@ func (d *Database) UpsertInvertedIndex(tokenId primitive.TokenId, blob []byte) e
 	return nil
 }
 
-func (d *Database) ResolvePostingList(tokenId primitive.TokenId) (*invertedindex.PostingList, error) {
-	rows, err := d.resolvePostingList.Query(tokenId)
+func (d *Database) ResolveInvertedIndex(tokenIds []primitive.TokenId) (
+	*invertedindex.InvertedIndex,
+	error,
+) {
+	ids := make([]string, len(tokenIds))
+	for i, id := range tokenIds {
+		ids[i] = string(id)
+	}
+
+	query, params, err := sqlx.In(
+		`SELECT token_id, posting_list FROM inverted_index WHERE token_id in (?)`,
+		ids,
+	)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	defer rows.Close()
 
-	if !rows.Next() {
-		return nil, nil
-	}
-
-	var blob []byte
-	if err := rows.Scan(&blob); err != nil {
+	var records []InvertedIndex
+	if err := d.db.Select(&records, query, params...); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	return invertedindex.DecodePostingList(blob)
+	invertedIndex := invertedindex.New()
+	for _, record := range records {
+		postingList, err := invertedindex.DecodePostingList(record.PostingList)
+		if err != nil {
+			return nil, err
+		}
+		invertedIndex.Set(record.TokenId, postingList,)
+	}
+	return invertedIndex, nil
 }

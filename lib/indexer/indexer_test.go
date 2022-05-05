@@ -16,7 +16,8 @@ func Test_index(t *testing.T) {
 	defer databaseFile.Close()
 	require.Nil(t, err)
 	indexer := New()
-	require.Nil(t, indexer.Index("testdata/cl-ppcre.json", databaseFile.Name()))
+	err = indexer.Index("testdata/cl-ppcre.json", databaseFile.Name())
+	require.Nil(t, err)
 
 	database := database.New(databaseFile.Name())
 	require.Nil(t, database.Connect())
@@ -32,13 +33,18 @@ func Test_index(t *testing.T) {
 
 	tokenIds, err := database.ResolveAllTokenIds()
 	assert.Nil(t, err)
+
+	invertedIndex, err := database.ResolveInvertedIndex(tokenIds)
+	fmt.Printf("%+v\n", err)
+	assert.Nil(t, err)
+
 	for _, tokenId := range tokenIds {
-		postinglist, err := database.ResolvePostingList(tokenId)
-		assert.Nil(t, err)
-		fmt.Println(tokenId)
-		postinglist.Map(func(docId primitive.DocumentId, positions []int) error {
-			fmt.Println(docId, positions)
-			return nil
-		})
+		invertedIndex.MapPostingList(
+			tokenId,
+			func(docId primitive.DocumentId, positions []int) error {
+				fmt.Println(docId, positions)
+				return nil
+			},
+		)
 	}
 }

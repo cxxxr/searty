@@ -40,8 +40,7 @@ func (i *Indexer) indexFile(file string, database *database.Database) error {
 	}
 	text := string(data)
 
-	encoding := "utf-8" // TODO
-	if err := database.InsertDocument(file, encoding, text); err != nil {
+	if err := database.InsertDocument(file, text); err != nil {
 		return err
 	}
 
@@ -53,15 +52,20 @@ func (i *Indexer) indexFile(file string, database *database.Database) error {
 	terms := tokenizer.New().Tokenize(text)
 
 	for pos, term := range terms {
-		id, err := database.ResolveTokenId(term)
+		token, err := database.ResolveTokenId(term)
 		if err != nil {
 			return err
 		}
-		if id == primitive.EmptyTokenId {
+
+		var tokenId primitive.TokenId
+		if token == nil {
 			id := primitive.TokenId(uuid.NewString())
 			database.InsertToken(id, term)
+			tokenId = id
+		} else {
+			tokenId = token.Id
 		}
-		i.index.Insert(id, doc.Id, pos)
+		i.index.Insert(tokenId, doc.Id, pos)
 	}
 
 	return nil

@@ -10,3 +10,7 @@ type Document struct {
 	Id       DocumentId
 	Filename string
 }
+
+type SymbolId string
+type PackageId string
+type SystemId string

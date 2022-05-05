@@ -67,14 +67,14 @@ func Test_index(t *testing.T) {
 		})
 	}
 
-	if isExists(".dump") {
-		data, err := os.ReadFile(".dump")
+	if isExists(".snapshot") {
+		data, err := os.ReadFile(".snapshot")
 		assert.Nil(t, err)
 		assert.Equal(t, data, writer.Bytes())
 		return
 	}
 
-	file, err := os.Create(".dump")
+	file, err := os.Create(".snapshot")
 	assert.Nil(t, err)
 	file.Write(writer.Bytes())
 }

@@ -20,6 +20,11 @@ func (index *InvertedIndex) Set(tokenId primitive.TokenId, postingList *PostingL
 	index.table[tokenId] = postingList
 }
 
+func (index *InvertedIndex) Get(tokenId primitive.TokenId) (*PostingList, bool) {
+	postingList, ok := index.table[tokenId]
+	return postingList, ok
+}
+
 func (index *InvertedIndex) Insert(tokenId primitive.TokenId, docId primitive.DocumentId, pos int) {
 	postinglist, ok := index.table[tokenId]
 	if !ok {

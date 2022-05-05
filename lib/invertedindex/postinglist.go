@@ -9,49 +9,109 @@ import (
 )
 
 type posting struct {
-	DocumentId primitive.DocumentId
-	Positions  []int
-	Next       *posting // TODO: exportしたくない
+	documentId primitive.DocumentId
+	positions  []int
+	next       *posting
 }
 
 func newPosting(docId primitive.DocumentId, pos int, next *posting) *posting {
 	return &posting{
-		DocumentId: docId,
-		Positions:  []int{pos},
-		Next:       next,
+		documentId: docId,
+		positions:  []int{pos},
+		next:       next,
 	}
 }
 
+func (p *posting) GobEncode() ([]byte, error) {
+	buf := bytes.NewBuffer(nil)
+	type Alias posting
+	_ = gob.NewEncoder(buf).Encode(struct {
+		DocumentId primitive.DocumentId
+		Positions  []int
+		Next       *posting
+	}{
+		DocumentId: p.documentId,
+		Positions:  p.positions,
+		Next:       p.next,
+	})
+	return buf.Bytes(), nil
+}
+
+func (p *posting) GobDecode(data []byte) error {
+	buf := bytes.NewBuffer(data)
+	type Alias posting
+	aux := struct {
+		DocumentId primitive.DocumentId
+		Positions  []int
+		Next       *posting
+	}{}
+	_ = gob.NewDecoder(buf).Decode(&aux)
+	p.documentId = aux.DocumentId
+	p.positions = aux.Positions
+	p.next = aux.Next
+	return nil
+}
+
 type PostingList struct {
-	Head  *posting // TODO: exportしたくない
-	Count int      // TODO: exportしたくない
+	head  *posting
+	count int
 }
 
 func newPostingList() *PostingList {
-	return &PostingList{Head: nil}
+	return &PostingList{head: nil}
+}
+
+func (p *PostingList) Count() int {
+	return p.count
+}
+
+func (p *PostingList) GobEncode() ([]byte, error) {
+	buf := bytes.NewBuffer(nil)
+	type Alias PostingList
+	_ = gob.NewEncoder(buf).Encode(struct {
+		Head  *posting
+		Count int
+	}{
+		Head:  p.head,
+		Count: p.count,
+	})
+	return buf.Bytes(), nil
+}
+
+func (p *PostingList) GobDecode(data []byte) error {
+	buf := bytes.NewBuffer(data)
+	type Alias PostingList
+	aux := struct {
+		Head  *posting
+		Count int
+	}{}
+	_ = gob.NewDecoder(buf).Decode(&aux)
+	p.head = aux.Head
+	p.count = aux.Count
+	return nil
 }
 
 func (p *PostingList) insert(pos int, docId primitive.DocumentId) {
-	node := &p.Head
+	node := &p.head
 
 	for *node != nil {
 		current := *node
 
-		if current.DocumentId == docId {
-			current.Positions = append(current.Positions, pos)
+		if current.documentId == docId {
+			current.positions = append(current.positions, pos)
 			return
 		}
-		if current.DocumentId < docId {
-			p.Count++
+		if current.documentId < docId {
+			p.count++
 			posting := newPosting(docId, pos, current)
 			*node = posting
 			return
 		}
 
-		node = &current.Next
+		node = &current.next
 	}
 
-	p.Count++
+	p.count++
 	(*node) = newPosting(docId, pos, nil)
 }
 
@@ -59,12 +119,12 @@ func (p *PostingList) Map(fn func(primitive.DocumentId, []int) error) error {
 	if p == nil {
 		return nil
 	}
-	current := p.Head
+	current := p.head
 	for current != nil {
-		if err := fn(current.DocumentId, current.Positions); err != nil {
+		if err := fn(current.documentId, current.positions); err != nil {
 			return err
 		}
-		current = current.Next
+		current = current.next
 	}
 	return nil
 }

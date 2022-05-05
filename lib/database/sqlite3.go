@@ -176,6 +176,23 @@ func (d *Database) ResolveTokenId(term string) (*Token, error) {
 	return &tokens[0], nil
 }
 
+func (d *Database) ResolveTokensByTerms(terms []string) ([]Token, error) {
+	query, params, err := sqlx.In(
+		`SELECT id, term, kind FROM token WHERE term in (?)`,
+		terms,
+	)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	var records []Token
+	if err := d.db.Select(&records, query, params...); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return records, nil
+}
+
 func (d *Database) ResolveAllTokenIds() ([]primitive.TokenId, error) {
 	var ids []primitive.TokenId
 	err := d.resolveAllTokenIds.Select(&ids)

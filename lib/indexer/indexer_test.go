@@ -35,10 +35,11 @@ func Test_index(t *testing.T) {
 	assert.Nil(t, err)
 
 	invertedIndex, err := database.ResolveInvertedIndex(tokenIds)
-	fmt.Printf("%+v\n", err)
 	assert.Nil(t, err)
 
 	for _, tokenId := range tokenIds {
+		postingList, _ := invertedIndex.Get(tokenId)
+		fmt.Printf("%s: count = %d\n", tokenId, postingList.Count())
 		invertedIndex.MapPostingList(
 			tokenId,
 			func(docId primitive.DocumentId, positions []int) error {

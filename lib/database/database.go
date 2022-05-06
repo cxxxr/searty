@@ -33,7 +33,7 @@ func New(databaseFile string) *Database {
 	return &Database{databaseFile: databaseFile}
 }
 
-func connectSqlite3(databaseFile string) (*sqlx.DB, error){
+func connectSqlite3(databaseFile string) (*sqlx.DB, error) {
 	db, err := sqlx.Connect("sqlite3", databaseFile)
 	if err != nil {
 		return nil, errors.WithStack(err)

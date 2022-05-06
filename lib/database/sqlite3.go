@@ -184,6 +184,20 @@ func (d *Database) ResolveDocumentById(id primitive.DocumentId) (*Document, erro
 	return &doc, nil
 }
 
+func (d *Database) ResolveDocumentsByIds(ids []primitive.DocumentId) ([]*Document, error) {
+	query, params, err := sqlx.In(`SELECT id, filename FROM document WHERE id in (?)`, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	var records []*Document
+	if err := d.db.Select(&records, query, params...); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return records, nil
+}
+
 func (d *Database) ResolveAllDocuments() ([]*Document, error) {
 	var docs []*Document
 	err := d.resolveAllDocuments.Select(&docs)

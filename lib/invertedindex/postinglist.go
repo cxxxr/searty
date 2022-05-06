@@ -22,6 +22,18 @@ func newPosting(docId primitive.DocumentId, pos int, next *Posting) *Posting {
 	}
 }
 
+func (p *Posting) DocumentId() primitive.DocumentId {
+	return p.documentId
+}
+
+func (p *Posting) Next() *Posting {
+	return p.next
+}
+
+func (p *Posting) Positions() []int {
+	return p.positions
+}
+
 func (p *Posting) GobEncode() ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
 	type Alias Posting
@@ -63,6 +75,10 @@ func newPostingList() *PostingList {
 
 func (p *PostingList) Count() int {
 	return p.count
+}
+
+func (p *PostingList) Posting() *Posting {
+	return p.head
 }
 
 func (p *PostingList) GobEncode() ([]byte, error) {

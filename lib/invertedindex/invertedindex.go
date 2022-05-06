@@ -20,9 +20,12 @@ func (index *InvertedIndex) Set(tokenId primitive.TokenId, postingList *PostingL
 	index.table[tokenId] = postingList
 }
 
-func (index *InvertedIndex) Get(tokenId primitive.TokenId) (*PostingList, bool) {
+func (index *InvertedIndex) Get(tokenId primitive.TokenId) *PostingList {
 	postingList, ok := index.table[tokenId]
-	return postingList, ok
+	if !ok {
+		return nil
+	}
+	return postingList
 }
 
 func (index *InvertedIndex) Length() int {

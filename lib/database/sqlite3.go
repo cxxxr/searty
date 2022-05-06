@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"os/exec"
 
 	"github.com/cxxxr/searty/lib/invertedindex"
 	"github.com/cxxxr/searty/lib/primitive"
@@ -34,18 +33,29 @@ func New(databaseFile string) *Database {
 	return &Database{databaseFile: databaseFile}
 }
 
-func (d *Database) Clear() error {
-	err := exec.Command("sqlite3", "-init", "../../schema.sql", d.databaseFile).Run()
+func connectSqlite3(databaseFile string) (*sqlx.DB, error){
+	db, err := sqlx.Connect("sqlite3", databaseFile)
 	if err != nil {
-		return errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
+	return db, err
+}
+
+func (d *Database) InitTables() error {
+	db, err := connectSqlite3(d.databaseFile)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	db.MustExec(string(schema))
+
 	return nil
 }
 
 func (d *Database) Connect() error {
-	db, err := sqlx.Connect("sqlite3", d.databaseFile)
+	db, err := connectSqlite3(d.databaseFile)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	d.db = db
 
@@ -244,8 +254,8 @@ func (d *Database) ResolveTokensByTerms(terms []string) ([]Token, error) {
 	return records, nil
 }
 
-func (d *Database) ResolveAllTokens() ([]Token, error) {
-	var tokens []Token
+func (d *Database) ResolveAllTokens() ([]*Token, error) {
+	var tokens []*Token
 	err := d.resolveAllTokenIds.Select(&tokens)
 	if err != nil {
 		return nil, errors.WithStack(err)

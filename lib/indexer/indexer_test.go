@@ -10,7 +10,6 @@ import (
 	"github.com/cxxxr/searty/lib/database"
 	"github.com/cxxxr/searty/lib/invertedindex"
 	"github.com/cxxxr/searty/lib/primitive"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,7 +21,7 @@ func isExists(filename string) bool {
 func resolveInvertedIndex(
 	t *testing.T,
 	database *database.Database,
-	tokens []database.Token,
+	tokens []*database.Token,
 ) *invertedindex.InvertedIndex {
 	tokenIds := make([]primitive.TokenId, len(tokens))
 	for i, token := range tokens {
@@ -30,13 +29,13 @@ func resolveInvertedIndex(
 	}
 
 	invertedIndex, err := database.ResolveInvertedIndex(tokenIds)
-	assert.Nil(t, err)
+	require.Nil(t, err)
 	return invertedIndex
 }
 
-func resolveAllTokens(t *testing.T, database *database.Database) []database.Token {
+func resolveAllTokens(t *testing.T, database *database.Database) []*database.Token {
 	tokens, err := database.ResolveAllTokens()
-	assert.Nil(t, err)
+	require.Nil(t, err)
 
 	sort.Slice(tokens, func(i, j int) bool {
 		return tokens[i].Term < tokens[j].Term
@@ -91,12 +90,12 @@ func Test_index(t *testing.T) {
 	// snapshot test
 	if isExists(".snapshot") {
 		data, err := os.ReadFile(".snapshot")
-		assert.Nil(t, err)
-		assert.Equal(t, data, writer.Bytes())
+		require.Nil(t, err)
+		require.Equal(t, data, writer.Bytes())
 		return
 	}
 
 	file, err := os.Create(".snapshot")
-	assert.Nil(t, err)
+	require.Nil(t, err)
 	file.Write(writer.Bytes())
 }

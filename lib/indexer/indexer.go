@@ -84,7 +84,7 @@ func (i *Indexer) Index(specFile, databaseFile string) error {
 
 	database := database.New(databaseFile)
 
-	if err := database.Clear(); err != nil {
+	if err := database.InitTables(); err != nil {
 		return err
 	}
 

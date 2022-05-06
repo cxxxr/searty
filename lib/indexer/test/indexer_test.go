@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/cxxxr/searty/lib/database"
+	"github.com/cxxxr/searty/lib/indexer"
 	"github.com/cxxxr/searty/lib/invertedindex"
 	"github.com/cxxxr/searty/lib/primitive"
 	"github.com/stretchr/testify/require"
@@ -55,7 +56,7 @@ func Test_index(t *testing.T) {
 	databaseFile := createTestingDatabaseFile(t)
 
 	// Do
-	err := New().Index("testdata/cl-ppcre.json", databaseFile)
+	err := indexer.New().Index("testdata/cl-ppcre.json", databaseFile)
 	require.Nil(t, err)
 
 	// prepare database connection

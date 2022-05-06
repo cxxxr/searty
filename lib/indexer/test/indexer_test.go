@@ -52,12 +52,15 @@ func createTestingDatabaseFile(t *testing.T) string {
 	return databaseFile.Name()
 }
 
-func Test_index(t *testing.T) {
+func doIndex(t *testing.T, specFile string) string {
 	databaseFile := createTestingDatabaseFile(t)
-
-	// Do
-	err := indexer.New().Index("testdata/cl-ppcre.json", databaseFile)
+	err := indexer.New().Index(specFile, databaseFile)
 	require.Nil(t, err)
+	return databaseFile
+}
+
+func Test_index(t *testing.T) {
+	databaseFile := doIndex(t, "testdata/cl-ppcre.json")
 
 	// prepare database connection
 	database := database.New(databaseFile)

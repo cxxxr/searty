@@ -237,7 +237,7 @@ func (d *Database) ResolveTokenById(id primitive.TokenId) (*Token, error) {
 	return d.resolveToken(d.resolveTokenById, id)
 }
 
-func (d *Database) ResolveTokensByTerms(terms []string) ([]Token, error) {
+func (d *Database) ResolveTokensByTerms(terms []string) ([]*Token, error) {
 	query, params, err := sqlx.In(
 		`SELECT id, term, kind FROM token WHERE term in (?)`,
 		terms,
@@ -246,7 +246,7 @@ func (d *Database) ResolveTokensByTerms(terms []string) ([]Token, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	var records []Token
+	var records []*Token
 	if err := d.db.Select(&records, query, params...); err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -291,6 +291,7 @@ func (d *Database) ResolveInvertedIndex(tokenIds []primitive.TokenId) (
 		return nil, errors.WithStack(err)
 	}
 
+	// TODO
 	var records []InvertedIndex
 	if err := d.db.Select(&records, query, params...); err != nil {
 		return nil, errors.WithStack(err)

@@ -1,8 +1,6 @@
 package searcher
 
 import (
-	"log"
-
 	"github.com/cxxxr/searty/lib/database"
 	"github.com/cxxxr/searty/lib/invertedindex"
 	"github.com/cxxxr/searty/lib/primitive"
@@ -14,11 +12,11 @@ type Searcher struct {
 	database  *database.Database
 }
 
-func New() *Searcher {
-	return &Searcher{}
+func New(tokenizer *tokenizer.Tokenizer, database *database.Database) *Searcher {
+	return &Searcher{tokenizer: tokenizer, database: database}
 }
 
-func makeTokenIds(tokens []database.Token) []primitive.TokenId {
+func makeTokenIds(tokens []*database.Token) []primitive.TokenId {
 	tokenIds := make([]primitive.TokenId, len(tokens))
 	for i, token := range tokens {
 		tokenIds[i] = token.Id

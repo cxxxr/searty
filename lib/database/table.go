@@ -1,6 +1,10 @@
 package database
 
-import "github.com/cxxxr/searty/lib/primitive"
+import (
+	"database/sql"
+
+	"github.com/cxxxr/searty/lib/primitive"
+)
 
 type Document struct {
 	Id       primitive.DocumentId `db:"id"`
@@ -11,7 +15,7 @@ type Document struct {
 type Token struct {
 	Id   primitive.TokenId `db:"id"`
 	Term string            `db:"term"`
-	kind int               `db:"kind"`
+	Kind sql.NullInt64     `db:"kind"`
 }
 
 type InvertedIndex struct {

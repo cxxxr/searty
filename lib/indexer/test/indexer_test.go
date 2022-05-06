@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/cxxxr/searty/lib/database"
-	"github.com/cxxxr/searty/lib/indexer"
 	"github.com/cxxxr/searty/lib/invertedindex"
 	"github.com/cxxxr/searty/lib/primitive"
+	"github.com/cxxxr/searty/lib/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -45,22 +45,8 @@ func resolveAllTokens(t *testing.T, database *database.Database) []*database.Tok
 	return tokens
 }
 
-func createTestingDatabaseFile(t *testing.T) string {
-	databaseFile, err := os.CreateTemp("", "searty.sqlite3.*")
-	require.Nil(t, err)
-	defer databaseFile.Close()
-	return databaseFile.Name()
-}
-
-func doIndex(t *testing.T, specFile string) string {
-	databaseFile := createTestingDatabaseFile(t)
-	err := indexer.New().Index(specFile, databaseFile)
-	require.Nil(t, err)
-	return databaseFile
-}
-
 func Test_index(t *testing.T) {
-	databaseFile := doIndex(t, "testdata/cl-ppcre.json")
+	databaseFile := testutil.DoIndex(t, "testdata/cl-ppcre.json")
 
 	// prepare database connection
 	database := database.New(databaseFile)

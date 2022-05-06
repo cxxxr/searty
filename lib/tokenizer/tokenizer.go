@@ -15,9 +15,11 @@ func ngram(text string, n int) []string {
 }
 
 func (t *Tokenizer) Tokenize(text string) []string {
-	boundingText := make([]byte, len(text)+2)
-	copy(boundingText[1:], text)
-	boundingText[0] = byte(0)
-	boundingText[len(boundingText)-1] = byte(0)
-	return ngram(string(boundingText), 3)
+	// boundingText := make([]byte, len(text)+2)
+	// copy(boundingText[1:], text)
+	// boundingText[0] = byte(0)
+	// boundingText[len(boundingText)-1] = byte(0)
+	// return ngram(string(boundingText), 3)
+
+	return ngram(string(text), 3)
 }

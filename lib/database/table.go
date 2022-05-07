@@ -26,7 +26,7 @@ type InvertedIndex struct {
 type Symbol struct {
 	Id          primitive.SymbolId `db:"id"`
 	Name        string             `db:"name"`
-	PackageName string             `db:"package_name"`
+	PackageName sql.NullString     `db:"package_name"`
 }
 
 type Package struct {

@@ -1,6 +1,7 @@
 package indexer
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -147,7 +148,7 @@ func (i *Indexer) indexDefinition(definition spec.Definition, db *database.Datab
 		err := db.InsertSymbol(&database.Symbol{
 			Id:          symbolId,
 			Name:        identifier.Name,
-			PackageName: identifier.Package,
+			PackageName: sql.NullString{String: identifier.Package, Valid: true},
 		})
 		if err != nil {
 			return err

@@ -46,7 +46,7 @@ func resolveAllTokens(t *testing.T, database *database.Database) []*database.Tok
 }
 
 func Test_index(t *testing.T) {
-	databaseFile := testutil.DoIndex(t, "testdata/cl-ppcre.json")
+	databaseFile := testutil.DoIndex(t, "../../testdata/cl-ppcre.json")
 
 	// prepare database connection
 	database := database.New(databaseFile)

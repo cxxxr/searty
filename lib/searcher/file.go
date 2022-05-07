@@ -2,6 +2,7 @@ package searcher
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/cxxxr/searty/lib/database"
 	"github.com/cxxxr/searty/lib/primitive"
@@ -26,18 +27,18 @@ func searchLineStartForward(text string, pos int) int {
 			return pos
 		}
 		if text[pos] == '\n' {
-			return pos - 1
+			return pos
 		}
 	}
 }
 
-func printMatchedLine(result *Result, text string) {
+func printMatchedLine(result *Result, text string, writer io.Writer) {
 	lineStart := searchLineStartBackward(text, result.start)
 	lineEnd := searchLineStartForward(text, result.start)
-	fmt.Println(result.doc.Filename, text[lineStart:lineEnd])
+	fmt.Fprintf(writer, "%s:%s\n", result.doc.Filename, text[lineStart:lineEnd])
 }
 
-func prettyPrintResults(results []*Result, db *database.Database) error {
+func prettyPrintResults(results []*Result, db *database.Database, writer io.Writer) error {
 	docIds := make([]primitive.DocumentId, 0, len(results))
 	for _, result := range results {
 		docIds = append(docIds, result.doc.Id)
@@ -54,7 +55,7 @@ func prettyPrintResults(results []*Result, db *database.Database) error {
 	}
 
 	for _, result := range results {
-		printMatchedLine(result, docIdTextMap[result.doc.Id])
+		printMatchedLine(result, docIdTextMap[result.doc.Id], writer)
 	}
 
 	return nil

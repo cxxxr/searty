@@ -35,18 +35,20 @@ type Package struct {
 	SystemId primitive.SystemId  `db:"system_id"`
 }
 
-type SymbolDefinition struct {
-	SymbolId   primitive.SymbolId   `db:"symbol_id"`
+type definition struct {
 	Specifier  string               `db:"specifier"`
 	DocumentId primitive.DocumentId `db:"document_id"`
 	Position   int                  `db:"position"`
 }
 
+type SymbolDefinition struct {
+	SymbolId   primitive.SymbolId   `db:"symbol_id"`
+	*definition
+}
+
 type PackageDefinition struct {
 	PackageId  primitive.PackageId  `db:"package_id"`
-	Specifier  string               `db:"specifier"`
-	DocumentId primitive.DocumentId `db:"document_id"`
-	Position   int                  `db:"position"`
+	*definition
 }
 
 type AsdSystem struct {

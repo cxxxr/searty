@@ -109,7 +109,6 @@ func (i *Indexer) Index(specFile, databaseFile string) error {
 }
 
 // TODO
-// - inverted_index
 // - symbol_definition
 // - package_definition
 // - symbol

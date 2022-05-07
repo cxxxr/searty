@@ -20,7 +20,7 @@ func Test_Search(t *testing.T) {
 	defer database.Close()
 
 	// Do
-	results, err := New(tokenizer.New(), database).Search("defun")
+	results, err := NewPhraseSearcher(tokenizer.New(), database).Search("defun")
 	require.Nil(t, err)
 
 	// Post

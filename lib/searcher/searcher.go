@@ -9,13 +9,13 @@ import (
 	"github.com/cxxxr/searty/lib/tokenizer"
 )
 
-type Searcher struct {
+type PhraseSearcher struct {
 	tokenizer *tokenizer.Tokenizer
 	database  *database.Database
 }
 
-func New(tokenizer *tokenizer.Tokenizer, database *database.Database) *Searcher {
-	return &Searcher{tokenizer: tokenizer, database: database}
+func NewPhraseSearcher(tokenizer *tokenizer.Tokenizer, database *database.Database) *PhraseSearcher {
+	return &PhraseSearcher{tokenizer: tokenizer, database: database}
 }
 
 func makeTokenIds(tokens []*database.Token) []primitive.TokenId {
@@ -205,7 +205,7 @@ func convertResultsPerDocToResults(resultsPerDoc resultsPerDocMap) []*Result {
 	return acc
 }
 
-func (s *Searcher) Search(query string) ([]*Result, error) {
+func (s *PhraseSearcher) Search(query string) ([]*Result, error) {
 	// TODO: ngramのトークンをphrase検索するときにn-1文字ずつ探す
 
 	terms := s.tokenizer.Tokenize(query)

@@ -135,10 +135,7 @@ func extractMatched(acc resultsPerDocMap, postings postingSlice, positions posit
 }
 
 func resolveResultDocument(results []*Result, db *database.Database) ([]*Result, error) {
-	ids := make([]primitive.DocumentId, len(results))
-	for i, result := range results {
-		ids[i] = result.doc.Id
-	}
+	ids := resultDocIds(results)
 
 	// REVIEW: 現状は含めていないがbodyを含めるべきか?
 	docs, err := db.ResolveDocumentsByIds(ids)

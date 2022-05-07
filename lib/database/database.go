@@ -194,18 +194,28 @@ func (d *Database) ResolveDocumentById(id primitive.DocumentId) (*Document, erro
 	return &doc, nil
 }
 
+func (d *Database) resolveDocumentsAux(query string, params []interface{}) ([]*Document, error) {
+	var records []*Document
+	if err := d.db.Select(&records, query, params...); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return records, nil
+}
+
 func (d *Database) ResolveDocumentsByIds(ids []primitive.DocumentId) ([]*Document, error) {
 	query, params, err := sqlx.In(`SELECT id, filename FROM document WHERE id in (?)`, ids)
 	if err != nil {
 		return nil, err
 	}
+	return d.resolveDocumentsAux(query, params)
+}
 
-	var records []*Document
-	if err := d.db.Select(&records, query, params...); err != nil {
-		return nil, errors.WithStack(err)
+func (d *Database) ResolveDocumentsWithBodyByIds(ids []primitive.DocumentId) ([]*Document, error) {
+	query, params, err := sqlx.In(`SELECT id, filename, body FROM document WHERE id in (?)`, ids)
+	if err != nil {
+		return nil, err
 	}
-
-	return records, nil
+	return d.resolveDocumentsAux(query, params)
 }
 
 func (d *Database) ResolveAllDocuments() ([]*Document, error) {
@@ -291,8 +301,7 @@ func (d *Database) ResolveInvertedIndex(tokenIds []primitive.TokenId) (
 		return nil, errors.WithStack(err)
 	}
 
-	// TODO
-	var records []InvertedIndex
+	var records []*InvertedIndex
 	if err := d.db.Select(&records, query, params...); err != nil {
 		return nil, errors.WithStack(err)
 	}

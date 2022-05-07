@@ -14,9 +14,9 @@ func isExists(filename string) bool {
 
 func Snapshot(t *testing.T, data []byte, snapshotFile string) {
 	if isExists(snapshotFile) {
-		data, err := os.ReadFile(".snapshot")
+		cached, err := os.ReadFile(snapshotFile)
 		require.Nil(t, err)
-		require.Equal(t, data, data)
+		require.Equal(t, cached, data)
 		return
 	}
 

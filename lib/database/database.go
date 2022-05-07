@@ -205,7 +205,7 @@ func (d *Database) resolveDocumentsAux(query string, params []interface{}) ([]*D
 func (d *Database) ResolveDocumentsByIds(ids []primitive.DocumentId) ([]*Document, error) {
 	query, params, err := sqlx.In(`SELECT id, filename FROM document WHERE id in (?)`, ids)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return d.resolveDocumentsAux(query, params)
 }

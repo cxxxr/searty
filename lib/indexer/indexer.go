@@ -56,16 +56,18 @@ func createDocument(file, text string, db *database.Database) (*database.Documen
 	return doc, nil
 }
 
-func (i *Indexer) indexFile(file string, db *database.Database) error {
+func (i *Indexer) indexFile(file string, db *database.Database) (*database.Document, error) {
+	log.Println(file)
+
 	data, err := os.ReadFile(file)
 	if err != nil {
-		return errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 	text := string(data)
 
 	doc, err := createDocument(i.computeRelativePath(file), text, db)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	terms := tokenizer.New().Tokenize(text)
@@ -79,7 +81,7 @@ func (i *Indexer) indexFile(file string, db *database.Database) error {
 	for pos, term := range terms {
 		token, err := db.ResolveTokenByTerm(term)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		var tokenId primitive.TokenId
@@ -93,7 +95,7 @@ func (i *Indexer) indexFile(file string, db *database.Database) error {
 		i.index.Insert(tokenId, doc.Id, pos)
 	}
 
-	return nil
+	return doc, nil
 }
 
 func (i *Indexer) Index(specFile, databaseFile string) error {
@@ -118,10 +120,15 @@ func (i *Indexer) Index(specFile, databaseFile string) error {
 	}
 
 	i.rootDirectory = computeRootDirectory(spec.AsdFile)
+	asdDoc, err := i.indexFile(spec.AsdFile, db)
+	if err != nil {
+		return err
+	}
+
+	var _ = asdDoc
 
 	for _, file := range spec.Files {
-		log.Println(file)
-		if err := i.indexFile(file, db); err != nil {
+		if _, err := i.indexFile(file, db); err != nil {
 			return err
 		}
 	}

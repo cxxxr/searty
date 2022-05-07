@@ -27,6 +27,7 @@ type prepareStatements struct {
 	resolveAllTokenIds        *sqlx.Stmt
 	insertToken               *sqlx.Stmt
 	upsertInvertedIndex       *sqlx.Stmt
+	insertAsdSystem           *sqlx.NamedStmt
 }
 
 func New(databaseFile string) *Database {
@@ -165,6 +166,15 @@ ON CONFLICT(token_id) DO NOTHING`,
 	}
 	d.upsertInvertedIndex = stmt
 
+	namedStmt, err := d.tx.PrepareNamedContext(
+		ctx,
+		`INSERT INTO asd_system (id, name, document_id, analyzed_time)
+VALUES (:id, :name, :document_id, :analyzed_time)`,
+	)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	d.insertAsdSystem = namedStmt
 	return nil
 }
 
@@ -315,4 +325,13 @@ func (d *Database) ResolveInvertedIndex(tokenIds []primitive.TokenId) (
 		invertedIndex.Set(record.TokenId, postingList)
 	}
 	return invertedIndex, nil
+}
+
+func (d *Database) InsertAsdSystem(record *AsdSystem) error {
+	_, err := d.insertAsdSystem.Exec(record)
+
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
 }

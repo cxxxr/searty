@@ -120,12 +120,22 @@ func (i *Indexer) Index(specFile, databaseFile string) error {
 	}
 
 	i.rootDirectory = computeRootDirectory(spec.AsdFile)
+
 	asdDoc, err := i.indexFile(spec.AsdFile, db)
 	if err != nil {
 		return err
 	}
-
-	var _ = asdDoc
+	err = db.InsertAsdSystem(
+		&database.AsdSystem{
+			Id: primitive.SystemId(uuid.NewString()),
+			Name: spec.SystemName,
+			DocumentId: asdDoc.Id,
+			AnalyzedTime: spec.Time,
+		},
+	)
+	if err != nil {
+		return err
+	}
 
 	for _, file := range spec.Files {
 		if _, err := i.indexFile(file, db); err != nil {

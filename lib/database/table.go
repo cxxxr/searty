@@ -52,7 +52,7 @@ type PackageDefinition struct {
 }
 
 type AsdSystem struct {
-	Id           primitive.SystemId   `db:"system_id"`
+	Id           primitive.SystemId   `db:"id"`
 	Name         string               `db:"name"`
 	DocumentId   primitive.DocumentId `db:"document_id"`
 	AnalyzedTime float64              `db:"analyzed_time"`

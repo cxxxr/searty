@@ -63,14 +63,14 @@ func nextEachPosting(postings postingSlice) {
 
 func nextMinimumPosting(postings postingSlice) {
 	minDoc := postings[0]
-	MinIndex := 0
+	minIndex := 0
 	for i, posting := range postings[1:] {
 		if minDoc.DocumentId() > posting.DocumentId() {
 			minDoc = posting
-			MinIndex = i
+			minIndex = i + 1
 		}
 	}
-	postings[MinIndex] = postings[MinIndex].Next()
+	postings[minIndex] = postings[minIndex].Next()
 }
 
 type positions []int

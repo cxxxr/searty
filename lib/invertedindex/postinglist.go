@@ -117,7 +117,7 @@ func (p *PostingList) insert(pos int, docId primitive.DocumentId) {
 			current.positions = append(current.positions, pos)
 			return
 		}
-		if current.documentId < docId {
+		if current.documentId > docId {
 			p.count++
 			posting := newPosting(docId, pos, current)
 			*node = posting

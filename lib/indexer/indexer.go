@@ -1,11 +1,11 @@
 package indexer
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path"
 
-	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
 	"github.com/cxxxr/searty/lib/database"
@@ -18,10 +18,15 @@ import (
 type Indexer struct {
 	index         *invertedindex.InvertedIndex
 	rootDirectory string
+	systemId      primitive.SystemId
+	fileIdMap     map[string]primitive.DocumentId
 }
 
 func New() *Indexer {
-	return &Indexer{index: invertedindex.New()}
+	return &Indexer{
+		index:     invertedindex.New(),
+		fileIdMap: make(map[string]primitive.DocumentId, 0),
+	}
 }
 
 func computeRootDirectory(asdFile string) string {
@@ -43,15 +48,21 @@ func (i *Indexer) flush(database *database.Database) error {
 	return nil
 }
 
-func createDocument(file, text string, db *database.Database) (*database.Document, error) {
-	if err := db.InsertDocument(file, text); err != nil {
+func (i *Indexer) createDocument(file, text string, db *database.Database) (
+	*database.Document,
+	error,
+) {
+	relativePath := i.computeRelativePath(file)
+	if err := db.InsertDocument(relativePath, text); err != nil {
 		return nil, err
 	}
 
-	doc, err := db.ResolveDocumentByFilename(file)
+	doc, err := db.ResolveDocumentByFilename(relativePath)
 	if err != nil {
 		return nil, err
 	}
+
+	i.fileIdMap[file] = doc.Id
 
 	return doc, nil
 }
@@ -65,7 +76,7 @@ func (i *Indexer) indexFile(file string, db *database.Database) (*database.Docum
 	}
 	text := string(data)
 
-	doc, err := createDocument(i.computeRelativePath(file), text, db)
+	doc, err := i.createDocument(file, text, db)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +97,7 @@ func (i *Indexer) indexFile(file string, db *database.Database) (*database.Docum
 
 		var tokenId primitive.TokenId
 		if token == nil {
-			id := primitive.TokenId(uuid.NewString())
+			id := primitive.NewTokenId()
 			db.InsertToken(id, term)
 			tokenId = id
 		} else {
@@ -96,6 +107,76 @@ func (i *Indexer) indexFile(file string, db *database.Database) (*database.Docum
 	}
 
 	return doc, nil
+}
+
+func (i *Indexer) makeLocation(loc spec.Location) database.Location {
+	return database.Location{
+		Specifier:  loc.Specifier,
+		DocumentId: i.fileIdMap[loc.File],
+		Position:   loc.Position,
+	}
+}
+
+func (i *Indexer) indexDefinition(definition spec.Definition, db *database.Database) error {
+	identifier := definition.Identifier
+	switch identifier.Type {
+	case "package":
+		packageId := primitive.NewPackageId()
+		err := db.InsertPackage(&database.Package{
+			Id:       packageId,
+			Name:     identifier.Name,
+			SystemId: i.systemId,
+		})
+		if err != nil {
+			return err
+		}
+
+		for _, loc := range definition.Locations {
+			record := database.PackageDefinition{
+				PackageId: packageId,
+				Location:  i.makeLocation(loc),
+			}
+			err := db.InsertPackageDefinition(&record)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	case "symbol":
+		symbolId := primitive.NewSymbolId()
+		err := db.InsertSymbol(&database.Symbol{
+			Id:          symbolId,
+			Name:        identifier.Name,
+			PackageName: identifier.Package,
+		})
+		if err != nil {
+			return err
+		}
+
+		for _, loc := range definition.Locations {
+			record := database.SymbolDefinition{
+				SymbolId: symbolId,
+				Location: i.makeLocation(loc),
+			}
+			err := db.InsertSymbolDefinition(&record)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	default:
+		return fmt.Errorf("unexpected identifier.Type: %v", identifier.Type)
+	}
+}
+
+func (i *Indexer) indexDefinitions(definitions []spec.Definition, db *database.Database) error {
+	for _, definition := range definitions {
+		err := i.indexDefinition(definition, db)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (i *Indexer) Index(specFile, databaseFile string) error {
@@ -125,17 +206,20 @@ func (i *Indexer) Index(specFile, databaseFile string) error {
 	if err != nil {
 		return err
 	}
+
+	systemId := primitive.NewSystemId()
 	err = db.InsertAsdSystem(
 		&database.AsdSystem{
-			Id: primitive.SystemId(uuid.NewString()),
-			Name: spec.SystemName,
-			DocumentId: asdDoc.Id,
+			Id:           systemId,
+			Name:         spec.SystemName,
+			DocumentId:   asdDoc.Id,
 			AnalyzedTime: spec.Time,
 		},
 	)
 	if err != nil {
 		return err
 	}
+	i.systemId = systemId
 
 	for _, file := range spec.Files {
 		if _, err := i.indexFile(file, db); err != nil {
@@ -143,12 +227,10 @@ func (i *Indexer) Index(specFile, databaseFile string) error {
 		}
 	}
 
+	err = i.indexDefinitions(spec.Definitions, db)
+	if err != nil {
+		return err
+	}
+
 	return i.flush(db)
 }
-
-// TODO
-// - symbol_definition
-// - package_definition
-// - symbol
-// - package
-// - asd_system

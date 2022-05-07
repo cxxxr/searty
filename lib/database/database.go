@@ -28,6 +28,10 @@ type prepareStatements struct {
 	insertToken               *sqlx.Stmt
 	upsertInvertedIndex       *sqlx.Stmt
 	insertAsdSystem           *sqlx.NamedStmt
+	insertSymbol              *sqlx.NamedStmt
+	insertPackage             *sqlx.NamedStmt
+	insertSymbolDefinition    *sqlx.NamedStmt
+	insertPackageDefinition   *sqlx.NamedStmt
 }
 
 func New(databaseFile string) *Database {
@@ -175,6 +179,47 @@ VALUES (:id, :name, :document_id, :analyzed_time)`,
 		return errors.WithStack(err)
 	}
 	d.insertAsdSystem = namedStmt
+
+	namedStmt, err = d.tx.PrepareNamedContext(
+		ctx,
+		`INSERT INTO symbol (id, name, package_name)
+VALUES (:id, :name, :package_name)`,
+	)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	d.insertSymbol = namedStmt
+
+	namedStmt, err = d.tx.PrepareNamedContext(
+		ctx,
+		`INSERT INTO package (id, name, system_id)
+VALUES (:id, :name, :system_id)`,
+	)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	d.insertPackage = namedStmt
+
+	namedStmt, err = d.tx.PrepareNamedContext(
+		ctx,
+		`INSERT INTO symbol_definition (symbol_id, specifier, document_id, position)
+VALUES (:symbol_id, :specifier, :document_id, :position)`,
+	)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	d.insertSymbolDefinition = namedStmt
+
+	namedStmt, err = d.tx.PrepareNamedContext(
+		ctx,
+		`INSERT INTO package_definition (package_id, specifier, document_id, position)
+VALUES (:package_id, :specifier, :document_id, :position)`,
+	)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	d.insertPackageDefinition = namedStmt
+
 	return nil
 }
 
@@ -329,7 +374,38 @@ func (d *Database) ResolveInvertedIndex(tokenIds []primitive.TokenId) (
 
 func (d *Database) InsertAsdSystem(record *AsdSystem) error {
 	_, err := d.insertAsdSystem.Exec(record)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
 
+func (d *Database) InsertSymbol(record *Symbol) error {
+	_, err := d.insertSymbol.Exec(record)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
+func (d *Database) InsertPackage(record *Package) error {
+	_, err := d.insertPackage.Exec(record)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
+func (d *Database) InsertSymbolDefinition(record *SymbolDefinition) error {
+	_, err := d.insertSymbolDefinition.Exec(record)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
+func (d *Database) InsertPackageDefinition(record *PackageDefinition) error {
+	_, err := d.insertPackageDefinition.Exec(record)
 	if err != nil {
 		return errors.WithStack(err)
 	}

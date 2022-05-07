@@ -127,6 +127,7 @@ func extractMatched(acc resultsPerDocMap, postings postingSlice, positions posit
 				&database.Document{Id: posting.DocumentId()},
 				pos+offset,
 				pos+offset+3,
+				nil,
 			)
 			k := posting.DocumentId()
 			acc[k] = append(acc[k], r)
@@ -159,6 +160,15 @@ func resolveResultDocument(results []*Result, db *database.Database) ([]*Result,
 	for i, result := range results {
 		results[i].doc = docMap[result.doc.Id]
 	}
+
+	sort.Slice(results, func(i, j int) bool {
+		file1 := results[i].doc.Filename
+		file2 := results[j].doc.Filename
+		if file1 == file2 {
+			return results[i].start < results[j].start
+		}
+		return file1 < file2
+	})
 
 	return results, nil
 }

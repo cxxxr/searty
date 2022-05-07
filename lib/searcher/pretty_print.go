@@ -35,7 +35,13 @@ func searchLineStartForward(text string, pos int) int {
 func printMatchedLine(result *Result, text string, writer io.Writer) {
 	lineStart := searchLineStartBackward(text, result.start)
 	lineEnd := searchLineStartForward(text, result.start)
-	fmt.Fprintf(writer, "%s:%s\n", result.doc.Filename, text[lineStart:lineEnd])
+	fmt.Fprintf(writer,
+		"%s:%d:%d:%s\n",
+		result.doc.Filename,
+		result.start,
+		result.end,
+		text[lineStart:lineEnd],
+	)
 }
 
 func prettyPrintResults(results []*Result, db *database.Database, writer io.Writer) error {

@@ -60,5 +60,14 @@ func (s *SymbolSearcher) Search(query string) ([]*Result, error) {
 		return nil, err
 	}
 
+	for _, symbol := range symbols {
+		defs, err := s.db.ResolveSymbolDefinitionsBySymbolId(symbol.Id)
+		if err != nil {
+			return nil, err
+		}
+		for _, def := range defs {
+			fmt.Println(def)
+		}
+	}
 	return nil, nil
 }

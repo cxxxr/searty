@@ -134,6 +134,14 @@ func extractMatched(acc resultsPerDocMap, postings postingSlice, positions posit
 	}
 }
 
+func resultDocIds(results []*Result) []primitive.DocumentId {
+	ids := make([]primitive.DocumentId, len(results))
+	for i, result := range results {
+		ids[i] = result.doc.Id
+	}
+	return ids
+}
+
 func resolveResultDocument(results []*Result, db *database.Database) ([]*Result, error) {
 	ids := resultDocIds(results)
 

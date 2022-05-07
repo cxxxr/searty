@@ -24,7 +24,7 @@ func New() *Indexer {
 
 func (i *Indexer) flush(database *database.Database) error {
 	for _, tokenId := range i.index.TokenIds() {
-		blob, err := i.index.EncodePostingList(tokenId)
+		blob, err := i.index.Get(tokenId).Encode()
 		if err != nil {
 			return err
 		}

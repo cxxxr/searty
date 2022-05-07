@@ -1,8 +1,6 @@
 package invertedindex
 
 import (
-	"fmt"
-
 	"github.com/cxxxr/searty/lib/primitive"
 )
 
@@ -47,12 +45,4 @@ func (index *InvertedIndex) TokenIds() []primitive.TokenId {
 		ids = append(ids, tokenId)
 	}
 	return ids
-}
-
-func (index *InvertedIndex) EncodePostingList(tokenId primitive.TokenId) ([]byte, error) {
-	postinglist, ok := index.table[tokenId]
-	if !ok {
-		return nil, fmt.Errorf("%v not found", tokenId)
-	}
-	return encode(postinglist)
 }

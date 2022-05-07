@@ -3,6 +3,7 @@ package invertedindex
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
 
 	"github.com/cxxxr/searty/lib/primitive"
 	"github.com/pkg/errors"
@@ -32,6 +33,18 @@ func (p *Posting) Next() *Posting {
 
 func (p *Posting) Positions() []int {
 	return p.positions
+}
+
+func (p *Posting) CheckCorruption() error {
+	id := primitive.DocumentId(0)
+	for p != nil {
+		if id > p.documentId {
+			return errors.New("assertion error")
+		}
+		id = p.documentId
+		p = p.next
+	}
+	return nil
 }
 
 func (p *Posting) GobEncode() ([]byte, error) {
@@ -145,7 +158,7 @@ func (p *PostingList) Map(fn func(primitive.DocumentId, []int) error) error {
 	return nil
 }
 
-func encode(p *PostingList) ([]byte, error) {
+func (p *PostingList) Encode() ([]byte, error) {
 	writer := bytes.NewBuffer(nil)
 	encoder := gob.NewEncoder(writer)
 	if err := encoder.Encode(p); err != nil {

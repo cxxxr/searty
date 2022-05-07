@@ -66,6 +66,7 @@ func Test_index(t *testing.T) {
 	invertedIndex := resolveInvertedIndex(t, database, tokens)
 	for _, token := range tokens {
 		postingList := invertedIndex.Get(token.Id)
+		require.Nil(t, postingList.CheckCorruption())
 		fmt.Fprintf(writer, "%#v: count = %d\n", token.Term, postingList.Count())
 		postingList.Map(func(docId primitive.DocumentId, positions []int) error {
 			doc, err := database.ResolveDocumentById(docId)

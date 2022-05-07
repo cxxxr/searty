@@ -101,16 +101,16 @@ func (i *Indexer) Index(specFile, databaseFile string) error {
 	log.SetPrefix("Index: ")
 	defer log.SetPrefix(prefix)
 
-	database := database.New(databaseFile)
+	db := database.New(databaseFile)
 
-	if err := database.InitTables(); err != nil {
+	if err := db.InitTables(); err != nil {
 		return err
 	}
 
-	if err := database.Connect(); err != nil {
+	if err := db.Connect(); err != nil {
 		return err
 	}
-	defer database.Close()
+	defer db.Close()
 
 	spec, err := spec.Read(specFile)
 	if err != nil {
@@ -121,12 +121,12 @@ func (i *Indexer) Index(specFile, databaseFile string) error {
 
 	for _, file := range spec.Files {
 		log.Println(file)
-		if err := i.indexFile(file, database); err != nil {
+		if err := i.indexFile(file, db); err != nil {
 			return err
 		}
 	}
 
-	return i.flush(database)
+	return i.flush(db)
 }
 
 // TODO

@@ -1,11 +1,13 @@
 package searcher
 
+import "github.com/cxxxr/searty/lib/database"
+
 type Result struct {
-	Filename string
-	start    int
-	end      int
+	doc   *database.Document
+	start int
+	end   int
 }
 
-func newResult(filename string, start, end int) *Result {
-	return &Result{filename, start, end}
+func newResult(doc *database.Document, start, end int) *Result {
+	return &Result{doc, start, end}
 }

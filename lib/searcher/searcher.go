@@ -1,6 +1,8 @@
 package searcher
 
 import (
+	"sort"
+
 	"github.com/cxxxr/searty/lib/database"
 	"github.com/cxxxr/searty/lib/invertedindex"
 	"github.com/cxxxr/searty/lib/primitive"
@@ -98,7 +100,7 @@ func intersectionPositionsSet(set positionsSet) positions {
 			m[pos]++
 		}
 	}
-	intersection := make(positions, len(m))
+	intersection := make(positions, 0)
 	for pos, count := range m {
 		if count == len(set) {
 			intersection = append(intersection, pos)
@@ -116,50 +118,91 @@ func matchPhrase(postings postingSlice) (positions, bool) {
 	return positions, true
 }
 
-type result struct {
-	docId primitive.DocumentId
-	start int
-	end   int
-}
+type resultsPerDocMap map[primitive.DocumentId][]*Result
 
-func extractMatched(postings postingSlice, positions positions) *result {
-	// assert
-	{
-		pos0 := positions[0]
-		for i, pos := range positions[1:] {
-			if pos0 != pos+i {
-				panic("assertion error")
-			}
+func extractMatched(acc resultsPerDocMap, postings postingSlice, positions positions) {
+	for offset, posting := range postings {
+		for _, pos := range positions {
+			r := newResult(
+				&database.Document{Id: posting.DocumentId()},
+				pos+offset,
+				pos+offset+3,
+			)
+			k := posting.DocumentId()
+			acc[k] = append(acc[k], r)
 		}
 	}
-
-	docId := postings[0].DocumentId()
-	start := positions[0]
-	end := positions[len(positions)-1]
-	return &result{docId, start, end}
 }
 
-func convertResults(results []*result, database *database.Database) ([]*Result, error) {
+func resolveResultDocument(results []*Result, db *database.Database) ([]*Result, error) {
 	ids := make([]primitive.DocumentId, len(results))
 	for i, result := range results {
-		ids[i] = result.docId
+		ids[i] = result.doc.Id
 	}
 
 	// REVIEW: 現状は含めていないがbodyを含めるべきか?
-	docs, err := database.ResolveDocumentsByIds(ids)
+	docs, err := db.ResolveDocumentsByIds(ids)
 	if err != nil {
 		return nil, err
 	}
 
-	convertedResults := make([]*Result, len(results))
-	for i, result := range results {
-		convertedResults[i] = newResult(docs[i].Filename, result.start, result.end)
+	docMap := make(map[primitive.DocumentId]*database.Document, 0)
+	for _, doc := range docs {
+		docMap[doc.Id] = doc
 	}
 
-	return convertedResults, nil
+	for i, result := range results {
+		results[i].doc = docMap[result.doc.Id]
+	}
+
+	return results, nil
+}
+
+func mergeRanges(results []*Result) []*Result {
+	cursor := 0
+
+	for cursor < len(results)-1 {
+		current := results[cursor]
+		next := results[cursor+1]
+		if current.start <= next.start && next.start <= current.end {
+			current.end = next.end
+			results[cursor+1].start = current.start
+			results[cursor] = nil
+			cursor++
+		} else {
+			cursor++
+		}
+	}
+
+	var acc []*Result
+	for _, result := range results {
+		if result != nil {
+			acc = append(acc, result)
+		}
+	}
+	return acc
+}
+
+func mergeRangesForResultsPerDoc(resultsPerDoc resultsPerDocMap) {
+	for docId, results := range resultsPerDoc {
+		sort.Slice(results, func(i, j int) bool {
+			return results[i].start < results[j].start
+		})
+		resultsPerDoc[docId] = mergeRanges(results)
+	}
+}
+
+func convertResultsPerDocToResults(resultsPerDoc resultsPerDocMap) []*Result {
+	var acc []*Result
+	for _, results := range resultsPerDoc {
+		acc = append(acc, results...)
+	}
+	return acc
 }
 
 func (s *Searcher) Search(query string) ([]*Result, error) {
+	// TODO: ngramのトークンをphrase検索するときにn-1文字ずつ探す
+
 	terms := s.tokenizer.Tokenize(query)
 	tokens, err := s.database.ResolveTokensByTerms(terms)
 	if err != nil {
@@ -176,14 +219,13 @@ func (s *Searcher) Search(query string) ([]*Result, error) {
 		return nil, err
 	}
 
-	results := make([]*result, 0)
-
+	resultsPerDoc := make(resultsPerDocMap, 0)
 	postings := makePostings(invertedIndex, tokenIds)
+
 	for !findFinishPosting(postings) {
 		if isEverythingSameDocument(postings) {
 			if positions, ok := matchPhrase(postings); ok {
-				result := extractMatched(postings, positions)
-				results = append(results, result)
+				extractMatched(resultsPerDoc, postings, positions)
 			}
 			nextEachPosting(postings)
 		} else {
@@ -191,5 +233,7 @@ func (s *Searcher) Search(query string) ([]*Result, error) {
 		}
 	}
 
-	return convertResults(results, s.database)
+	mergeRangesForResultsPerDoc(resultsPerDoc)
+	results := convertResultsPerDocToResults(resultsPerDoc)
+	return resolveResultDocument(results, s.database)
 }

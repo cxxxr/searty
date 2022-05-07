@@ -1,7 +1,7 @@
 package searcher
 
 import (
-	"os"
+	"bytes"
 	"testing"
 
 	"github.com/cxxxr/searty/lib/database"
@@ -11,17 +11,22 @@ import (
 )
 
 func Test_Search(t *testing.T) {
-	databaseFile := testutil.DoIndex(t, "../indexer/test/testdata/cl-ppcre.json")
-	tokenizer := tokenizer.New()
+	// Prepare index
+	databaseFile := testutil.DoIndex(t, "../testdata/cl-ppcre.json")
+
+	// Prepare database connection
 	database := database.New(databaseFile)
 	database.Connect()
 	defer database.Close()
-	searcher := New(tokenizer, database)
-	results, err := searcher.Search("defun")
+
+	// Do
+	results, err := New(tokenizer.New(), database).Search("defun")
 	require.Nil(t, err)
 
-	file, err := os.Create("/tmp/searty.searchresult.txt")
+	// Post
+	writer := bytes.NewBuffer(nil)
+	err = prettyPrintResults(results, database, writer)
 	require.Nil(t, err)
-	err = prettyPrintResults(results, database, file)
-	require.Nil(t, err)
+
+	testutil.Snapshot(t, writer.Bytes(), ".snapshot")
 }

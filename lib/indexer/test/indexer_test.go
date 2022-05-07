@@ -3,7 +3,6 @@ package indexer
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"sort"
 	"testing"
 
@@ -13,11 +12,6 @@ import (
 	"github.com/cxxxr/searty/lib/testutil"
 	"github.com/stretchr/testify/require"
 )
-
-func isExists(filename string) bool {
-	_, err := os.Stat(filename)
-	return err == nil
-}
 
 func resolveInvertedIndex(
 	t *testing.T,
@@ -79,14 +73,5 @@ func Test_index(t *testing.T) {
 	}
 
 	// snapshot test
-	if isExists(".snapshot") {
-		data, err := os.ReadFile(".snapshot")
-		require.Nil(t, err)
-		require.Equal(t, data, writer.Bytes())
-		return
-	}
-
-	file, err := os.Create(".snapshot")
-	require.Nil(t, err)
-	file.Write(writer.Bytes())
+	testutil.Snapshot(t, writer.Bytes(), ".snapshot")
 }

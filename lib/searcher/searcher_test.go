@@ -40,5 +40,11 @@ func Test_XXX(t *testing.T) {
 	db.Connect()
 	defer db.Close()
 
-	NewSymbolSearcher(db).Search("shuffle")
+	results, err := NewSymbolSearcher(db).Search("shuffle")
+	require.Nil(t, err)
+
+	writer := bytes.NewBuffer(nil)
+	err = prettyPrintResults(results, db, writer)
+	require.Nil(t, err)
+	fmt.Println(string(writer.Bytes()))
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_Search(t *testing.T) {
+func Test_SearchPhrase(t *testing.T) {
 	// Prepare index
 	databaseFile := testutil.DoIndex(t, "../testdata/cl-ppcre.json")
 

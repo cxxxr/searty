@@ -32,7 +32,7 @@ func Test_SearchPhrase(t *testing.T) {
 	testutil.Snapshot(t, writer.Bytes(), ".snapshot.Test_SearchPhrase")
 }
 
-func Test_XXX(t *testing.T) {
+func Test_SearchSymbol(t *testing.T) {
 	databaseFile := testutil.DoIndex(t, "../testdata/1am.json")
 
 	fmt.Println(databaseFile)
@@ -40,11 +40,12 @@ func Test_XXX(t *testing.T) {
 	db.Connect()
 	defer db.Close()
 
-	results, err := NewSymbolSearcher(db).Search("shuffle")
+	results, err := NewSymbolSearcher(db).Search("is")
 	require.Nil(t, err)
 
 	writer := bytes.NewBuffer(nil)
 	err = prettyPrintResults(results, db, writer)
 	require.Nil(t, err)
-	fmt.Println(string(writer.Bytes()))
+
+	testutil.Snapshot(t, writer.Bytes(), ".snapshot.Test_SearchSymbol")
 }

@@ -2,7 +2,6 @@ package indexer
 
 import (
 	"log"
-	"path/filepath"
 	"sync"
 )
 
@@ -42,9 +41,4 @@ func (b *BulkIndexer) Index(specFiles []string, outputDir string) {
 	}
 
 	wg.Wait()
-}
-
-func trimExt(file string) string {
-	ext := filepath.Ext(file)
-	return file[:len(file)-len(ext)]
 }

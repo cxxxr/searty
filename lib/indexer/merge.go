@@ -210,5 +210,12 @@ func MergeDatabases(inputFiles []string, outputFile string) error {
 		return err
 	}
 
+	// TODO
+	// - sybmol
+	// - package
+	// - symbol_definition
+	// - package_definition
+	// - asd_system
+
 	return nil
 }

@@ -35,7 +35,6 @@ func Test_SearchPhrase(t *testing.T) {
 func Test_SearchSymbol(t *testing.T) {
 	databaseFile := testutil.DoIndex(t, "../testdata/1am.json")
 
-	fmt.Println(databaseFile)
 	db := database.New(databaseFile)
 	db.Connect()
 	defer db.Close()

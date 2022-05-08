@@ -44,7 +44,7 @@ func printMatchedLine(result *Result, text string, writer io.Writer) {
 	)
 }
 
-func PrettyPrintResults(results []*Result, db *database.Database, writer io.Writer) error {
+func PrintResults(results []*Result, db *database.Database, writer io.Writer) error {
 	if len(results) == 0 {
 		return nil
 	}

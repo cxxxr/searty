@@ -24,7 +24,7 @@ func Test_SearchPhrase(t *testing.T) {
 
 	// Post
 	writer := bytes.NewBuffer(nil)
-	err = PrettyPrintResults(results, db, writer)
+	err = PrintResults(results, db, writer)
 	require.Nil(t, err)
 
 	testutil.Snapshot(t, writer.Bytes(), ".snapshot.Test_SearchPhrase")
@@ -41,7 +41,7 @@ func Test_SearchSymbol(t *testing.T) {
 	require.Nil(t, err)
 
 	writer := bytes.NewBuffer(nil)
-	err = PrettyPrintResults(results, db, writer)
+	err = PrintResults(results, db, writer)
 	require.Nil(t, err)
 
 	testutil.Snapshot(t, writer.Bytes(), ".snapshot.Test_SearchSymbol")

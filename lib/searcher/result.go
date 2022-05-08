@@ -5,9 +5,9 @@ import "github.com/cxxxr/searty/lib/database"
 type metadata map[string]string
 
 type Result struct {
-	doc   *database.Document
-	start int
-	end   int
+	doc      *database.Document
+	start    int
+	end      int
 	metadata metadata
 }
 

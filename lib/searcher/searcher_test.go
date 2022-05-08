@@ -2,7 +2,6 @@ package searcher
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 
 	"github.com/cxxxr/searty/lib/database"

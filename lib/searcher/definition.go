@@ -86,7 +86,7 @@ func convertDefinitionsToResults(
 		symbol := symbolMap[def.SymbolId]
 
 		m := metadata{
-			"specifier": def.Specifier,
+			"specifier":   def.Specifier,
 			"symbol_name": symbol.Name,
 		}
 		if symbol.PackageName.Valid {

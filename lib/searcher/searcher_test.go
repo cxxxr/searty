@@ -29,7 +29,7 @@ func Test_SearchPhrase(t *testing.T) {
 	err = prettyPrintResults(results, db, writer)
 	require.Nil(t, err)
 
-	testutil.Snapshot(t, writer.Bytes(), ".snapshot")
+	testutil.Snapshot(t, writer.Bytes(), ".snapshot.Test_SearchPhrase")
 }
 
 func Test_XXX(t *testing.T) {

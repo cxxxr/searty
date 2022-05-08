@@ -53,7 +53,7 @@ func New(databaseFile string) *Database {
 func connectSqlite3(databaseFile string) (*sqlx.DB, error) {
 	db, err := sqlx.Connect("sqlite3", databaseFile)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "file: %s", databaseFile)
 	}
 	return db, err
 }

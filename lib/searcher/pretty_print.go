@@ -45,6 +45,10 @@ func printMatchedLine(result *Result, text string, writer io.Writer) {
 }
 
 func prettyPrintResults(results []*Result, db *database.Database, writer io.Writer) error {
+	if len(results) == 0 {
+		return nil
+	}
+
 	docIds := make([]primitive.DocumentId, 0, len(results))
 	for _, result := range results {
 		docIds = append(docIds, result.doc.Id)

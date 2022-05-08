@@ -105,6 +105,10 @@ func (s *SymbolSearcher) Search(query string) ([]*Result, error) {
 		return nil, err
 	}
 
+	if len(symbols) == 0 {
+		return nil, nil
+	}
+
 	symbolMap := make(map[primitive.SymbolId]*database.Symbol, 0)
 
 	defs := make([]*database.SymbolDefinition, 0)

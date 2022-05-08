@@ -17,7 +17,7 @@ func createTestingDatabaseFile(t *testing.T) string {
 
 func DoIndex(t *testing.T, specFile string) string {
 	databaseFile := createTestingDatabaseFile(t)
-	err := indexer.New().Index(specFile, databaseFile)
+	err := indexer.NewIndexer().Index(specFile, databaseFile)
 	require.Nil(t, err)
 	return databaseFile
 }

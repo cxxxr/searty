@@ -23,7 +23,7 @@ type Indexer struct {
 	fileIdMap     map[string]primitive.DocumentId
 }
 
-func New() *Indexer {
+func NewIndexer() *Indexer {
 	return &Indexer{
 		index:     invertedindex.New(),
 		fileIdMap: make(map[string]primitive.DocumentId, 0),

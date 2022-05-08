@@ -33,8 +33,12 @@ func computeRootDirectory(asdFile string) string {
 	return path.Dir(path.Dir(asdFile))
 }
 
-func (i *Indexer) computeRelativePath(file string) string {
-	return file[len(i.rootDirectory)+1:]
+func (i *Indexer) computeRelativePath(file string) (string, error) {
+	n := len(i.rootDirectory)
+	if file[:n] != i.rootDirectory {
+		return "", errors.Errorf("invalid file: %s\n", file)
+	}
+	return file[n+1:], nil
 }
 
 func (i *Indexer) flush(database *database.Database) error {
@@ -52,7 +56,10 @@ func (i *Indexer) createDocument(file, text string, db *database.Database) (
 	*database.Document,
 	error,
 ) {
-	relativePath := i.computeRelativePath(file)
+	relativePath, err := i.computeRelativePath(file)
+	if err != nil {
+		return nil, err
+	}
 	if err := db.InsertDocument(relativePath, text); err != nil {
 		return nil, err
 	}

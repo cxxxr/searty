@@ -3,7 +3,6 @@ package indexer
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 	"path"
 
@@ -69,8 +68,6 @@ func (i *Indexer) createDocument(file, text string, db *database.Database) (
 }
 
 func (i *Indexer) indexFile(file string, db *database.Database) (*database.Document, error) {
-	log.Println(file)
-
 	data, err := os.ReadFile(file)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -181,10 +178,6 @@ func (i *Indexer) indexDefinitions(definitions []spec.Definition, db *database.D
 }
 
 func (i *Indexer) Index(specFile, databaseFile string) error {
-	prefix := log.Prefix()
-	log.SetPrefix("Index: ")
-	defer log.SetPrefix(prefix)
-
 	db := database.New(databaseFile)
 
 	if err := db.InitTables(); err != nil {

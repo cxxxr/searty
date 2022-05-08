@@ -2,6 +2,7 @@ package indexer
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/cxxxr/searty/lib/database"
 	"github.com/cxxxr/searty/lib/invertedindex"
@@ -14,6 +15,14 @@ type reducer struct {
 
 type documentIdMap map[primitive.DocumentId]primitive.DocumentId
 type tokenIdMap map[primitive.TokenId]primitive.TokenId
+
+func printProgress(desc string, n, deno int) {
+	fmt.Printf("\r%s [%d/%d]", desc, n, deno)
+}
+
+func finishProgress() {
+	fmt.Println()
+}
 
 func (rdr *reducer) mergeDocuments(file string) (documentIdMap, error) {
 	srcDB := database.New(file)
@@ -47,13 +56,15 @@ func (rdr *reducer) mergeDocuments(file string) (documentIdMap, error) {
 func (rdr *reducer) mergeDocumentsPerDBs(inputFiles []string) (map[string]documentIdMap, error) {
 	docIdMapPerDBs := make(map[string]documentIdMap, len(inputFiles))
 
-	for _, file := range inputFiles {
+	for progress, file := range inputFiles {
 		docIdMap, err := rdr.mergeDocuments(file)
 		if err != nil {
 			return nil, err
 		}
 		docIdMapPerDBs[file] = docIdMap
+		printProgress("merge document", progress + 1, len(inputFiles))
 	}
+	finishProgress()
 
 	return docIdMapPerDBs, nil
 }
@@ -94,12 +105,14 @@ func (rdr *reducer) mergeTokensPerDBs(inputFiles []string) (tokenIdMap, error) {
 	tokenIdMap := make(tokenIdMap, 0)
 	termIdMap := make(map[string]primitive.TokenId, 0)
 
-	for _, file := range inputFiles {
+	for progress, file := range inputFiles {
 		err := rdr.mergeTokens(file, tokenIdMap, termIdMap)
 		if err != nil {
 			return nil, err
 		}
+		printProgress("merge token", progress + 1, len(inputFiles))
 	}
+	finishProgress()
 
 	return tokenIdMap, nil
 }
@@ -159,7 +172,7 @@ func (rdr *reducer) mergeInvertedIndexPerDBs(
 
 	dstInvertedIndex := invertedindex.New()
 
-	for _, file := range inputFiles {
+	for progress, file := range inputFiles {
 		srcInvertedIndex, err := rdr.getInvertedIndex(file)
 		if err != nil {
 			return err
@@ -171,7 +184,10 @@ func (rdr *reducer) mergeInvertedIndexPerDBs(
 		if err != nil {
 			return err
 		}
+
+		printProgress("merge index", progress + 1, len(inputFiles))
 	}
+	finishProgress()
 
 	err := flush(dstInvertedIndex, rdr.dstDB)
 	if err != nil {

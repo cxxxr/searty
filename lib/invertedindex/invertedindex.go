@@ -46,3 +46,13 @@ func (index *InvertedIndex) TokenIds() []primitive.TokenId {
 	}
 	return ids
 }
+
+func (index *InvertedIndex) Map(fn func(id primitive.TokenId, list *PostingList) error) error {
+	for id, list := range index.table {
+		err := fn(id, list)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

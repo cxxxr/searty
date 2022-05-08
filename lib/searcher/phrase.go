@@ -14,8 +14,11 @@ type PhraseSearcher struct {
 	database  *database.Database
 }
 
-func NewPhraseSearcher(tokenizer *tokenizer.Tokenizer, database *database.Database) *PhraseSearcher {
-	return &PhraseSearcher{tokenizer: tokenizer, database: database}
+func NewPhraseSearcher(database *database.Database) *PhraseSearcher {
+	return &PhraseSearcher{
+		tokenizer: tokenizer.New(),
+		database:  database,
+	}
 }
 
 func makeTokenIds(tokens []*database.Token) []primitive.TokenId {

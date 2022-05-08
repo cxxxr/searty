@@ -25,10 +25,11 @@ type prepareStatements struct {
 
 	resolveTokenByTerm *sqlx.Stmt
 	resolveTokenById   *sqlx.Stmt
-	resolveAllTokenIds *sqlx.Stmt
+	resolveAllTokens   *sqlx.Stmt
 	insertToken        *sqlx.Stmt
 
-	upsertInvertedIndex *sqlx.Stmt
+	upsertInvertedIndex       *sqlx.Stmt
+	resolveWholeInvertedIndex *sqlx.Stmt
 
 	insertAsdSystem *sqlx.NamedStmt
 
@@ -129,7 +130,7 @@ func (d *Database) initializePrepareStatements() error {
 
 	stmt, err = d.tx.PreparexContext(
 		ctx,
-		`SELECT id, filename FROM document`,
+		`SELECT id, filename, body FROM document`,
 	)
 	if err != nil {
 		return errors.WithStack(err)
@@ -161,7 +162,7 @@ func (d *Database) initializePrepareStatements() error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	d.resolveAllTokenIds = stmt
+	d.resolveAllTokens = stmt
 
 	stmt, err = d.tx.PreparexContext(
 		ctx,
@@ -181,6 +182,15 @@ ON CONFLICT(token_id) DO NOTHING`,
 		return errors.WithStack(err)
 	}
 	d.upsertInvertedIndex = stmt
+
+	stmt, err = d.tx.PreparexContext(
+		ctx,
+		`SELECT token_id, posting_list FROM inverted_index`,
+	)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	d.resolveWholeInvertedIndex = stmt
 
 	namedStmt, err := d.tx.PrepareNamedContext(
 		ctx,
@@ -380,7 +390,7 @@ func (d *Database) ResolveTokensByTerms(terms []string) ([]*Token, error) {
 
 func (d *Database) ResolveAllTokens() ([]*Token, error) {
 	var tokens []*Token
-	err := d.resolveAllTokenIds.Select(&tokens)
+	err := d.resolveAllTokens.Select(&tokens)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -403,6 +413,28 @@ func (d *Database) UpsertInvertedIndex(tokenId primitive.TokenId, blob []byte) e
 	return nil
 }
 
+func (d *Database) resolveInvertedIndex(records []*InvertedIndex) (*invertedindex.InvertedIndex, error) {
+	invertedIndex := invertedindex.New()
+	for _, record := range records {
+		postingList, err := invertedindex.DecodePostingList(record.PostingList)
+		if err != nil {
+			return nil, err
+		}
+		invertedIndex.Set(record.TokenId, postingList)
+	}
+	return invertedIndex, nil
+}
+
+func (d *Database) ResolveWholeInvertedIndex() (*invertedindex.InvertedIndex, error) {
+	var records []*InvertedIndex
+	err := d.resolveWholeInvertedIndex.Select(&records)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return d.resolveInvertedIndex(records)
+}
+
 func (d *Database) ResolveInvertedIndex(tokenIds []primitive.TokenId) (
 	*invertedindex.InvertedIndex,
 	error,
@@ -420,15 +452,7 @@ func (d *Database) ResolveInvertedIndex(tokenIds []primitive.TokenId) (
 		return nil, errors.WithStack(err)
 	}
 
-	invertedIndex := invertedindex.New()
-	for _, record := range records {
-		postingList, err := invertedindex.DecodePostingList(record.PostingList)
-		if err != nil {
-			return nil, err
-		}
-		invertedIndex.Set(record.TokenId, postingList)
-	}
-	return invertedIndex, nil
+	return d.resolveInvertedIndex(records)
 }
 
 func (d *Database) InsertAsdSystem(record *AsdSystem) error {

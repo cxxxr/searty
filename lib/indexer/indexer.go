@@ -41,13 +41,13 @@ func (i *Indexer) computeRelativePath(file string) (string, error) {
 	return file[n+1:], nil
 }
 
-func (i *Indexer) flush(database *database.Database) error {
-	for _, tokenId := range i.index.TokenIds() {
-		blob, err := i.index.Get(tokenId).Encode()
+func flush(index *invertedindex.InvertedIndex, db *database.Database) error {
+	for _, tokenId := range index.TokenIds() {
+		blob, err := index.Get(tokenId).Encode()
 		if err != nil {
 			return err
 		}
-		database.UpsertInvertedIndex(tokenId, blob)
+		db.UpsertInvertedIndex(tokenId, blob)
 	}
 	return nil
 }
@@ -233,5 +233,5 @@ func (i *Indexer) Index(specFile, databaseFile string) error {
 		return err
 	}
 
-	return i.flush(db)
+	return flush(i.index, db)
 }

@@ -114,13 +114,13 @@ func (p *PostingList) insert(pos int, docId primitive.DocumentId) {
 		current := *node
 
 		if current.documentId == docId {
+			// これもソートされている必要があるが小さい順にinsertされているので問題になってない
 			current.positions = append(current.positions, pos)
 			return
 		}
-		if current.documentId > docId {
+		if docId < current.documentId {
 			p.count++
-			posting := newPosting(docId, pos, current)
-			*node = posting
+			*node = newPosting(docId, pos, current)
 			return
 		}
 

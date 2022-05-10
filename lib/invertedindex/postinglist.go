@@ -14,11 +14,11 @@ type Posting struct {
 	next       *Posting
 }
 
-func newPosting(docId primitive.DocumentId, pos int, next *Posting) *Posting {
+func NewPosting(docId primitive.DocumentId, positions []int) *Posting {
 	return &Posting{
 		documentId: docId,
-		positions:  []int{pos},
-		next:       next,
+		positions:  positions,
+		next:       nil,
 	}
 }
 
@@ -107,20 +107,21 @@ func (p *PostingList) GobDecode(data []byte) error {
 	return nil
 }
 
-func (p *PostingList) insert(docId primitive.DocumentId, pos int) {
+func (p *PostingList) insert(newNode *Posting) {
 	node := &p.head
 
 	for *node != nil {
 		current := *node
 
-		if current.documentId == docId {
+		if current.documentId == newNode.documentId {
 			// これもソートされている必要があるが昇順にinsertされるので問題になってない
-			current.positions = append(current.positions, pos)
+			current.positions = append(current.positions, newNode.positions...)
 			return
 		}
-		if docId < current.documentId {
+		if newNode.documentId < current.documentId {
 			p.count++
-			*node = newPosting(docId, pos, current)
+			newNode.next = current
+			*node = newNode
 			return
 		}
 
@@ -128,7 +129,7 @@ func (p *PostingList) insert(docId primitive.DocumentId, pos int) {
 	}
 
 	p.count++
-	(*node) = newPosting(docId, pos, nil)
+	(*node) = newNode
 }
 
 func (p *PostingList) Map(fn func(primitive.DocumentId, []int) error) error {

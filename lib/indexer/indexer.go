@@ -108,7 +108,7 @@ func (i *Indexer) indexFile(file string, db *database.Database) (*database.Docum
 		} else {
 			tokenId = token.Id
 		}
-		i.index.Insert(tokenId, doc.Id, pos)
+		i.index.Insert(tokenId, invertedindex.NewPosting(doc.Id, []int{pos}))
 	}
 
 	return doc, nil

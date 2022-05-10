@@ -136,10 +136,7 @@ func (rdr *reducer) replaceIdOfInvertedIndex(
 			if !ok {
 				return errors.New("unexpected error")
 			}
-			for _, pos := range positions {
-				// TODO: ここで毎回挿入ソートが走るので効率が悪い
-				dst.Insert(dstId, dstDocId, pos)
-			}
+			dst.Insert(dstId, invertedindex.NewPosting(dstDocId, positions))
 			return nil
 		})
 

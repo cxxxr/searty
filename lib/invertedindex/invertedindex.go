@@ -30,13 +30,13 @@ func (index *InvertedIndex) Length() int {
 	return len(index.table)
 }
 
-func (index *InvertedIndex) Insert(tokenId primitive.TokenId, docId primitive.DocumentId, pos int) {
+func (index *InvertedIndex) Insert(tokenId primitive.TokenId, value *Posting) {
 	postinglist, ok := index.table[tokenId]
 	if !ok {
 		postinglist = newPostingList()
 		index.table[tokenId] = postinglist
 	}
-	postinglist.insert(docId, pos)
+	postinglist.insert(value)
 }
 
 func (index *InvertedIndex) TokenIds() []primitive.TokenId {

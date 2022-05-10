@@ -107,14 +107,14 @@ func (p *PostingList) GobDecode(data []byte) error {
 	return nil
 }
 
-func (p *PostingList) insert(pos int, docId primitive.DocumentId) {
+func (p *PostingList) insert(docId primitive.DocumentId, pos int) {
 	node := &p.head
 
 	for *node != nil {
 		current := *node
 
 		if current.documentId == docId {
-			// これもソートされている必要があるが小さい順にinsertされているので問題になってない
+			// これもソートされている必要があるが昇順にinsertされるので問題になってない
 			current.positions = append(current.positions, pos)
 			return
 		}

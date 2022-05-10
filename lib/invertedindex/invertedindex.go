@@ -36,7 +36,7 @@ func (index *InvertedIndex) Insert(tokenId primitive.TokenId, docId primitive.Do
 		postinglist = newPostingList()
 		index.table[tokenId] = postinglist
 	}
-	postinglist.insert(pos, docId)
+	postinglist.insert(docId, pos)
 }
 
 func (index *InvertedIndex) TokenIds() []primitive.TokenId {

@@ -43,10 +43,7 @@ func (i *Indexer) computeRelativePath(file string) (string, error) {
 
 func flush(index *invertedindex.InvertedIndex, db *database.Database) error {
 	for _, tokenId := range index.TokenIds() {
-		blob, err := index.Get(tokenId).Encode()
-		if err != nil {
-			return err
-		}
+		blob := index.Get(tokenId).Encode()
 		db.UpsertInvertedIndex(tokenId, blob)
 	}
 	return nil

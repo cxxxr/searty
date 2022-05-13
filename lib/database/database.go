@@ -416,10 +416,7 @@ func (d *Database) UpsertInvertedIndex(tokenId primitive.TokenId, blob []byte) e
 func (d *Database) resolveInvertedIndex(records []*InvertedIndex) (*invertedindex.InvertedIndex, error) {
 	invertedIndex := invertedindex.New()
 	for _, record := range records {
-		postingList, err := invertedindex.DecodePostingList(record.PostingList)
-		if err != nil {
-			return nil, err
-		}
+		postingList := invertedindex.DecodePostingList(record.PostingList)
 		invertedIndex.Set(record.TokenId, postingList)
 	}
 	return invertedIndex, nil

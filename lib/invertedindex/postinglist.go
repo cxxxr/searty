@@ -132,6 +132,12 @@ func (p *PostingList) insert(newNode *Posting) {
 	(*node) = newNode
 }
 
+func (p *PostingList) push(newNode *Posting) {
+	newNode.next = p.head
+	p.head = newNode
+	p.count++
+}
+
 func (p *PostingList) Map(fn func(primitive.DocumentId, []int) error) error {
 	if p == nil {
 		return nil
@@ -158,22 +164,12 @@ func (p *PostingList) CheckCorruption() error {
 	})
 }
 
-func (p *PostingList) Encode() ([]byte, error) {
-	writer := bytes.NewBuffer(nil)
-	encoder := gob.NewEncoder(writer)
-	if err := encoder.Encode(p); err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return writer.Bytes(), nil
+func (p *PostingList) Encode() []byte {
+	enc := newEncoder()
+	enc.EncodePostingList(p)
+	return enc.Bytes()
 }
 
-func DecodePostingList(blob []byte) (*PostingList, error) {
-	var postinglist PostingList
-
-	decoder := gob.NewDecoder(bytes.NewReader(blob))
-	if err := decoder.Decode(&postinglist); err != nil {
-		return nil, err
-	}
-
-	return &postinglist, nil
+func DecodePostingList(blob []byte) *PostingList {
+	return newDecoder(blob).DecodePostingList()
 }

@@ -51,6 +51,9 @@ func Test_index(t *testing.T) {
 	// snapshot documents
 	docs, err := database.ResolveAllDocuments()
 	require.Nil(t, err)
+	sort.Slice(docs, func(i, j int) bool {
+		return docs[i].Filename < docs[j].Filename
+	})
 	for _, doc := range docs {
 		fmt.Fprintln(writer, doc.Filename)
 	}

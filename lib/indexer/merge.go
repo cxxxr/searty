@@ -3,6 +3,7 @@ package indexer
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/cxxxr/searty/lib/database"
 	"github.com/cxxxr/searty/lib/invertedindex"
@@ -17,11 +18,11 @@ type documentIdMap map[primitive.DocumentId]primitive.DocumentId
 type tokenIdMap map[primitive.TokenId]primitive.TokenId
 
 func printProgress(desc string, n, deno int) {
-	fmt.Printf("\r%s [%d/%d]", desc, n, deno)
+	fmt.Fprintf(os.Stderr, "\r%s [%d/%d]", desc, n, deno)
 }
 
 func finishProgress() {
-	fmt.Println()
+	fmt.Fprintln(os.Stderr)
 }
 
 func (rdr *reducer) mergeDocuments(file string) (documentIdMap, error) {
@@ -117,7 +118,7 @@ func (rdr *reducer) mergeTokensPerDBs(inputFiles []string) (tokenIdMap, error) {
 	return tokenIdMap, nil
 }
 
-func (rdr *reducer) replaceIdOfInvertedIndex(
+func (rdr *reducer) mergeInvertedIndex(
 	dst, src *invertedindex.InvertedIndex,
 	tokenIdMap tokenIdMap,
 	docIdMap documentIdMap,
@@ -175,7 +176,7 @@ func (rdr *reducer) mergeInvertedIndexPerDBs(
 			return err
 		}
 
-		err = rdr.replaceIdOfInvertedIndex(
+		err = rdr.mergeInvertedIndex(
 			dstInvertedIndex, srcInvertedIndex, tokenIdMap, docIdMapPerDBs[file],
 		)
 		if err != nil {

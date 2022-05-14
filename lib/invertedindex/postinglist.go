@@ -1,9 +1,6 @@
 package invertedindex
 
 import (
-	"bytes"
-	"encoding/gob"
-
 	"github.com/cxxxr/searty/lib/primitive"
 	"github.com/pkg/errors"
 )
@@ -34,36 +31,6 @@ func (p *Posting) Positions() []int {
 	return p.positions
 }
 
-func (p *Posting) GobEncode() ([]byte, error) {
-	buf := bytes.NewBuffer(nil)
-	type Alias Posting
-	_ = gob.NewEncoder(buf).Encode(struct {
-		DocumentId primitive.DocumentId
-		Positions  []int
-		Next       *Posting
-	}{
-		DocumentId: p.documentId,
-		Positions:  p.positions,
-		Next:       p.next,
-	})
-	return buf.Bytes(), nil
-}
-
-func (p *Posting) GobDecode(data []byte) error {
-	buf := bytes.NewBuffer(data)
-	type Alias Posting
-	aux := struct {
-		DocumentId primitive.DocumentId
-		Positions  []int
-		Next       *Posting
-	}{}
-	_ = gob.NewDecoder(buf).Decode(&aux)
-	p.documentId = aux.DocumentId
-	p.positions = aux.Positions
-	p.next = aux.Next
-	return nil
-}
-
 type PostingList struct {
 	head  *Posting
 	count int
@@ -79,32 +46,6 @@ func (p *PostingList) Count() int {
 
 func (p *PostingList) Posting() *Posting {
 	return p.head
-}
-
-func (p *PostingList) GobEncode() ([]byte, error) {
-	buf := bytes.NewBuffer(nil)
-	type Alias PostingList
-	_ = gob.NewEncoder(buf).Encode(struct {
-		Head  *Posting
-		Count int
-	}{
-		Head:  p.head,
-		Count: p.count,
-	})
-	return buf.Bytes(), nil
-}
-
-func (p *PostingList) GobDecode(data []byte) error {
-	buf := bytes.NewBuffer(data)
-	type Alias PostingList
-	aux := struct {
-		Head  *Posting
-		Count int
-	}{}
-	_ = gob.NewDecoder(buf).Decode(&aux)
-	p.head = aux.Head
-	p.count = aux.Count
-	return nil
 }
 
 func (p *PostingList) insert(newNode *Posting) {

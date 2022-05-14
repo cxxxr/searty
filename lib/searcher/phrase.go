@@ -21,10 +21,15 @@ func NewPhraseSearcher(database *database.Database) *PhraseSearcher {
 	}
 }
 
-func makeTokenIds(tokens []*database.Token) []primitive.TokenId {
+func makeTokenIds(tokens []*database.Token, terms []string) []primitive.TokenId {
 	tokenIds := make([]primitive.TokenId, len(tokens))
-	for i, token := range tokens {
-		tokenIds[i] = token.Id
+	for i, term := range terms {
+		for _, token := range tokens {
+			if token.Term == term {
+				tokenIds[i] = token.Id
+				break
+			}
+		}
 	}
 	return tokenIds
 }
@@ -231,7 +236,7 @@ func (s *PhraseSearcher) Search(query string) ([]*Result, error) {
 		return nil, nil
 	}
 
-	tokenIds := makeTokenIds(tokens)
+	tokenIds := makeTokenIds(tokens, terms)
 	invertedIndex, err := s.database.ResolveInvertedIndex(tokenIds)
 	if err != nil {
 		return nil, err

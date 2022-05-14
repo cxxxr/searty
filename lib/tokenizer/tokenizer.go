@@ -10,7 +10,7 @@ func ngram(text string, n int) []string {
 	tokens := make([]string, 0)
 
 	for i := range text {
-		token := make([]rune, 0, 3)
+		token := make([]rune, 0, n)
 		limit := n
 		for _, c := range text[i:] {
 			token = append(token, c)

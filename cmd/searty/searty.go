@@ -43,7 +43,7 @@ func main() {
 	s := searcher.NewPhraseSearcher(db)
 	results, err := s.Search(query)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("%+v\n", err)
 	}
 
 	writer := bytes.NewBuffer(nil)

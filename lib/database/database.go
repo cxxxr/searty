@@ -334,6 +334,18 @@ func (d *Database) ResolveDocumentsByIds(ids []primitive.DocumentId) ([]*Documen
 	return d.resolveDocumentsAux(query, params)
 }
 
+func (d *Database) ResolveDocumentsByFilenames(filenames []string) ([]*Document, error) {
+	query, params, err := sqlx.In(
+		`SELECT id, filename FROM document WHERE filename IN (?)`,
+		filenames,
+	)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return d.resolveDocumentsAux(query, params)
+}
+
 func (d *Database) ResolveDocumentsWithBodyByIds(ids []primitive.DocumentId) ([]*Document, error) {
 	query, params, err := sqlx.In(`SELECT id, filename, body FROM document WHERE id in (?)`, ids)
 	if err != nil {

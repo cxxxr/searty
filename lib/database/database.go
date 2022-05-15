@@ -320,7 +320,7 @@ func (d *Database) ResolveDocumentById(id primitive.DocumentId) (*Document, erro
 
 func (d *Database) resolveDocumentsAux(query string, params []interface{}) ([]*Document, error) {
 	var records []*Document
-	if err := d.db.Select(&records, query, params...); err != nil {
+	if err := d.tx.Select(&records, query, params...); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return records, nil
@@ -381,7 +381,7 @@ func (d *Database) ResolveTokensByTerms(terms []string) ([]*Token, error) {
 	}
 
 	var records []*Token
-	if err := d.db.Select(&records, query, params...); err != nil {
+	if err := d.tx.Select(&records, query, params...); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
@@ -445,7 +445,7 @@ func (d *Database) ResolveInvertedIndex(tokenIds []primitive.TokenId) (
 	}
 
 	var records []*InvertedIndex
-	if err := d.db.Select(&records, query, params...); err != nil {
+	if err := d.tx.Select(&records, query, params...); err != nil {
 		return nil, errors.WithStack(err)
 	}
 

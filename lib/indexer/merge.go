@@ -73,7 +73,7 @@ func (rdr *reducer) mergeDocumentsPerDBs(inputFiles []string) (map[string]docume
 			return nil, err
 		}
 		docIdMapPerDBs[file] = docIdMap
-		printProgress("merge document", progress + 1, len(inputFiles))
+		printProgress("merge document", progress+1, len(inputFiles))
 	}
 	finishProgress()
 
@@ -121,7 +121,7 @@ func (rdr *reducer) mergeTokensPerDBs(inputFiles []string) (tokenIdMap, error) {
 		if err != nil {
 			return nil, err
 		}
-		printProgress("merge token", progress + 1, len(inputFiles))
+		printProgress("merge token", progress+1, len(inputFiles))
 	}
 	finishProgress()
 
@@ -180,7 +180,6 @@ func (rdr *reducer) mergeInvertedIndexPerDBs(
 	tokenIdMap tokenIdMap,
 	docIdMapPerDBs map[string]documentIdMap,
 ) error {
-
 	dstInvertedIndex := invertedindex.New()
 
 	for progress, file := range inputFiles {
@@ -196,7 +195,7 @@ func (rdr *reducer) mergeInvertedIndexPerDBs(
 			return err
 		}
 
-		printProgress("merge index", progress + 1, len(inputFiles))
+		printProgress("merge index", progress+1, len(inputFiles))
 	}
 	finishProgress()
 

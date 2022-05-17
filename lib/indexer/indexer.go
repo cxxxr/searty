@@ -36,7 +36,9 @@ func computeRootDirectory(asdFile string) string {
 func (i *Indexer) computeRelativePath(file string) (string, error) {
 	n := len(i.rootDirectory)
 	if file[:n] != i.rootDirectory {
-		return "", errors.Errorf("invalid file: %s\n", file)
+		// TODO: この対象のファイルを確認する
+		// return "", errors.Errorf("invalid file: %s\n", file)
+		return file, nil
 	}
 	return file[n+1:], nil
 }

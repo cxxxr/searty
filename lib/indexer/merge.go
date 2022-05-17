@@ -39,16 +39,26 @@ func (rdr *reducer) mergeDocuments(file string) (documentIdMap, error) {
 
 	docIdMap := make(documentIdMap, len(docs))
 
+	filenames := make([]string, 0, len(docs))
 	for _, doc := range docs {
 		if err := rdr.dstDB.InsertDocument(doc.Filename, doc.Body); err != nil {
 			return nil, err
 		}
+		filenames = append(filenames, doc.Filename)
+	}
 
-		dstDoc, err := rdr.dstDB.ResolveDocumentByFilename(doc.Filename) // TODO: N+1
-		if err != nil {
-			return nil, err
+	dstDocs, err := rdr.dstDB.ResolveDocumentsByFilenames(filenames)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, dstDoc := range dstDocs {
+		for _, srcDoc := range docs {
+			if dstDoc.Filename == srcDoc.Filename {
+				docIdMap[srcDoc.Id] = dstDoc.Id
+				break
+			}
 		}
-		docIdMap[doc.Id] = dstDoc.Id
 	}
 
 	return docIdMap, nil

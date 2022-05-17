@@ -200,8 +200,7 @@ func (rdr *reducer) mergeInvertedIndexPerDBs(
 	}
 	finishProgress()
 
-	err := flush(dstInvertedIndex, rdr.dstDB)
-	if err != nil {
+	if err := flush(dstInvertedIndex, rdr.dstDB, true); err != nil {
 		return err
 	}
 

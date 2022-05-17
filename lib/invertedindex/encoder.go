@@ -4,7 +4,7 @@ type encoder struct {
 	buf []byte
 }
 
-func newEncoder() *encoder{
+func newEncoder() *encoder {
 	return &encoder{}
 }
 
@@ -14,13 +14,13 @@ func (enc *encoder) append(b byte) {
 
 func (enc *encoder) EncodeUint(v int) {
 	vs := make([]byte, 0)
-	vs = append(vs, byte(v & 0x7f))
+	vs = append(vs, byte(v&0x7f))
 	for {
 		v >>= 7
 		if v == 0 {
 			break
 		}
-		vs = append(vs, byte((v & 0x7f) + 0x80))
+		vs = append(vs, byte((v&0x7f)+0x80))
 	}
 	enc.buf = append(enc.buf, reverse(vs)...)
 }
@@ -70,8 +70,8 @@ func (enc *encoder) Bytes() []byte {
 
 func reverse[T any](vs []T) []T {
 	size := len(vs)
-	for i := 0; i < size / 2; i++ {
-		vs[i], vs[size - i - 1] = vs[size - i - 1], vs[i]
+	for i := 0; i < size/2; i++ {
+		vs[i], vs[size-i-1] = vs[size-i-1], vs[i]
 	}
 	return vs
 }

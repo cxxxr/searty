@@ -31,7 +31,8 @@ type prepareStatements struct {
 	upsertInvertedIndex       *sqlx.Stmt
 	resolveWholeInvertedIndex *sqlx.Stmt
 
-	insertAsdSystem *sqlx.NamedStmt
+	insertAsdSystem      *sqlx.NamedStmt
+	resolveAllAsdSystems *sqlx.Stmt
 
 	insertSymbol                   *sqlx.NamedStmt
 	resolveSymbolsByName           *sqlx.Stmt
@@ -205,6 +206,15 @@ VALUES (:id, :name, :document_id, :analyzed_time)`,
 		return errors.WithStack(err)
 	}
 	d.insertAsdSystem = namedStmt
+
+	stmt, err = d.tx.PreparexContext(
+		ctx,
+		`SELECT id, name, document_id, analyzed_time FROM asd_system`,
+	)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	d.resolveAllAsdSystems = stmt
 
 	namedStmt, err = d.tx.PrepareNamedContext(
 		ctx,
@@ -510,6 +520,15 @@ func (d *Database) InsertAsdSystem(record *AsdSystem) error {
 		return errors.WithStack(err)
 	}
 	return nil
+}
+
+func (d *Database) ResolveAllAsdSystem() ([]*AsdSystem, error) {
+	var records []*AsdSystem
+	err := d.resolveAllAsdSystems.Select(&records)
+	if err != nil {
+		return nil, err
+	}
+	return records, nil
 }
 
 func (d *Database) InsertSymbol(record *Symbol) error {

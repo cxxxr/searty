@@ -411,6 +411,43 @@ func (rdr *reducer) mergeDefinitionsPerDBs(inputFiles []string) error {
 	return nil
 }
 
+func (rdr *reducer) mergeAsdSystem(file string, idMap documentIdMap) error {
+	srcDB := database.New(file)
+	if err := srcDB.Connect(); err != nil {
+		return err
+	}
+	defer srcDB.Close()
+
+	asdSystems, err := srcDB.ResolveAllAsdSystem()
+	if err != nil {
+		return err
+	}
+
+	for _, asdSystem := range asdSystems {
+		asdSystem.DocumentId = idMap[asdSystem.DocumentId]
+		err := rdr.dstDB.InsertAsdSystem(asdSystem)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (rdr *reducer) mergeAsdSystemsPerDBs(
+	inputFiles []string,
+	docIdMapPerDBs map[string]documentIdMap,
+) error {
+	for progress, file := range inputFiles {
+		if err := rdr.mergeAsdSystem(file, docIdMapPerDBs[file]); err != nil {
+			return err
+		}
+		printProgress("merge asd system", progress+1, len(inputFiles))
+	}
+	finishProgress()
+	return nil
+}
+
 func MergeDatabases(inputFiles []string, outputFile string) error {
 	db := database.New(outputFile)
 
@@ -453,12 +490,9 @@ func MergeDatabases(inputFiles []string, outputFile string) error {
 		return err
 	}
 
-	// TODO
-	// - sybmol
-	// - package
-	// - symbol_definition
-	// - package_definition
-	// - asd_system
+	if err := rdr.mergeAsdSystemsPerDBs(inputFiles, docIdMapPerDBs); err != nil {
+		return err
+	}
 
 	return nil
 }

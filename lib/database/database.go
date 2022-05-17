@@ -37,14 +37,18 @@ type prepareStatements struct {
 	resolveSymbolsByName           *sqlx.Stmt
 	resolveSymbolsByPackage        *sqlx.Stmt
 	resolveSymbolsByNameAndPackage *sqlx.Stmt
+	resolveAllSymbols              *sqlx.Stmt
 
 	insertPackage         *sqlx.NamedStmt
 	resolvePackagesByName *sqlx.NamedStmt
+	resolveAllPackages    *sqlx.Stmt
 
 	insertSymbolDefinition             *sqlx.NamedStmt
 	resolveSymbolDefinitionsBySymbolId *sqlx.Stmt
+	resolveAllSymbolDefinitions        *sqlx.Stmt
 
-	insertPackageDefinition *sqlx.NamedStmt
+	insertPackageDefinition      *sqlx.NamedStmt
+	resolveAllPackageDefinitions *sqlx.Stmt
 }
 
 func New(databaseFile string) *Database {
@@ -239,6 +243,15 @@ VALUES (:id, :name, :package_name)`,
 	}
 	d.resolveSymbolsByNameAndPackage = stmt
 
+	stmt, err = d.tx.PreparexContext(
+		ctx,
+		`SELECT id, name, package_name FROM symbol`,
+	)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	d.resolveAllSymbols = stmt
+
 	namedStmt, err = d.tx.PrepareNamedContext(
 		ctx,
 		`INSERT INTO package (id, name, system_id)
@@ -257,6 +270,15 @@ VALUES (:id, :name, :system_id)`,
 		return errors.WithStack(err)
 	}
 	d.resolvePackagesByName = namedStmt
+
+	stmt, err = d.tx.PreparexContext(
+		ctx,
+		`SELECT id, name, system_id FROM package`,
+	)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	d.resolveAllPackages = stmt
 
 	namedStmt, err = d.tx.PrepareNamedContext(
 		ctx,
@@ -279,6 +301,15 @@ WHERE symbol_id = ?`,
 	}
 	d.resolveSymbolDefinitionsBySymbolId = stmt
 
+	stmt, err = d.tx.PreparexContext(
+		ctx,
+		`SELECT symbol_id, specifier, document_id, position FROM symbol_definition`,
+	)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	d.resolveAllSymbolDefinitions = stmt
+
 	namedStmt, err = d.tx.PrepareNamedContext(
 		ctx,
 		`INSERT INTO package_definition (package_id, specifier, document_id, position)
@@ -288,6 +319,15 @@ VALUES (:package_id, :specifier, :document_id, :position)`,
 		return errors.WithStack(err)
 	}
 	d.insertPackageDefinition = namedStmt
+
+	stmt, err = d.tx.PreparexContext(
+		ctx,
+		`SELECT package_id, specifier, document_id, position FROM package_definition`,
+	)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	d.resolveAllPackageDefinitions = stmt
 
 	return nil
 }
@@ -498,12 +538,30 @@ func (d *Database) ResolveSymbols(symbol *Symbol) ([]*Symbol, error) {
 	return records, nil
 }
 
+func (d *Database) ResolveAllSymbols() ([]*Symbol, error) {
+	var records []*Symbol
+	err := d.resolveAllSymbols.Select(&records)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return records, nil
+}
+
 func (d *Database) InsertPackage(record *Package) error {
 	_, err := d.insertPackage.Exec(record)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	return nil
+}
+
+func (d *Database) ResolveAllPackages() ([]*Package, error) {
+	var records []*Package
+	err := d.resolveAllPackages.Select(&records)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return records, nil
 }
 
 func (d *Database) InsertSymbolDefinition(record *SymbolDefinition) error {
@@ -525,10 +583,28 @@ func (d *Database) ResolveSymbolDefinitionsBySymbolId(id primitive.SymbolId) (
 	return records, nil
 }
 
+func (d *Database) ResolveAllSymbolDefinitions() ([]*SymbolDefinition, error) {
+	var records []*SymbolDefinition
+	err := d.resolveAllSymbolDefinitions.Select(&records)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return records, nil
+}
+
 func (d *Database) InsertPackageDefinition(record *PackageDefinition) error {
 	_, err := d.insertPackageDefinition.Exec(record)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	return nil
+}
+
+func (d *Database) ResolveAllPackageDefinitions() ([]*PackageDefinition, error) {
+	var records []*PackageDefinition
+	err := d.resolveAllPackageDefinitions.Select(&records)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return records, nil
 }

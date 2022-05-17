@@ -319,6 +319,98 @@ func (rdr *reducer) mergeInvertedIndexPerDBs(
 	return nil
 }
 
+func (rdr *reducer) mergeSymbolsAndPackages(file string) error {
+	srcDB := database.New(file)
+	if err := srcDB.Connect(); err != nil {
+		return err
+	}
+	defer srcDB.Close()
+
+	symbols, err := srcDB.ResolveAllSymbols()
+	if err != nil {
+		return err
+	}
+
+	for _, symbol := range symbols {
+		if err := rdr.dstDB.InsertSymbol(symbol); err != nil {
+			return err
+		}
+	}
+
+	packages, err := srcDB.ResolveAllPackages()
+	if err != nil {
+		return err
+	}
+
+	for _, pkg := range packages {
+		if err := rdr.dstDB.InsertPackage(pkg); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (rdr *reducer) mergeSymbolsAndPackagesPerDBs(inputFiles []string) error {
+	for progress, file := range inputFiles {
+		if err := rdr.mergeSymbolsAndPackages(file); err != nil {
+			return err
+		}
+		printProgress("merge symbol and package", progress+1, len(inputFiles))
+	}
+	finishProgress()
+	return nil
+}
+
+func (rdr *reducer) mergeDefinitions(file string) error {
+	srcDB := database.New(file)
+	if err := srcDB.Connect(); err != nil {
+		return err
+	}
+	defer srcDB.Close()
+
+	{
+		defs, err := srcDB.ResolveAllSymbolDefinitions()
+		if err != nil {
+			return err
+		}
+
+		for _, def := range defs {
+			err := rdr.dstDB.InsertSymbolDefinition(def)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	{
+		defs, err := srcDB.ResolveAllPackageDefinitions()
+		if err != nil {
+			return err
+		}
+
+		for _, def := range defs {
+			err := rdr.dstDB.InsertPackageDefinition(def)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (rdr *reducer) mergeDefinitionsPerDBs(inputFiles []string) error {
+	for progress, file := range inputFiles {
+		if err := rdr.mergeDefinitions(file); err != nil {
+			return err
+		}
+		printProgress("merge definition", progress+1, len(inputFiles))
+	}
+	finishProgress()
+	return nil
+}
+
 func MergeDatabases(inputFiles []string, outputFile string) error {
 	db := database.New(outputFile)
 
@@ -351,6 +443,14 @@ func MergeDatabases(inputFiles []string, outputFile string) error {
 	if false {
 		printDocIdMap(docIdMapPerDBs)
 		printDocumentId(db, inputFiles)
+	}
+
+	if err := rdr.mergeSymbolsAndPackagesPerDBs(inputFiles); err != nil {
+		return err
+	}
+
+	if err := rdr.mergeDefinitionsPerDBs(inputFiles); err != nil {
+		return err
 	}
 
 	// TODO

@@ -39,6 +39,15 @@ func (index *InvertedIndex) Insert(tokenId primitive.TokenId, value *Posting) {
 	postinglist.insert(value)
 }
 
+func (index *InvertedIndex) Push(tokenId primitive.TokenId, value *Posting) {
+	postinglist, ok := index.table[tokenId]
+	if !ok {
+		postinglist = newPostingList()
+		index.table[tokenId] = postinglist
+	}
+	postinglist.push(value)
+}
+
 func (index *InvertedIndex) TokenIds() []primitive.TokenId {
 	ids := make([]primitive.TokenId, 0)
 	for tokenId := range index.table {

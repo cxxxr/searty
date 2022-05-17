@@ -37,10 +37,7 @@ func (enc *encoder) EncodePosting(posting *Posting) {
 	enc.EncodeUints(posting.positions)
 }
 
-func (enc *encoder) EncodePostingList(postinglist *PostingList) {
-	enc.EncodeUint(postinglist.count)
-
-	// 各postingを逆順にencodeしている, decodeで順にpushしていけば元の順番に戻るため
+func reversePostingList(postinglist *PostingList) *PostingList {
 	postinglist2 := newPostingList()
 	p := postinglist.head
 	for p != nil {
@@ -49,8 +46,20 @@ func (enc *encoder) EncodePostingList(postinglist *PostingList) {
 		postinglist2.push(p)
 		p = next
 	}
+	return postinglist2
+}
 
-	for p := postinglist2.head; p != nil; p = p.next {
+func (enc *encoder) EncodePostingList(postinglist *PostingList, isReverse bool) {
+	enc.EncodeUint(postinglist.count)
+
+	if isReverse {
+		// 既に逆順なので何もしない
+	} else {
+		// 各postingを逆順にencodeしている, decodeで順にpushしていけば元の順番に戻るため
+		postinglist = reversePostingList(postinglist)
+	}
+
+	for p := postinglist.head; p != nil; p = p.next {
 		enc.EncodePosting(p)
 	}
 }

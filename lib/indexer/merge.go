@@ -137,7 +137,10 @@ func (rdr *reducer) mergeInvertedIndex(
 			if !ok {
 				return errors.New("unexpected error")
 			}
-			dst.Insert(dstId, invertedindex.NewPosting(dstDocId, positions))
+			// dstDocIdは常に昇順なのでpostinglistの先頭に足していくと降順にソートされることになる
+			// 通常、encode時に降順のpostinglistを昇順になるようreverseするが、このときから逆順になるようにしておき、
+			// encodeではreverseしないようにする
+			dst.Push(dstId, invertedindex.NewPosting(dstDocId, positions))
 			return nil
 		})
 

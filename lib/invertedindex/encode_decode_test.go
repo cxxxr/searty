@@ -62,7 +62,7 @@ func Test_EncodePostingList(t *testing.T) {
 	postinglist.insert(NewPosting(primitive.DocumentId(2), []int{3, 5, 8}))
 
 	enc := newEncoder()
-	enc.EncodePostingList(postinglist)
+	enc.EncodePostingList(postinglist, false)
 	data := enc.Bytes()
 
 	postinglist = newDecoder(data).DecodePostingList()

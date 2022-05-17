@@ -105,9 +105,9 @@ func (p *PostingList) CheckCorruption() error {
 	})
 }
 
-func (p *PostingList) Encode() []byte {
+func (p *PostingList) Encode(isReverse bool) []byte {
 	enc := newEncoder()
-	enc.EncodePostingList(p)
+	enc.EncodePostingList(p, isReverse)
 	return enc.Bytes()
 }
 

@@ -132,18 +132,18 @@ func extractMatched(acc resultsPerDocMap, postings postingSlice, positions posit
 
 func resolveResultDocument(results []*Result, db *database.Database) ([]*Result, error) {
 	for i, result := range results {
-		doc, err := db.ResolveDocumentById(result.doc.Id)
+		doc, err := db.ResolveDocumentById(result.Doc.Id)
 		if err != nil {
 			return nil, err
 		}
-		results[i].doc = doc
+		results[i].Doc = doc
 	}
 
 	sort.Slice(results, func(i, j int) bool {
-		file1 := results[i].doc.Filename
-		file2 := results[j].doc.Filename
+		file1 := results[i].Doc.Filename
+		file2 := results[j].Doc.Filename
 		if file1 == file2 {
-			return results[i].start < results[j].start
+			return results[i].Start < results[j].Start
 		}
 		return file1 < file2
 	})
@@ -157,9 +157,9 @@ func mergeRanges(results []*Result) []*Result {
 	for cursor < len(results)-1 {
 		current := results[cursor]
 		next := results[cursor+1]
-		if current.start <= next.start && next.start <= current.end {
-			current.end = next.end
-			results[cursor+1].start = current.start
+		if current.Start <= next.Start && next.Start <= current.End {
+			current.End = next.End
+			results[cursor+1].Start = current.Start
 			results[cursor] = nil
 			cursor++
 		} else {
@@ -179,7 +179,7 @@ func mergeRanges(results []*Result) []*Result {
 func mergeRangesForResultsPerDoc(resultsPerDoc resultsPerDocMap) {
 	for docId, results := range resultsPerDoc {
 		sort.Slice(results, func(i, j int) bool {
-			return results[i].start < results[j].start
+			return results[i].Start < results[j].Start
 		})
 		resultsPerDoc[docId] = mergeRanges(results)
 	}

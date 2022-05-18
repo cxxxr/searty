@@ -33,13 +33,13 @@ func searchLineStartForward(text string, pos int) int {
 }
 
 func printMatchedLine(result *Result, text string, writer io.Writer) {
-	lineStart := searchLineStartBackward(text, result.start)
-	lineEnd := searchLineStartForward(text, result.start)
+	lineStart := searchLineStartBackward(text, result.Start)
+	lineEnd := searchLineStartForward(text, result.Start)
 	fmt.Fprintf(writer,
 		"%s:%d:%d:%s\n",
-		result.doc.Filename,
-		result.start,
-		result.end,
+		result.Doc.Filename,
+		result.Start,
+		result.End,
 		text[lineStart:lineEnd],
 	)
 }
@@ -47,7 +47,7 @@ func printMatchedLine(result *Result, text string, writer io.Writer) {
 func uniqueDocumentIds(results []*Result) []primitive.DocumentId {
 	docIdMap := make(map[primitive.DocumentId]struct{}, 0)
 	for _, result := range results {
-		docIdMap[result.doc.Id] = struct{}{}
+		docIdMap[result.Doc.Id] = struct{}{}
 	}
 
 	ids := make([]primitive.DocumentId, 0, len(docIdMap))
@@ -73,7 +73,7 @@ func PrintResults(results []*Result, db *database.Database, writer io.Writer) er
 	}
 
 	for _, result := range results {
-		printMatchedLine(result, docIdTextMap[result.doc.Id], writer)
+		printMatchedLine(result, docIdTextMap[result.Doc.Id], writer)
 	}
 
 	return nil

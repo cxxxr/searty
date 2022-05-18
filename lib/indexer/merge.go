@@ -362,7 +362,7 @@ func (rdr *reducer) mergeSymbolsAndPackagesPerDBs(inputFiles []string) error {
 	return nil
 }
 
-func (rdr *reducer) mergeDefinitions(file string) error {
+func (rdr *reducer) mergeDefinitions(file string, idMap documentIdMap) error {
 	srcDB := database.New(file)
 	if err := srcDB.Connect(); err != nil {
 		return err
@@ -376,6 +376,7 @@ func (rdr *reducer) mergeDefinitions(file string) error {
 		}
 
 		for _, def := range defs {
+			def.DocumentId = idMap[def.DocumentId]
 			err := rdr.dstDB.InsertSymbolDefinition(def)
 			if err != nil {
 				return err
@@ -390,6 +391,7 @@ func (rdr *reducer) mergeDefinitions(file string) error {
 		}
 
 		for _, def := range defs {
+			def.DocumentId = idMap[def.DocumentId]
 			err := rdr.dstDB.InsertPackageDefinition(def)
 			if err != nil {
 				return err
@@ -400,9 +402,11 @@ func (rdr *reducer) mergeDefinitions(file string) error {
 	return nil
 }
 
-func (rdr *reducer) mergeDefinitionsPerDBs(inputFiles []string) error {
+func (rdr *reducer) mergeDefinitionsPerDBs(
+	inputFiles []string, docIdMapPerDBs map[string]documentIdMap,
+) error {
 	for progress, file := range inputFiles {
-		if err := rdr.mergeDefinitions(file); err != nil {
+		if err := rdr.mergeDefinitions(file, docIdMapPerDBs[file]); err != nil {
 			return err
 		}
 		printProgress("merge definition", progress+1, len(inputFiles))
@@ -486,7 +490,7 @@ func MergeDatabases(inputFiles []string, outputFile string) error {
 		return err
 	}
 
-	if err := rdr.mergeDefinitionsPerDBs(inputFiles); err != nil {
+	if err := rdr.mergeDefinitionsPerDBs(inputFiles, docIdMapPerDBs); err != nil {
 		return err
 	}
 

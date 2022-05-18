@@ -21,19 +21,6 @@ func NewPhraseSearcher(database *database.Database) *PhraseSearcher {
 	}
 }
 
-func makeTokenIds(tokens []*database.Token, terms []string) []primitive.TokenId {
-	tokenIds := make([]primitive.TokenId, len(tokens))
-	for i, term := range terms {
-		for _, token := range tokens {
-			if token.Term == term {
-				tokenIds[i] = token.Id
-				break
-			}
-		}
-	}
-	return tokenIds
-}
-
 type postingSlice []*invertedindex.Posting
 
 func makePostings(ii *invertedindex.InvertedIndex, tokenIds []primitive.TokenId) postingSlice {
@@ -223,20 +210,33 @@ func convertResultsPerDocToResults(resultsPerDoc resultsPerDocMap) []*Result {
 	return acc
 }
 
+func (s *PhraseSearcher) resolveTokenIds(terms []string) ([]primitive.TokenId, error) {
+	tokenIds := make([]primitive.TokenId, len(terms))
+	for i, term := range terms {
+		token, err := s.database.ResolveTokenByTerm(term)
+		if err != nil {
+			return nil, err
+		}
+		if token == nil {
+			return nil, nil
+		}
+		tokenIds[i] = token.Id
+	}
+	return tokenIds, nil
+}
+
 func (s *PhraseSearcher) Search(query string) ([]*Result, error) {
 	// TODO: ngramのトークンをphrase検索するときにn-1文字ずつ探す
 
 	terms := s.tokenizer.Tokenize(query)
-	tokens, err := s.database.ResolveTokensByTerms(terms)
+	tokenIds, err := s.resolveTokenIds(terms)
 	if err != nil {
 		return nil, err
 	}
-
-	if len(terms) != len(tokens) {
+	if tokenIds == nil {
 		return nil, nil
 	}
 
-	tokenIds := makeTokenIds(tokens, terms)
 	invertedIndex, err := s.database.ResolveInvertedIndex(tokenIds)
 	if err != nil {
 		return nil, err

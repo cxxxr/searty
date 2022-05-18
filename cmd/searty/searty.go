@@ -48,7 +48,7 @@ func main() {
 
 	writer := bytes.NewBuffer(nil)
 	if err := searcher.PrintResults(results, db, writer); err != nil {
-		log.Fatal(err)
+		log.Fatalf("%+v\n", err)
 	}
 
 	fmt.Print(string(writer.Bytes()))

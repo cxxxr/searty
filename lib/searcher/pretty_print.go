@@ -44,24 +44,32 @@ func printMatchedLine(result *Result, text string, writer io.Writer) {
 	)
 }
 
+func uniqueDocumentIds(results []*Result) []primitive.DocumentId {
+	docIdMap := make(map[primitive.DocumentId]struct{}, 0)
+	for _, result := range results {
+		docIdMap[result.doc.Id] = struct{}{}
+	}
+
+	ids := make([]primitive.DocumentId, 0, len(docIdMap))
+	for id := range docIdMap {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
 func PrintResults(results []*Result, db *database.Database, writer io.Writer) error {
 	if len(results) == 0 {
 		return nil
 	}
 
-	docIds := make([]primitive.DocumentId, 0, len(results))
-	for _, result := range results {
-		docIds = append(docIds, result.doc.Id)
-	}
-
-	docs, err := db.ResolveDocumentsWithBodyByIds(docIds)
-	if err != nil {
-		return err
-	}
-
-	docIdTextMap := make(map[primitive.DocumentId]string, len(docs))
-	for _, doc := range docs {
-		docIdTextMap[doc.Id] = doc.Body
+	docIds := uniqueDocumentIds(results)
+	docIdTextMap := make(map[primitive.DocumentId]string, len(docIds))
+	for _, docId := range docIds {
+		text, err := db.ResolveDocumentWithBodyById(docId)
+		if err != nil {
+			return err
+		}
+		docIdTextMap[docId] = text
 	}
 
 	for _, result := range results {

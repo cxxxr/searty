@@ -130,30 +130,13 @@ func extractMatched(acc resultsPerDocMap, postings postingSlice, positions posit
 	}
 }
 
-func resultDocIds(results []*Result) []primitive.DocumentId {
-	ids := make([]primitive.DocumentId, len(results))
-	for i, result := range results {
-		ids[i] = result.doc.Id
-	}
-	return ids
-}
-
 func resolveResultDocument(results []*Result, db *database.Database) ([]*Result, error) {
-	docIds := resultDocIds(results)
-
-	// REVIEW: 現状は含めていないがbodyを含めるべきか?
-	docs, err := db.ResolveDocumentsByIds(docIds)
-	if err != nil {
-		return nil, err
-	}
-
-	docMap := make(map[primitive.DocumentId]*database.Document, 0)
-	for _, doc := range docs {
-		docMap[doc.Id] = doc
-	}
-
 	for i, result := range results {
-		results[i].doc = docMap[result.doc.Id]
+		doc, err := db.ResolveDocumentById(result.doc.Id)
+		if err != nil {
+			return nil, err
+		}
+		results[i].doc = doc
 	}
 
 	sort.Slice(results, func(i, j int) bool {

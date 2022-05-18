@@ -18,10 +18,11 @@ type Database struct {
 }
 
 type prepareStatements struct {
-	insertDocument            *sqlx.Stmt
-	resolveDocumentByFilename *sqlx.Stmt
-	resolveDocumentById       *sqlx.Stmt
-	resolveAllDocuments       *sqlx.Stmt
+	insertDocument              *sqlx.Stmt
+	resolveDocumentByFilename   *sqlx.Stmt
+	resolveDocumentById         *sqlx.Stmt
+	resolveAllDocuments         *sqlx.Stmt
+	resolveDocumentWithBodyById *sqlx.Stmt
 
 	resolveTokenByTerm *sqlx.Stmt
 	resolveTokenById   *sqlx.Stmt
@@ -123,6 +124,15 @@ func (d *Database) initializePrepareStatements() error {
 		return errors.WithStack(err)
 	}
 	d.resolveDocumentByFilename = stmt
+
+	stmt, err = d.tx.PreparexContext(
+		ctx,
+		`SELECT body FROM document WHERE id = ? LIMIT 1`,
+	)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	d.resolveDocumentWithBodyById = stmt
 
 	stmt, err = d.tx.PreparexContext(
 		ctx,
@@ -368,6 +378,15 @@ func (d *Database) ResolveDocumentById(id primitive.DocumentId) (*Document, erro
 	return &doc, nil
 }
 
+func (d *Database) ResolveDocumentWithBodyById(id primitive.DocumentId) (string, error) {
+	var doc Document
+	err := d.resolveDocumentWithBodyById.Get(&doc, id)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	return doc.Body, nil
+}
+
 func (d *Database) resolveDocumentsAux(query string, params []interface{}) ([]*Document, error) {
 	var records []*Document
 	if err := d.tx.Select(&records, query, params...); err != nil {
@@ -393,14 +412,6 @@ func (d *Database) ResolveDocumentsByFilenames(filenames []string) ([]*Document,
 		return nil, errors.WithStack(err)
 	}
 
-	return d.resolveDocumentsAux(query, params)
-}
-
-func (d *Database) ResolveDocumentsWithBodyByIds(ids []primitive.DocumentId) ([]*Document, error) {
-	query, params, err := sqlx.In(`SELECT id, filename, body FROM document WHERE id in (?)`, ids)
-	if err != nil {
-		return nil, err
-	}
 	return d.resolveDocumentsAux(query, params)
 }
 

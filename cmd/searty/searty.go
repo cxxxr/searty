@@ -30,7 +30,7 @@ func newSearcher(kind string, db *database.Database) searcher.Searcher {
 	case phraseSearch:
 		return searcher.NewPhraseSearcher(db)
 	case fileSearch:
-		panic("unimplemented")
+		return searcher.NewFileSearcher(db)
 	case definitionSearch:
 		return searcher.NewSymbolSearcher(db)
 	default:

@@ -139,10 +139,10 @@ func resultDocIds(results []*Result) []primitive.DocumentId {
 }
 
 func resolveResultDocument(results []*Result, db *database.Database) ([]*Result, error) {
-	ids := resultDocIds(results)
+	docIds := resultDocIds(results)
 
 	// REVIEW: 現状は含めていないがbodyを含めるべきか?
-	docs, err := db.ResolveDocumentsByIds(ids)
+	docs, err := db.ResolveDocumentsByIds(docIds)
 	if err != nil {
 		return nil, err
 	}

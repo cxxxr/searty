@@ -86,13 +86,6 @@ func (i *Indexer) indexFile(file string, db *database.Database) (*database.Docum
 	}
 
 	terms := tokenizer.New().Tokenize(text)
-
-	// OPTIMIZE:
-	// ResolveTokenIdがN+1になっている.
-	// 現状はtokenはtermだけを持ってるが,
-	// 付加情報があるとsqlのwhere inで一度にselectできない問題がある.
-	// システム単位でデータベースが分割されている前提ならオンメモリでトークンテーブルを管理し,
-	// 最後にbulk insertすれば良いかもしれない.
 	for pos, term := range terms {
 		token, err := db.ResolveTokenByTerm(term)
 		if err != nil {

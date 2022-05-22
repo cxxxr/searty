@@ -1,7 +1,3 @@
-searty.db
 build
-index
 scripts/Makefile
 db/
-scripts/searty-index
-scripts/make.log

@@ -11,61 +11,59 @@ import (
 	"github.com/cxxxr/searty/lib/searcher"
 )
 
-var file string
-var searchKind string
+var dbFile string
 
-const (
-	phraseSearch = "phrase"
-	fileSearch = "file"
-	definitionSearch = "definition"
+var (
+	fileQuery   string
+	symbolQuery string
 )
 
 func init() {
-	flag.StringVar(&file, "d", "", "database file")
-	flag.StringVar(&searchKind, "k", phraseSearch, "kind")
-}
+	flag.StringVar(&dbFile, "d", "", "database file")
 
-func newSearcher(kind string, db *database.Database) searcher.Searcher {
-	switch kind {
-	case phraseSearch:
-		return searcher.NewPhraseSearcher(db)
-	case fileSearch:
-		return searcher.NewFileSearcher(db)
-	case definitionSearch:
-		return searcher.NewSymbolSearcher(db)
-	default:
-		return nil
-	}
+	flag.StringVar(&fileQuery, "file", "", "")
+	flag.StringVar(&symbolQuery, "symbol", "", "")
 }
 
 func main() {
 	flag.Parse()
-	flag.Args()
-	query := flag.Arg(0)
 
-	if file == "" {
+	if dbFile == "" {
 		flag.Usage()
 		return
 	}
 
-	if _, err := os.Stat(file); err != nil {
-		log.Printf("%s not found", file)
+	if _, err := os.Stat(dbFile); err != nil {
+		log.Printf("%s not found", dbFile)
 		return
 	}
 
-	if query == "" {
-		return
-	}
-
-	db := database.New(file)
+	db := database.New(dbFile)
 	if err := db.Connect(); err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
-	results, err := newSearcher(searchKind, db).Search(query)
-	if err != nil {
-		log.Fatalf("%+v\n", err)
+	results := make([]*searcher.Result, 0)
+
+	if fileQuery != "" {
+		// TODO
+	}
+
+	if symbolQuery != "" {
+		results1, err := searcher.NewSymbolSearcher(db).Search(symbolQuery)
+		if err != nil {
+			log.Fatalf("%+v\n", err)
+		}
+		results = append(results, results1...)
+	}
+
+	for _, phraseQuery := range flag.Args() {
+		results1, err := searcher.NewPhraseSearcher(db).Search(phraseQuery)
+		if err != nil {
+			log.Fatalf("%+v\n", err)
+		}
+		results = append(results, results1...)
 	}
 
 	writer := bytes.NewBuffer(nil)

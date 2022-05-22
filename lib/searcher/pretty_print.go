@@ -9,27 +9,23 @@ import (
 )
 
 func searchLineStartBackward(text string, pos int) int {
-	for {
+	for 0 < pos {
 		pos--
-		if pos == 0 {
-			return 0
-		}
 		if text[pos] == '\n' {
 			return pos + 1
 		}
 	}
+	return 0
 }
 
 func searchLineStartForward(text string, pos int) int {
-	for {
-		pos++
-		if pos >= len(text) {
-			return pos
-		}
+	for pos < len(text) {
 		if text[pos] == '\n' {
 			return pos
 		}
+		pos++
 	}
+	return len(text)
 }
 
 func printMatchedLine(result *Result, text string, writer io.Writer) {

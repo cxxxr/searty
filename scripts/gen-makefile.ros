@@ -55,7 +55,7 @@ exec ros -Q -- $0 "$@"
                               #'.system-name)
           system-specs))
 
-(defun gen-build-command (stream system-name out-name)
+(defun gen-analyze-command (stream system-name out-name)
   (format stream
           "~C./lisp-analyzer.sh ~A ~A ~A~%"
           #\tab
@@ -63,17 +63,17 @@ exec ros -Q -- $0 "$@"
           *dist-dir*
           out-name))
 
-(defun gen-build-targets (stream system-specs build-directory)
+(defun gen-analyze-targets (stream system-specs analyze-directory)
   (dolist (system-spec system-specs)
-    (let ((target-name (system-to-out-name (.system-name system-spec) build-directory)))
+    (let ((target-name (system-to-out-name (.system-name system-spec) analyze-directory)))
       (format stream "~A:" target-name)
       (when (.dependencies system-spec)
         (format stream
                 " ~{~A~^ ~}"
-                (mapcar (alexandria:rcurry #'system-to-out-name build-directory)
+                (mapcar (alexandria:rcurry #'system-to-out-name analyze-directory)
                         (.dependencies system-spec))))
       (terpri stream)
-      (gen-build-command stream (.system-name system-spec) target-name))))
+      (gen-analyze-command stream (.system-name system-spec) target-name))))
 
 (defun gen-index-command (stream out-name db-name)
   (format stream
@@ -82,35 +82,35 @@ exec ros -Q -- $0 "$@"
           out-name
           db-name))
 
-(defun gen-index-targets (stream system-specs index-directory build-directory)
+(defun gen-index-targets (stream system-specs index-directory analyze-directory)
   (dolist (system-spec system-specs)
     (let ((target-name (system-to-db-name (.system-name system-spec) index-directory)))
-      (format stream "~A: ~A~%" target-name (system-to-out-name (.system-name system-spec) build-directory))
+      (format stream "~A: ~A~%" target-name (system-to-out-name (.system-name system-spec) analyze-directory))
       (gen-index-command stream
-                         (system-to-out-name (.system-name system-spec) build-directory)
+                         (system-to-out-name (.system-name system-spec) analyze-directory)
                          (system-to-db-name (.system-name system-spec) index-directory)))))
 
-(defun gen-makefile (systems.txt *dist-dir* build-directory index-directory stream)
+(defun gen-makefile (systems.txt *dist-dir* analyze-directory index-directory stream)
   (let* ((system-specs (load-systems.txt systems.txt))
-         (out-names (out-names build-directory system-specs))
+         (out-names (out-names analyze-directory system-specs))
          (db-names (db-names index-directory system-specs)))
     (format stream "all: ~{~A~^\\~%~5T~}~%" (append out-names db-names))
     (terpri stream)
-    (format stream "build: ~{~A~^\\~%~7T~}~%" out-names)
+    (format stream "analyze: ~{~A~^\\~%~7T~}~%" out-names)
     (terpri stream)
     (format stream "index: ~{~A~^\\~%~7T~}~%" db-names)
     (terpri stream)
-    (gen-build-targets stream system-specs build-directory)
+    (gen-analyze-targets stream system-specs analyze-directory)
     (terpri stream)
-    (gen-index-targets stream system-specs index-directory build-directory)))
+    (gen-index-targets stream system-specs index-directory analyze-directory)))
 
 (defun main (&rest argv)
   (declare (ignorable argv))
-  (destructuring-bind (systems.txt dist-dir build-directory index-directory makefile) argv
+  (destructuring-bind (systems.txt dist-dir analyze-directory index-directory makefile) argv
     (with-open-file (out makefile :direction :output :if-exists :supersede)
       (gen-makefile systems.txt
                     (uiop:ensure-directory-pathname dist-dir)
-                    (uiop:ensure-directory-pathname build-directory)
+                    (uiop:ensure-directory-pathname analyze-directory)
                     (uiop:ensure-directory-pathname index-directory)
                     out))))
 

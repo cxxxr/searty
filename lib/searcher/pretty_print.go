@@ -8,7 +8,7 @@ import (
 	"github.com/cxxxr/searty/lib/primitive"
 )
 
-func searchLineStartBackward(text string, pos int) int {
+func searchLineStartBackward(text []rune, pos int) int {
 	for 0 < pos {
 		pos--
 		if text[pos] == '\n' {
@@ -18,7 +18,7 @@ func searchLineStartBackward(text string, pos int) int {
 	return 0
 }
 
-func searchLineStartForward(text string, pos int) int {
+func searchLineStartForward(text []rune, pos int) int {
 	for pos < len(text) {
 		if text[pos] == '\n' {
 			return pos
@@ -28,7 +28,7 @@ func searchLineStartForward(text string, pos int) int {
 	return len(text)
 }
 
-func printMatchedLine(result *Result, text string, writer io.Writer) {
+func printMatchedLine(result *Result, text []rune, writer io.Writer) {
 	lineStart := searchLineStartBackward(text, result.start)
 	lineEnd := searchLineStartForward(text, result.start)
 	fmt.Fprintf(writer,
@@ -36,7 +36,7 @@ func printMatchedLine(result *Result, text string, writer io.Writer) {
 		result.doc.Filename,
 		result.start,
 		result.end,
-		text[lineStart:lineEnd],
+		string(text[lineStart:lineEnd]),
 	)
 }
 
@@ -69,7 +69,7 @@ func PrintResults(results []*Result, db *database.Database, writer io.Writer) er
 	}
 
 	for _, result := range results {
-		printMatchedLine(result, docIdTextMap[result.doc.Id], writer)
+		printMatchedLine(result, []rune(docIdTextMap[result.doc.Id]), writer)
 	}
 
 	return nil

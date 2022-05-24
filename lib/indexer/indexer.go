@@ -193,7 +193,7 @@ func (i *Indexer) Index(specFile, databaseFile string) error {
 		return err
 	}
 
-	i.rootDirectory = computeRootDirectory(spec.AsdFile)
+	i.rootDirectory = spec.RootDirectory
 
 	asdDoc, err := i.indexFile(spec.AsdFile, db)
 	if err != nil {

@@ -25,11 +25,12 @@ type Definition struct {
 }
 
 type Spec struct {
-	SystemName  string       `json:"system_name"`
-	AsdFile     string       `json:"asd_file"`
-	Files       []string     `json:"files"`
-	Definitions []Definition `json:"definitions"`
-	Time        float64      `json:"time"`
+	SystemName    string       `json:"system_name"`
+	AsdFile       string       `json:"asd_file"`
+	RootDirectory string       `json:"root_directory"`
+	Files         []string     `json:"files"`
+	Definitions   []Definition `json:"definitions"`
+	Time          float64      `json:"time"`
 }
 
 func Read(filename string) (*Spec, error) {

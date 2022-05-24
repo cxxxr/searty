@@ -61,6 +61,7 @@
 (defstruct json
   system-name
   asd-file
+  root-directory
   files
   definitions
   time)
@@ -223,10 +224,24 @@
                            :locations (find-locations package-name))
           definitions)))
 
+(defun project-root-directory (root-directory system-directory)
+  (labels ((rec (current)
+             (let ((parent (uiop:pathname-parent-directory-pathname current)))
+               (cond ((uiop:pathname-equal parent current)
+                      nil)
+                     ((uiop:pathname-equal parent root-directory)
+                      current)
+                     (t
+                      (rec parent))))))
+    (rec system-directory)))
+
 (defun main (system-name root-directory output-file)
   (let ((start-time (get-internal-real-time)))
     (with-asdf (root-directory)
-      (let ((asd-file (find-asd-file root-directory system-name)))
+      (let* ((asd-file (find-asd-file root-directory system-name))
+             (system-source-directory (uiop:pathname-directory-pathname asd-file))
+             (project-dir (project-root-directory root-directory system-source-directory)))
+        (assert project-dir)
         (asdf:load-asd asd-file)
         (let ((files (collect-cl-source-files system-name))
               (definitions '()))
@@ -243,6 +258,7 @@
             (encode-json (make-json
                           :system-name system-name
                           :asd-file asd-file
+                          :root-directory (princ-to-string project-dir)
                           :files files
                           :definitions definitions
                           :time (float (/ (- (get-internal-real-time) start-time)

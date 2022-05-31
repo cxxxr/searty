@@ -1,3 +1,5 @@
-build
-scripts/Makefile
-db/
+[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]
+cmd/searty-index/searty-index
+cmd/searty-merge/searty-merge
+cmd/searty/searty
+quicklisp.txt

@@ -13,6 +13,7 @@ exec ros -Q -- $0 "$@"
 (in-package :ros.script.gen-make.3858474593)
 
 (defvar *dist-dir*)
+(defparameter *script-dir* (or (uiop:getenv "SCRIPTDIR")"./"))
 
 (defstruct (system-spec (:conc-name ".")) project system-file system-name dependencies)
 
@@ -40,25 +41,20 @@ exec ros -Q -- $0 "$@"
   (ppcre:regex-replace-all "/" name "_"))
 
 (defun system-to-out-name (system-name directory)
-  (make-pathname :name (escape-system-name system-name) :type "json" :defaults directory))
-
-(defun system-to-db-name (system-name directory)
-  (make-pathname :name (escape-system-name system-name) :type "db" :defaults directory))
+  (make-pathname :name (escape-system-name system-name)
+                 :type "json"
+                 :defaults directory))
 
 (defun out-names (directory system-specs)
   (mapcar (alexandria:compose (alexandria:rcurry #'system-to-out-name directory)
                               #'.system-name)
           system-specs))
 
-(defun db-names (directory system-specs)
-  (mapcar (alexandria:compose (alexandria:rcurry #'system-to-db-name directory)
-                              #'.system-name)
-          system-specs))
-
 (defun gen-analyze-command (stream system-name out-name)
   (format stream
-          "~C./lisp-analyzer.sh ~A ~A ~A~%"
+          "~C~Alisp-analyzer.sh ~A ~A ~A~%"
           #\tab
+          *script-dir*
           system-name
           *dist-dir*
           out-name))
@@ -73,45 +69,24 @@ exec ros -Q -- $0 "$@"
                 (mapcar (alexandria:rcurry #'system-to-out-name analyze-directory)
                         (.dependencies system-spec))))
       (terpri stream)
-      (gen-analyze-command stream (.system-name system-spec) target-name))))
+      (gen-analyze-command stream (.system-name system-spec) "$@"))))
 
-(defun gen-index-command (stream out-name db-name)
-  (format stream
-          "~C./searty-index.sh ~A ~A~%"
-          #\tab
-          out-name
-          db-name))
-
-(defun gen-index-targets (stream system-specs index-directory analyze-directory)
-  (dolist (system-spec system-specs)
-    (let ((target-name (system-to-db-name (.system-name system-spec) index-directory)))
-      (format stream "~A: ~A~%" target-name (system-to-out-name (.system-name system-spec) analyze-directory))
-      (gen-index-command stream
-                         (system-to-out-name (.system-name system-spec) analyze-directory)
-                         (system-to-db-name (.system-name system-spec) index-directory)))))
-
-(defun gen-makefile (systems.txt *dist-dir* analyze-directory index-directory stream)
+(defun gen-makefile (systems.txt *dist-dir* analyze-directory stream)
   (let* ((system-specs (load-systems.txt systems.txt))
-         (out-names (out-names analyze-directory system-specs))
-         (db-names (db-names index-directory system-specs)))
-    (format stream "all: ~{~A~^\\~%~5T~}~%" (append out-names db-names))
+         (out-names (out-names analyze-directory system-specs)))
+    (format stream "JSON =~{ \\~%	~A~}~%" out-names)
     (terpri stream)
-    (format stream "analyze: ~{~A~^\\~%~7T~}~%" out-names)
-    (terpri stream)
-    (format stream "index: ~{~A~^\\~%~7T~}~%" db-names)
-    (terpri stream)
+    (format stream "analyze: $(JSON)~%")
     (gen-analyze-targets stream system-specs analyze-directory)
-    (terpri stream)
-    (gen-index-targets stream system-specs index-directory analyze-directory)))
+    (terpri stream)))
 
 (defun main (&rest argv)
   (declare (ignorable argv))
-  (destructuring-bind (systems.txt dist-dir analyze-directory index-directory makefile) argv
+  (destructuring-bind (systems.txt dist-dir analyze-directory makefile) argv
     (with-open-file (out makefile :direction :output :if-exists :supersede)
       (gen-makefile systems.txt
                     (uiop:ensure-directory-pathname dist-dir)
                     (uiop:ensure-directory-pathname analyze-directory)
-                    (uiop:ensure-directory-pathname index-directory)
                     out))))
 
 ;;; vim: set ft=lisp lisp:

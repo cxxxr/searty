@@ -31,7 +31,7 @@
       releases-map)))
 
 (defun make-system-map (dist-directory)
-  (let* ((quicklisp-directory (uiop:pathname-directory-pathname dist-directory))
+  (let* ((quicklisp-directory (uiop:pathname-parent-directory-pathname dist-directory))
          (systems-map (load-systems (merge-pathnames "systems.txt" quicklisp-directory)))
          (releases-map (load-releases (merge-pathnames "releases.txt" quicklisp-directory)))
          (system-name-file-map (make-hash-table :test 'equal)))
@@ -236,8 +236,7 @@
     (rec system-directory)))
 
 (defun main (system-name root-directory output-file)
-  (let ((start-time (get-internal-real-time))
-        (root-directory (truename root-directory)))
+  (let ((start-time (get-internal-real-time)))
     (with-asdf (root-directory)
       (let* ((asd-file (find-asd-file root-directory system-name))
              (system-source-directory (uiop:pathname-directory-pathname asd-file))
